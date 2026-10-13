@@ -1,0 +1,8 @@
+.DS_Store
+*.ipk
+*.tar.gz
+*.swp
+*~
+/build/
+/bin/
+/tmp/

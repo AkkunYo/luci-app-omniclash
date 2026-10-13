@@ -1,0 +1,55 @@
+{
+	"admin/services/omniclash": {
+		"title": "OmniClash",
+		"action": {
+			"type": "firstchild"
+		},
+		"acl": {
+			"package": "luci-app-omniclash"
+		}
+	},
+	"admin/services/omniclash/overview": {
+		"title": "运行概览",
+		"order": 10,
+		"action": {
+			"type": "view",
+			"path": "omniclash/overview"
+		},
+		"acl": {
+			"package": "luci-app-omniclash"
+		}
+	},
+	"admin/services/omniclash/matrix": {
+		"title": "WiFi 矩阵管理",
+		"order": 20,
+		"action": {
+			"type": "view",
+			"path": "omniclash/matrix"
+		},
+		"acl": {
+			"package": "luci-app-omniclash"
+		}
+	},
+	"admin/services/omniclash/routing": {
+		"title": "订阅与分流",
+		"order": 30,
+		"action": {
+			"type": "view",
+			"path": "omniclash/routing"
+		},
+		"acl": {
+			"package": "luci-app-omniclash"
+		}
+	},
+	"admin/services/omniclash/log": {
+		"title": "运行日志",
+		"order": 40,
+		"action": {
+			"type": "view",
+			"path": "omniclash/log"
+		},
+		"acl": {
+			"package": "luci-app-omniclash"
+		}
+	}
+}

@@ -1,0 +1,36 @@
+{
+	"luci-app-omniclash": {
+		"description": "Grant access to OmniClash procedures and files",
+		"read": {
+			"uci": [ "omniclash", "network", "wireless", "firewall", "dhcp" ],
+			"ubus": {
+				"luci.omniclash": [ "*" ],
+				"network.wireless": [ "status" ]
+			},
+			"file": {
+				"/etc/omniclash/*": [ "read" ],
+				"/etc/omniclash/run/config.yaml": [ "read" ],
+				"/var/run/omniclash.pid": [ "read" ],
+				"/var/log/omniclash/*": [ "read" ],
+				"/proc/uptime": [ "read" ],
+				"/usr/bin/omniclash": [ "exec" ],
+				"/usr/bin/curl": [ "exec" ],
+				"/usr/bin/unzip": [ "exec" ],
+				"/bin/rm": [ "exec" ]
+			}
+		},
+		"write": {
+			"uci": [ "omniclash", "network", "wireless", "firewall", "dhcp" ],
+			"ubus": {
+				"luci.omniclash": [ "*" ]
+			},
+			"file": {
+				"/etc/omniclash/*": [ "write" ],
+				"/etc/omniclash/run/*": [ "write" ],
+				"/etc/omniclash/run/ui/*": [ "write" ],
+				"/var/log/omniclash/*": [ "write" ],
+				"/tmp/zashboard.zip": [ "write" ]
+			}
+		}
+	}
+}

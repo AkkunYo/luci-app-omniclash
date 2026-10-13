@@ -1,0 +1,231 @@
+#!/usr/bin/ucode
+
+'use strict';
+
+import { popen, readfile, access } from 'fs';
+
+const methods = {
+	get_status: {
+		call: function() {
+			let p = popen("pidof mihomo | awk '{print $1}'");
+			let pid = p ? trim(p.read('all') || '') : '';
+			if (p) p.close();
+
+			let up_raw = readfile('/proc/uptime') || '0';
+			let up_secs = int(split(up_raw, ' ')[0]);
+
+			let uci = require('uci').cursor();
+			let enabled = uci.get('omniclash', 'config', 'enabled') != '0';
+
+			let app_ver = '0.0.1-1';
+			let pa = popen("opkg list-installed luci-app-omniclash 2>/dev/null | awk '{print $3}'");
+			if (pa) {
+				let v = trim(pa.read('all') || '');
+				pa.close();
+				if (v) app_ver = v;
+			}
+
+			let core_ver = '未安装';
+			let core_full = '未检测到 /usr/bin/mihomo';
+			if (access('/usr/bin/mihomo')) {
+				let pc = popen('/usr/bin/mihomo -v 2>/dev/null | head -n1');
+				if (pc) {
+					let line = trim(pc.read('all') || '');
+					pc.close();
+					if (line) {
+						core_full = line;
+						let m = match(line, /(v[0-9]+\.[0-9]+\.[0-9]+[-a-zA-Z0-9.]*)/);
+						core_ver = m ? m[1] : line;
+					}
+				}
+			}
+
+			return {
+				running: length(pid) > 0,
+				enabled: enabled,
+				pid: pid,
+				uptime: up_secs,
+				app_version: app_ver,
+				core_version: core_ver,
+				core_full: core_full
+			};
+		}
+	},
+	service_ctl: {
+		args: { action: 'action' },
+		call: function(req) {
+			let act = req.args.action || '';
+			let uci = require('uci').cursor();
+
+			if (act == 'start') {
+				uci.set('omniclash', 'config', 'enabled', '1');
+				uci.commit('omniclash');
+				let p = popen('/etc/init.d/omniclash enable; /etc/init.d/omniclash start >/dev/null 2>&1');
+				if (p) p.close();
+			} else if (act == 'stop') {
+				uci.set('omniclash', 'config', 'enabled', '0');
+				uci.commit('omniclash');
+				let p = popen('/etc/init.d/omniclash stop >/dev/null 2>&1; /etc/init.d/omniclash disable >/dev/null 2>&1; killall -9 mihomo 2>/dev/null || true');
+				if (p) p.close();
+			} else if (act == 'restart') {
+				uci.set('omniclash', 'config', 'enabled', '1');
+				uci.commit('omniclash');
+				let p = popen('/etc/init.d/omniclash enable; /etc/init.d/omniclash restart >/dev/null 2>&1');
+				if (p) p.close();
+			} else if (act == 'reload') {
+				let p = popen('/usr/bin/omniclash compile >/dev/null 2>&1; /usr/bin/omniclash reload >/dev/null 2>&1');
+				if (p) p.close();
+			}
+			return { success: true, action: act };
+		}
+	},
+	update_core: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash update_core');
+			if (!p) return { success: false, error: '执行失败' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: out }; }
+		}
+	},
+	get_logs: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash get_logs');
+			if (!p) return { success: false, log: '读取失败' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, log: out }; }
+		}
+	},
+	clear_logs: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash clear_logs');
+			if (!p) return { success: false };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: true }; }
+		}
+	},
+	get_matrix: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash get_matrix');
+			if (!p) return { success: false, error: '执行失败' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: '解析失败' }; }
+		}
+	},
+	toggle_wifi: {
+		args: { sid: 'sid', disabled: false },
+		call: function(req) {
+			let p = popen('/usr/bin/omniclash toggle_wifi', 'w');
+			if (!p) return { success: false, error: '管道失败' };
+			p.write(sprintf('%J', req.args));
+			p.close();
+			return { success: true };
+		}
+	},
+	save_slot: {
+		args: { slot: {} },
+		call: function(req) {
+			let p = popen('/usr/bin/omniclash save_slot', 'w');
+			if (!p) return { success: false, error: '管道失败' };
+			p.write(sprintf('%J', req.args.slot));
+			p.close();
+			return { success: true };
+		}
+	},
+	get_providers: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash get_providers');
+			if (!p) return { success: false, error: '执行失败' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: '解析失败' }; }
+		}
+	},
+	save_providers: {
+		args: { providers: [] },
+		call: function(req) {
+			let p = popen('/usr/bin/omniclash save_providers', 'w');
+			if (!p) return { success: false, error: '管道失败' };
+			p.write(sprintf('%J', req.args));
+			p.close();
+			return { success: true };
+		}
+	},
+	get_groups: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash get_groups');
+			if (!p) return { success: false, error: '执行失败' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: '解析失败' }; }
+		}
+	},
+	save_groups: {
+		args: { groups: [] },
+		call: function(req) {
+			let p = popen('/usr/bin/omniclash save_groups', 'w');
+			if (!p) return { success: false, error: '管道失败' };
+			p.write(sprintf('%J', req.args));
+			p.close();
+			return { success: true };
+		}
+	},
+	reset_groups: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash reset_groups');
+			if (!p) return { success: false };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: true }; }
+		}
+	},
+	get_rules: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash get_rules');
+			if (!p) return { success: false, error: '执行失败' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: '解析失败' }; }
+		}
+	},
+	save_rules: {
+		args: { rules: [] },
+		call: function(req) {
+			let p = popen('/usr/bin/omniclash save_rules', 'w');
+			if (!p) return { success: false, error: '管道失败' };
+			p.write(sprintf('%J', req.args));
+			p.close();
+			return { success: true };
+		}
+	},
+	reset_rules: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash reset_rules');
+			if (!p) return { success: false };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: true }; }
+		}
+	},
+	compile_reload: {
+		call: function() {
+			let p1 = popen('/usr/bin/omniclash compile');
+			let out1 = p1 ? p1.read('all') : '';
+			if (p1) p1.close();
+
+			let p2 = popen('/usr/bin/omniclash apply_cron');
+			if (p2) p2.close();
+
+			let p3 = popen('/usr/bin/omniclash reload');
+			let out3 = p3 ? p3.read('all') : '';
+			if (p3) p3.close();
+
+			return { success: true, compile: out1, reload: out3 };
+		}
+	}
+};
+
+return { 'luci.omniclash': methods };
