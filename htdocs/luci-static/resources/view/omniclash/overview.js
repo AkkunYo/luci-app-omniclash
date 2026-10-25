@@ -1,8 +1,10 @@
 'use strict';
 'require view';
-'require rpc';
+'require dom';
 'require poll';
-'require fs';
+'require uci';
+'require rpc';
+'require form';
 'require ui';
 
 var callGetStatus = rpc.declare({
@@ -14,6 +16,11 @@ var callServiceCtl = rpc.declare({
 	object: 'luci.omniclash',
 	method: 'service_ctl',
 	params: [ 'action' ]
+});
+
+var callUpdateApp = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'update_app'
 });
 
 var callUpdateCore = rpc.declare({
@@ -28,175 +35,301 @@ var callCompileReload = rpc.declare({
 
 return view.extend({
 	load: function() {
-		return callGetStatus();
+		return Promise.all([
+			callGetStatus(),
+			uci.load('omniclash')
+		]);
 	},
 
-	render: function(status) {
-		status = status || {};
+	render: function(data) {
+		var status = (data && data[0]) ? data[0] : {};
 		var isRunning = !!status.running;
-		var isEnabled = status.enabled !== false;
 		var uptimeSec = status.uptime || 0;
 		var days = Math.floor(uptimeSec / 86400);
 		var hours = Math.floor((uptimeSec % 86400) / 3600);
 		var mins = Math.floor((uptimeSec % 3600) / 60);
-		var uptimeStr = days + '天 ' + hours + '小时 ' + mins + '分钟';
+		var uptimeStr = _('%sd %sh %sm').replace('%s', days).replace('%s', hours).replace('%s', mins);
 
-		window.ctlService = function(action, label) {
-			ui.showModal(_('正在执行: ') + label, [
-				E('p', { 'class': 'spinning' }, _('正在执行服务操作 (') + label + _(')，请稍候...'))
-			]);
-			callServiceCtl(action).then(function() {
-				setTimeout(function() {
-					callGetStatus().then(function() {
-						ui.hideModal();
-						ui.addNotification(null, E('p', {}, _('✅ 服务操作【') + label + _('】已成功执行！')), 'success');
-						window.location.reload();
-					});
-				}, 1500);
-			}).catch(function(err) {
-				ui.hideModal();
-				ui.addNotification(null, E('p', {}, err.message), 'error');
-			});
-		};
-
-		var viewEl = E('div', { 'class': 'cbi-map' }, [
-			E('h2', {}, _('OmniClash 运行概览')),
-
-			E('div', { 'class': 'cbi-section' }, [
-				E('div', { 'class': 'cbi-value' }, [
-					E('label', { 'class': 'cbi-value-title' }, _('运行状态')),
-					E('div', { 'class': 'cbi-value-field' }, [
-						E('span', {
-							'id': 'omni_core_badge',
-							'style': 'display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: bold; color: white; background:' + (isRunning ? '#10b981' : '#ef4444')
-						}, isRunning ? _('运行中 (PID: ') + (status.pid || '-') + ')' : _('已停止')),
-						E('span', {
-							'id': 'omni_enable_badge',
-							'style': 'display: inline-block; margin-left: 10px; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; color: ' + (isEnabled ? '#2563eb' : '#94a3b8') + '; background: ' + (isEnabled ? 'rgba(37, 99, 235, 0.12)' : 'rgba(148, 163, 184, 0.15)')
-						}, isEnabled ? _('开机自启: 已启用') : _('开机自启: 已禁用'))
-					])
-				]),
-				E('div', { 'class': 'cbi-value' }, [
-					E('label', { 'class': 'cbi-value-title' }, _('插件版本 (App Version)')),
-					E('div', { 'class': 'cbi-value-field' }, [
-						E('span', {
-							'style': 'display: inline-block; padding: 3px 10px; border-radius: 4px; font-family: monospace; font-weight: bold; background: rgba(139, 92, 246, 0.15); color: #7c3aed;'
-						}, 'luci-app-omniclash v' + (status.app_version || '1.2.0-1'))
-					])
-				]),
-				E('div', { 'class': 'cbi-value' }, [
-					E('label', { 'class': 'cbi-value-title' }, _('核心版本 (Core Version)')),
-					E('div', { 'class': 'cbi-value-field' }, [
-						E('span', {
-							'id': 'omni_core_ver_badge',
-							'style': 'display: inline-block; padding: 3px 10px; border-radius: 4px; font-family: monospace; font-weight: bold; background: rgba(16, 185, 129, 0.15); color: #059669; margin-right: 10px;'
-						}, 'Mihomo Meta ' + (status.core_version || 'v1.19.31')),
-						E('button', {
-							'class': 'cbi-button cbi-button-neutral',
-							'click': function() {
-								ui.showModal(_('正在检查并升级 Mihomo 核心'), [
-									E('p', { 'class': 'spinning' }, _('正在通过软件源 / GitHub Releases 检查并升级 /usr/bin/mihomo 核心二进制...'))
-								]);
-								callUpdateCore().then(function(res) {
-									ui.hideModal();
-									if (res && res.success) {
-										ui.addNotification(null, E('p', {}, _('✅ 核心检查/更新完成！当前核心版本: ') + (res.new_version || '')), 'success');
-										setTimeout(function() { window.location.reload(); }, 1000);
-									} else {
-										ui.addNotification(null, E('p', {}, _('核心更新失败')), 'error');
-									}
-								}).catch(function(err) {
-									ui.hideModal();
-									ui.addNotification(null, E('p', {}, err.message), 'error');
-								});
-							}
-						}, _('⬆️ 检查并更新核心')),
-						E('div', { 'style': 'font-size: 11px; color: #94a3b8; margin-top: 4px; font-family: monospace;' }, status.core_full || '')
-					])
-				]),
-				E('div', { 'class': 'cbi-value' }, [
-					E('label', { 'class': 'cbi-value-title' }, _('系统连续运行时间')),
-					E('div', { 'class': 'cbi-value-field' }, [
-						E('span', { 'id': 'omni_uptime_span', 'style': 'color: #94a3b8; font-family: monospace;' }, uptimeStr)
-					])
-				]),
-				E('div', { 'class': 'cbi-value' }, [
-					E('label', { 'class': 'cbi-value-title' }, _('服务启停与控制')),
-					E('div', { 'class': 'cbi-value-field', 'style': 'display: flex; gap: 8px; flex-wrap: wrap;' }, [
-						isRunning ? E('button', {
-							'class': 'cbi-button cbi-button-remove',
-							'click': function() { window.ctlService('stop', '停止并禁用服务'); }
-						}, _('⏹️ 停止服务')) : E('button', {
-							'class': 'cbi-button cbi-button-apply',
-							'click': function() { window.ctlService('start', '启用并启动服务'); }
-						}, _('▶️ 启动服务')),
-						E('button', {
-							'class': 'cbi-button cbi-button-action',
-							'click': function() { window.ctlService('restart', '重启服务'); }
-						}, _('🔁 重启服务')),
-						E('button', {
-							'class': 'cbi-button cbi-button-apply',
-							'click': function() {
-								ui.showModal(_('正在合流编译'), [ E('p', { 'class': 'spinning' }, _('正在执行模板+节点池合流并平滑热重载...')) ]);
-								callCompileReload().then(function() {
-									ui.hideModal();
-									ui.addNotification(null, E('p', {}, _('✅ 核心配置已成功合流热重载！')), 'success');
-								}).catch(function(err) {
-									ui.hideModal();
-									ui.addNotification(null, E('p', {}, err.message), 'error');
-								});
-							}
-						}, _('🔄 合流编译并热重载'))
-					])
-				]),
-				E('div', { 'class': 'cbi-value' }, [
-					E('label', { 'class': 'cbi-value-title' }, _('核心控制面板 (Zashboard)')),
-					E('div', { 'class': 'cbi-value-field' }, [
-						E('button', {
-							'class': 'cbi-button cbi-button-action',
-							'style': 'margin-right: 8px;',
-							'click': function() {
-								window.open('http://' + window.location.hostname + ':9090/ui', '_blank');
-							}
-						}, _('🌐 打开控制面板')),
-						E('button', {
-							'class': 'cbi-button cbi-button-neutral',
-							'click': function() {
-								ui.showModal(_('正在更新控制面板'), [ E('p', { 'class': 'spinning' }, _('正在从官方源下载并更新最新的 Zashboard 面板资源...')) ]);
-								fs.exec('/usr/bin/curl', [
-									'-sL',
-									'https://hk.gh-proxy.org/https://github.com/Zephyruso/zashboard/releases/latest/download/dist-cdn-fonts.zip',
-									'-o',
-									'/tmp/zashboard.zip'
-								]).then(function() {
-									return fs.exec('/usr/bin/unzip', ['-o', '-q', '/tmp/zashboard.zip', '-d', '/etc/omniclash/run/ui/']);
-								}).then(function() {
-									return fs.exec('/bin/rm', ['-f', '/tmp/zashboard.zip']);
-								}).then(function() {
-									ui.hideModal();
-									ui.addNotification(null, E('p', {}, _('✅ Zashboard 控制面板已成功更新到最新版本！')), 'success');
-								}).catch(function(err) {
-									ui.hideModal();
-									ui.addNotification(null, E('p', {}, err.message), 'error');
-								});
-							}
-						}, _('⬇️ 更新控制面板'))
-					])
+		var mapTitle = [
+			E('div', { 'style': 'display: flex; justify-content: space-between; align-items: center;' }, [
+				E('span', {}, _('OmniClash Overview')),
+				E('a', {
+					'href': 'https://github.com/AkkunYo/luci-app-omniclash',
+					'target': '_blank',
+					'style': 'display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: inherit; opacity: 0.8; font-size: 13px; font-weight: normal;',
+					'title': 'GitHub: AkkunYo/luci-app-omniclash'
+				}, [
+					E('svg', {
+						'viewBox': '0 0 16 16',
+						'width': '20',
+						'height': '20',
+						'fill': 'currentColor',
+						'style': 'vertical-align: middle;'
+					}, [
+						E('path', {
+							'd': 'M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z'
+						})
+					]),
+					E('span', {}, 'GitHub')
 				])
 			])
-		]);
+		];
 
-		poll.add(function() {
-			return callGetStatus().then(function(s) {
-				s = s || {};
-				var badge = document.getElementById('omni_core_badge');
-				if (badge) {
-					badge.style.background = s.running ? '#10b981' : '#ef4444';
-					badge.innerText = s.running ? _('运行中 (PID: ') + (s.pid || '-') + ')' : _('已停止');
-				}
-			});
-		}, 3);
+		var m = new form.Map('omniclash', mapTitle);
 
-		return viewEl;
+		var s = m.section(form.NamedSection, 'config', 'omniclash');
+		s.anonymous = true;
+		s.addremove = false;
+
+		// 1. 运行状态与启用开关 (合并为第一行)
+		var o = s.option(form.Flag, 'enabled', _('Running Status'));
+		o.rmempty = false;
+		o.default = '1';
+
+		var origRenderWidget = o.renderWidget;
+		o.renderWidget = function(section_id, option_index, cfgvalue) {
+			var node = origRenderWidget.apply(this, [section_id, option_index, cfgvalue]);
+			var statusWrap = E('span', {
+				'id': 'omni_core_status_wrap',
+				'style': 'display: inline-flex; align-items: center; gap: 8px; margin-left: 14px; ' + (isRunning ? 'color: #059669; font-weight: 600;' : 'color: #64748b;')
+			}, [
+				isRunning ? E('span', {
+					'id': 'omni_status_dot',
+					'style': 'width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #10b981;'
+				}) : '',
+				E('span', {
+					'id': 'omni_status_desc',
+					'style': 'font-size: 13px;'
+				}, isRunning ? ('✓ ' + _('Running (PID: %s)').replace('%s', status.pid || '-')) : ('□ ' + _('Not Running')))
+			]);
+
+			return E('div', { 'style': 'display: flex; align-items: center;' }, [
+				node,
+				statusWrap
+			]);
+		};
+
+		// 2. 硬件内存与性能预设 (form.ListValue)
+		o = s.option(form.ListValue, 'perf_profile', _('Performance Profile'));
+		o.value('auto', _('Auto-detect (Recommended)'));
+		o.value('standard', _('High-Performance Mode (Full Features)'));
+		o.value('compact', _('Low-Memory Compact Mode (Optimized for <= 256MB)'));
+		o.default = 'auto';
+
+		var isCompactActive = (status.active_profile === 'compact');
+		var memInfoStr = (status.mem_total_mb || 0) + ' MB (' + _('Available: %s MB').replace('%s', status.mem_free_mb || 0) + ')';
+		if (isCompactActive) {
+			o.description = '🟡 ' + _('Memory: %s | Low-Memory Mode Active: GeoData disabled, process tracking off, saving 40MB+ RAM to prevent OOM on 256MB devices.').replace('%s', memInfoStr);
+		} else {
+			o.description = '🟢 ' + _('Memory: %s | High-Performance Mode Active: Full proxy groups and fine-grained application rule streams enabled.').replace('%s', memInfoStr);
+		}
+
+		// 4. 插件版本 (结果卡片式检查更新)
+		o = s.option(form.DummyValue, '_app_version', _('App Version'));
+		o.rawhtml = true;
+		o.cfgvalue = function() {
+			return E('div', { 'style': 'display: flex; align-items: center; gap: 10px;' }, [
+				E('span', {
+					'style': 'font-family: monospace; font-size: 13px; font-weight: 600;'
+				}, (status.app_version && status.app_version.startsWith('v')) ? status.app_version : ('v' + (status.app_version || '0.0.1-1'))),
+				E('button', {
+					'type': 'button',
+					'class': 'cbi-button',
+					'style': 'padding: 2px 8px; font-size: 12px;',
+					'click': function() {
+						ui.showModal(_('Checking & Updating OmniClash'), [
+							E('p', { 'class': 'spinning' }, _('Checking and updating luci-app-omniclash from software repository...'))
+						]);
+						callUpdateApp().then(function(res) {
+							var isNew = (res && res.new_version && res.new_version !== ('v' + (status.app_version || '')));
+							var modalBody = [];
+							if (res && res.success) {
+								modalBody = [
+									E('div', { 'style': 'padding: 10px 0;' }, [
+										E('p', { 'style': 'font-size: 14px; font-weight: 500; color: #059669; margin-bottom: 8px;' },
+											'✅ ' + _('App check/update completed! Current app version: %s').replace('%s', res.new_version || '')
+										),
+										E('p', { 'style': 'color: #64748b; font-size: 13px; margin: 0;' },
+											res.msg || _('Already on latest version or updated successfully.')
+										)
+									]),
+									E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;' }, [
+										E('button', {
+											'type': 'button',
+											'class': 'cbi-button cbi-button-apply',
+											'click': function() {
+												ui.hideModal();
+												if (isNew) window.location.reload();
+											}
+										}, isNew ? _('OK & Refresh Page') : _('OK'))
+									])
+								];
+							} else {
+								modalBody = [
+									E('div', { 'style': 'padding: 10px 0;' }, [
+										E('p', { 'style': 'font-size: 14px; font-weight: 500; color: #dc2626; margin-bottom: 8px;' },
+											'❌ ' + _('App update failed')
+										),
+										E('p', { 'style': 'color: #64748b; font-size: 13px; margin: 0;' },
+											(res && res.error) || _('Failed to fetch update from repository.')
+										)
+									]),
+									E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end;' }, [
+										E('button', { 'type': 'button', 'class': 'cbi-button', 'click': ui.hideModal }, _('Dismiss'))
+									])
+								];
+							}
+							ui.showModal(_('OmniClash Update Result'), modalBody);
+						}).catch(function(err) {
+							ui.showModal(_('OmniClash Update Result'), [
+								E('p', { 'style': 'color: #dc2626; padding: 10px 0;' }, '❌ ' + err.message),
+								E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end;' }, [
+									E('button', { 'type': 'button', 'class': 'cbi-button', 'click': ui.hideModal }, _('Dismiss'))
+								])
+							]);
+						});
+					}
+				}, _('Check Update'))
+			]);
+		};
+
+		// 5. 核心版本 (结果卡片式检查更新)
+		o = s.option(form.DummyValue, '_core_version', _('Core Version'));
+		o.rawhtml = true;
+		o.cfgvalue = function() {
+			return E('div', { 'style': 'display: flex; align-items: center; gap: 10px;' }, [
+				E('span', {
+					'style': 'font-family: monospace; font-size: 13px; font-weight: 600;'
+				}, (status.core_version && status.core_version.startsWith('v')) ? status.core_version : ('v' + (status.core_version || '1.19.32'))),
+				E('button', {
+					'type': 'button',
+					'class': 'cbi-button',
+					'style': 'padding: 2px 8px; font-size: 12px;',
+					'click': function() {
+						ui.showModal(_('Checking & Updating Mihomo Core'), [
+							E('p', { 'class': 'spinning' }, _('Checking and updating /usr/bin/mihomo core binary from releases...'))
+						]);
+						callUpdateCore().then(function(res) {
+							var isNew = (res && res.new_version && res.new_version !== (status.core_version || ''));
+							var modalBody = [];
+							if (res && res.success) {
+								modalBody = [
+									E('div', { 'style': 'padding: 10px 0;' }, [
+										E('p', { 'style': 'font-size: 14px; font-weight: 500; color: #059669; margin-bottom: 8px;' },
+											'✅ ' + _('Core check/update completed! Current core version: %s').replace('%s', res.new_version || '')
+										),
+										E('p', { 'style': 'color: #64748b; font-size: 13px; margin: 0;' },
+											res.msg || _('Already on latest version or updated successfully.')
+										)
+									]),
+									E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;' }, [
+										E('button', {
+											'type': 'button',
+											'class': 'cbi-button cbi-button-apply',
+											'click': function() {
+												ui.hideModal();
+												if (isNew) window.location.reload();
+											}
+										}, isNew ? _('OK & Refresh Page') : _('OK'))
+									])
+								];
+							} else {
+								modalBody = [
+									E('div', { 'style': 'padding: 10px 0;' }, [
+										E('p', { 'style': 'font-size: 14px; font-weight: 500; color: #dc2626; margin-bottom: 8px;' },
+											'❌ ' + _('Core update failed')
+										),
+										E('p', { 'style': 'color: #64748b; font-size: 13px; margin: 0;' },
+											(res && res.error) || _('Failed to fetch update from repository.')
+										)
+									]),
+									E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end;' }, [
+										E('button', { 'type': 'button', 'class': 'cbi-button', 'click': ui.hideModal }, _('Dismiss'))
+									])
+								];
+							}
+							ui.showModal(_('Mihomo Core Update Result'), modalBody);
+						}).catch(function(err) {
+							ui.showModal(_('Mihomo Core Update Result'), [
+								E('p', { 'style': 'color: #dc2626; padding: 10px 0;' }, '❌ ' + err.message),
+								E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end;' }, [
+									E('button', { 'type': 'button', 'class': 'cbi-button', 'click': ui.hideModal }, _('Dismiss'))
+								])
+							]);
+						});
+					}
+				}, _('Check Update'))
+			]);
+		};
+
+		// 6. 运行时间
+		o = s.option(form.DummyValue, '_uptime', _('System Uptime'));
+		o.rawhtml = true;
+		o.cfgvalue = function() {
+			return E('span', { 'id': 'omni_uptime_span', 'style': 'color: #64748b; font-family: monospace; font-size: 13px;' }, uptimeStr);
+		};
+
+		// 7. 快捷操作
+		o = s.option(form.DummyValue, '_actions', _('Quick Actions'));
+		o.rawhtml = true;
+		o.cfgvalue = function() {
+			return E('div', { 'style': 'display: flex; gap: 10px; flex-wrap: wrap;' }, [
+				E('button', {
+					'type': 'button',
+					'class': 'cbi-button cbi-button-action',
+					'click': function() {
+						window.open('http://' + window.location.hostname + ':9090/ui', '_blank');
+					}
+				}, '🌐 ' + _('Open Dashboard (Zashboard)')),
+				E('button', {
+					'type': 'button',
+					'class': 'cbi-button',
+					'click': function() {
+						ui.showModal(_('Compiling Configuration'), [ E('p', { 'class': 'spinning' }, _('Compiling template and provider node pool with seamless reload...')) ]);
+						callCompileReload().then(function() {
+							ui.hideModal();
+							ui.addNotification(null, E('p', {}, '✅ ' + _('Core configuration successfully compiled and reloaded!')), 'success');
+						}).catch(function(err) {
+							ui.hideModal();
+							ui.addNotification(null, E('p', {}, err.message), 'error');
+						});
+					}
+				}, '🔄 ' + _('Compile & Reload'))
+			]);
+		};
+
+		return m.render().then(L.bind(function(m, nodes) {
+			poll.add(function() {
+				return callGetStatus().then(function(s) {
+					s = s || {};
+					var wrap = document.getElementById('omni_core_status_wrap');
+					if (wrap) {
+						var running = !!s.running;
+						wrap.style.color = running ? '#059669' : '#64748b';
+						wrap.style.fontWeight = running ? '600' : 'normal';
+						dom.content(wrap, [
+							running ? E('span', {
+								'id': 'omni_status_dot',
+								'style': 'width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #10b981;'
+							}) : '',
+							E('span', {
+								'id': 'omni_status_desc',
+								'style': 'font-size: 13px;'
+							}, running ? ('✓ ' + _('Running (PID: %s)').replace('%s', s.pid || '-')) : ('□ ' + _('Not Running')))
+						]);
+					}
+				});
+			}, 3);
+			return nodes;
+		}, this, m));
+	},
+
+	handleSaveApply: function(ev, mode) {
+		return this.handleSave(ev).then(function() {
+			return ui.changes.apply(mode == '0');
+		}).then(function() {
+			var enabled = uci.get('omniclash', 'config', 'enabled');
+			return callServiceCtl(enabled === '0' ? 'stop' : 'start');
+		});
 	}
 });

@@ -20,11 +20,46 @@ let GROUPS_FILE = "/etc/omniclash/groups.json";
 let GROUPS_DEF_FILE = "/etc/omniclash/groups_default.json";
 let RULES_FILE = "/etc/omniclash/rules.json";
 let RULES_DEF_FILE = "/etc/omniclash/rules_default.json";
+let NORMAL_WIFI_FILE = "/etc/omniclash/wifi_normal.json";
+let NORMAL_WIFI_DEF_FILE = "/etc/omniclash/wifi_normal_default.json";
 
 let DROPBEAR_KEY = "/root/.ssh/id_dropbear";
 let AP_HOST = "192.168.100.2";
 let MIHOMO_API = "http://127.0.0.1:9090";
 let API_SECRET = "clashclash";
+
+function get_mem_info() {
+    let raw = fs.readfile("/proc/meminfo") || "";
+    let m_tot = match(raw, /MemTotal:\s*([0-9]+)/);
+    let m_avail = match(raw, /MemAvailable:\s*([0-9]+)/);
+    let tot_kb = m_tot ? int(m_tot[1]) : 0;
+    let avail_kb = m_avail ? int(m_avail[1]) : 0;
+    return {
+        total_mb: int(tot_kb / 1024),
+        avail_mb: int(avail_kb / 1024)
+    };
+}
+
+function get_effective_profile() {
+    let pref = uci.get("omniclash", "config", "perf_profile") || "auto";
+    if (pref == "compact") return "compact";
+    if (pref == "standard") return "standard";
+    let mem = get_mem_info();
+    return (mem.total_mb <= 300) ? "compact" : "standard";
+}
+
+function get_run_mode() {
+    let mode = uci.get("omniclash", "config", "run_mode");
+    if (!mode) {
+        let old = uci.get("omniclash", "config", "topology_mode");
+        mode = (old && match(old, /local/)) ? "local" : "ap";
+    }
+    return mode;
+}
+
+function is_local_mode() {
+    return get_run_mode() == "local";
+}
 
 function shell_exec(cmd) {
     let p = fs.popen(cmd);
@@ -34,10 +69,31 @@ function shell_exec(cmd) {
     return { code: rc, out: out };
 }
 
+function get_ap_cmd(remote_cmd) {
+    let host = uci.get("omniclash", "config", "ap_host") || AP_HOST;
+    let port = uci.get("omniclash", "config", "ap_port") || "22";
+    let user = uci.get("omniclash", "config", "ap_user") || "root";
+    let pass = uci.get("omniclash", "config", "ap_password") || "";
+    let key = uci.get("omniclash", "config", "ap_key") || DROPBEAR_KEY;
+
+    let escaped = replace(remote_cmd, "'", "'\\''");
+
+    if (pass) {
+        let escaped_pass = replace(pass, "'", "'\\''");
+        return sprintf("sshpass -p '%s' dbclient -y -y -p '%s' '%s@%s' '%s' 2>/dev/null", escaped_pass, port, user, host, escaped);
+    }
+    return sprintf("dbclient -y -y -p '%s' -i '%s' '%s@%s' '%s' 2>/dev/null", port, key, user, host, escaped);
+}
+
+function wireless_exec(cmd) {
+    if (is_local_mode()) {
+        return shell_exec(cmd);
+    }
+    return shell_exec(get_ap_cmd(cmd));
+}
+
 function ap_exec(cmd) {
-    let escaped = replace(cmd, "'", "'\\''");
-    let full = sprintf("dbclient -y -i '%s' root@'%s' '%s' 2>/dev/null", DROPBEAR_KEY, AP_HOST, escaped);
-    return shell_exec(full);
+    return wireless_exec(cmd);
 }
 
 function ensure_defaults() {
@@ -46,6 +102,9 @@ function ensure_defaults() {
     }
     if (!fs.access(RULES_FILE) && fs.access(RULES_DEF_FILE)) {
         fs.writefile(RULES_FILE, fs.readfile(RULES_DEF_FILE));
+    }
+    if (!fs.access(NORMAL_WIFI_FILE) && fs.access(NORMAL_WIFI_DEF_FILE)) {
+        fs.writefile(NORMAL_WIFI_FILE, fs.readfile(NORMAL_WIFI_DEF_FILE));
     }
 }
 
@@ -113,10 +172,10 @@ function save_template_providers(providers) {
         push(pp_lines, "    proxy: 🟢 直连");
         push(pp_lines, sprintf("    url: \"%s\"", p.url));
 
-        if (p.name == "githubhy") {
+        if (p.name == "githubhy" || p.name == "sub_provider_4") {
             push(pp_lines, "    filter: \"^((?!(中国|china|cn)).)*$\"");
             push(pp_lines, "    exclude-type: \"ss|http|vmess\"");
-        } else if (p.name == "sub_provider_2") {
+        } else if (p.name == "sub_provider_2" || p.name == "sub_provider_3") {
             push(pp_lines, "    exclude-type: \"ss|http|vmess\"");
         }
 
@@ -126,7 +185,7 @@ function save_template_providers(providers) {
             push(pp_lines, "      skip-cert-verify: true");
             push(pp_lines, sprintf("      additional-prefix: \"%s\"", p.prefix || "s5v_"));
             push(pp_lines, "      dialer-proxy: 🔗 前置入口");
-        } else if (p.name == "vpscloud") {
+        } else if (p.name == "vpscloud" || p.name == "sub_provider_1") {
             push(pp_lines, "      <<: *override");
             push(pp_lines, sprintf("      additional-prefix: \"%s\"", p.prefix || "vc_"));
             push(pp_lines, "      up: \"50 Mbps\"");
@@ -159,10 +218,20 @@ function compile_config() {
     let log_level = uci.get("omniclash", "config", "log_level") || "info";
     let tun_stack = uci.get("omniclash", "config", "tun_stack") || "system";
     let dns_mode = uci.get("omniclash", "config", "dns_mode") || "fake-ip";
-    let fake_ip_range = uci.get("omniclash", "config", "fake_ip_range") || "198.18.0.0/15";
+    let fake_ip_range = uci.get("omniclash", "config", "fake_ip_range") || "198.18.0.1/16";
+
+    let profile = get_effective_profile();
+    if (profile == "compact") {
+        template = replace(template, /log-level:\s*[a-zA-Z]+/, "log-level: warning");
+        template = replace(template, /geodata-mode:\s*[a-zA-Z]+/, "geodata-mode: false");
+        template = replace(template, /tcp-concurrent:\s*[a-zA-Z]+/, "tcp-concurrent: false");
+    } else {
+        template = replace(template, /log-level:\s*[a-zA-Z]+/, sprintf("log-level: %s", log_level));
+        template = replace(template, /geodata-mode:\s*[a-zA-Z]+/, "geodata-mode: true");
+        template = replace(template, /tcp-concurrent:\s*[a-zA-Z]+/, "tcp-concurrent: true");
+    }
 
     template = replace(template, /mixed-port:\s*[0-9]+/, sprintf("mixed-port: %s", mixed_port));
-    template = replace(template, /log-level:\s*[a-zA-Z]+/, sprintf("log-level: %s", log_level));
     template = replace(template, /stack:\s*[a-zA-Z]+/, sprintf("stack: %s", tun_stack));
     template = replace(template, /enhanced-mode:\s*[a-zA-Z-]+/, sprintf("enhanced-mode: %s", dns_mode));
     template = replace(template, /fake-ip-range:\s*[0-9.\/]+/, sprintf("fake-ip-range: %s", fake_ip_range));
@@ -179,27 +248,44 @@ function compile_config() {
         "☢ 负载均衡-散列", "☢ 负载均衡-轮询", "🌐 全部节点", "🟢 直连", "🛑 黑洞"
     ];
 
-    let group_lines = [];
-    push(group_lines, "  # ==========================================");
-    push(group_lines, "  # 🎛️ 槽位专属出口策略组 (32 槽位常驻注入)");
-    push(group_lines, "  # ==========================================");
+    let wmode = uci.get("omniclash", "config", "wireless_mode") || "multi";
 
-    for (let slot in slots) {
-        let node_group = sprintf("🌐 %s-出口", slot.num);
-        let ordered = [ slot.target ];
-        for (let c in candidate_names) {
-            if (c != slot.target) push(ordered, c);
+    let group_lines = [];
+    if (wmode == "multi") {
+        push(group_lines, "  # ==========================================");
+        push(group_lines, "  # 🎛️ 槽位专属出口策略组 (32 槽位常驻注入)");
+        push(group_lines, "  # ==========================================");
+
+        for (let slot in slots) {
+            let node_group = sprintf("🌐 %s-出口", slot.num);
+            let ordered = [ slot.target ];
+            for (let c in candidate_names) {
+                if (c != slot.target) push(ordered, c);
+            }
+            push(group_lines, sprintf("  - {name: \"%s\", type: select, include-all: true, exclude-filter: \"s5v_\", proxies: [%s], icon: https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/WiFi.png}", node_group, join(", ", ordered)));
         }
-        push(group_lines, sprintf("  - {name: \"%s\", type: select, include-all: true, exclude-filter: \"s5v_\", proxies: [%s], icon: https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/WiFi.png}", node_group, join(", ", ordered)));
     }
 
     push(group_lines, "\n  # ==========================================");
     push(group_lines, "  # 🎯 用户与系统分流策略组 (/etc/omniclash/groups.json)");
     push(group_lines, "  # ==========================================");
 
+    let template_providers = get_template_providers();
+    let all_provider_names = [];
+    for (let p in template_providers) {
+        if (p.name) push(all_provider_names, p.name);
+    }
+
     for (let g in groups) {
         let parts = [ sprintf("name: \"%s\"", g.name), sprintf("type: %s", g.type) ];
-        if (g.use && length(g.use)) push(parts, sprintf("use: [%s]", join(", ", g.use)));
+        let use_list = (g.use && length(g.use)) ? g.use : null;
+        if (!use_list) {
+            // 自动为需要节点池的策略组注入全量 Provider 列表，由前缀与正则过滤节点
+            if (g.filter || g.type == "url-test" || g.type == "load-balance" || g.type == "fallback" || match(g.name, /专线|自动|散列|轮询|前置|落地/)) {
+                use_list = all_provider_names;
+            }
+        }
+        if (use_list && length(use_list)) push(parts, sprintf("use: [%s]", join(", ", use_list)));
         if (g.proxies && length(g.proxies)) push(parts, sprintf("proxies: [%s]", join(", ", g.proxies)));
         if (g.filter) push(parts, sprintf("filter: \"%s\"", replace(g.filter, "\"", "\\\"")));
         if (g.tolerance) push(parts, sprintf("tolerance: %d", g.tolerance));
@@ -225,24 +311,26 @@ function compile_config() {
     let tier6_app_pool = [];
     let tier7_match = [];
 
-    for (let slot in slots) {
-        let cidr = sprintf("192.168.%s.0/24", slot.vlan);
-        let out = sprintf("🌐 %s-出口", slot.num);
-        push(tier1_infra, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOSITE,google-cn)),%s", cidr, out));
+    if (wmode == "multi") {
+        for (let slot in slots) {
+            let cidr = sprintf("192.168.%s.0/24", slot.vlan);
+            let out = sprintf("🌐 %s-出口", slot.num);
+            push(tier1_infra, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOSITE,google-cn)),%s", cidr, out));
 
-        if (slot.mode == "global") {
-            push(tier2_global, sprintf("  # [全局模式] 槽位 #%s: %s (VLAN %s)", slot.num, slot.ssid, slot.vlan));
-            push(tier2_global, sprintf("  - SRC-IP-CIDR,%s,%s", cidr, out));
-        } else if (slot.mode == "split") {
-            push(tier3_split, sprintf("  # [定向分流] 槽位 #%s: %s (VLAN %s)", slot.num, slot.ssid, slot.vlan));
-            push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOSITE,private)),DIRECT", cidr));
-            push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOIP,private)),DIRECT", cidr));
-            push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOSITE,cn)),DIRECT", cidr));
-            push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOIP,cn)),DIRECT", cidr));
-            push(tier3_split, sprintf("  - SRC-IP-CIDR,%s,%s", cidr, out));
-        } else if (slot.mode == "app_pool") {
-            push(tier6_app_pool, sprintf("  # [通用分流兜底] 槽位 #%s: %s (VLAN %s)", slot.num, slot.ssid, slot.vlan));
-            push(tier6_app_pool, sprintf("  - SRC-IP-CIDR,%s,%s", cidr, out));
+            if (slot.mode == "global") {
+                push(tier2_global, sprintf("  # [全局模式] 槽位 #%s: %s (VLAN %s)", slot.num, slot.ssid, slot.vlan));
+                push(tier2_global, sprintf("  - SRC-IP-CIDR,%s,%s", cidr, out));
+            } else if (slot.mode == "split") {
+                push(tier3_split, sprintf("  # [定向分流] 槽位 #%s: %s (VLAN %s)", slot.num, slot.ssid, slot.vlan));
+                push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOSITE,private)),DIRECT", cidr));
+                push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOIP,private)),DIRECT", cidr));
+                push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOSITE,cn)),DIRECT", cidr));
+                push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOIP,cn)),DIRECT", cidr));
+                push(tier3_split, sprintf("  - SRC-IP-CIDR,%s,%s", cidr, out));
+            } else if (slot.mode == "app_pool") {
+                push(tier6_app_pool, sprintf("  # [通用分流兜底] 槽位 #%s: %s (VLAN %s)", slot.num, slot.ssid, slot.vlan));
+                push(tier6_app_pool, sprintf("  - SRC-IP-CIDR,%s,%s", cidr, out));
+            }
         }
     }
 
@@ -316,6 +404,28 @@ if (action == "compile") {
     fs.writefile("/var/log/omniclash/core.log", "");
     fs.writefile("/var/log/omniclash/app.log", "");
     print("{\"success\":true,\"msg\":\"日志已成功清空\"}\n");
+} else if (action == "update_app") {
+    let p = fs.popen("opkg update >/dev/null 2>&1; opkg upgrade luci-app-omniclash luci-i18n-omniclash-zh-cn 2>&1");
+    let out = p ? p.read("all") : "";
+    if (p) p.close();
+    let pa = fs.popen("opkg list-installed luci-app-omniclash 2>/dev/null | awk '{print $3}'");
+    let cur_ver = pa ? trim(pa.read("all") || "") : "0.0.1-1";
+    if (pa) pa.close();
+    print(sprintf("{\"success\":true,\"new_version\":\"v%s\",\"msg\":\"插件已成功更新或已是最新\"}\n", cur_ver));
+} else if (action == "update_core") {
+    let p = fs.popen("opkg update >/dev/null 2>&1; opkg upgrade mihomo 2>&1");
+    let out = p ? p.read("all") : "";
+    if (p) p.close();
+    let p2 = fs.popen("/usr/bin/mihomo -v 2>/dev/null | head -n1");
+    let line = p2 ? trim(p2.read("all") || "") : "";
+    if (p2) p2.close();
+    let m = match(line, /(v[0-9]+\.[0-9]+\.[0-9]+[-a-zA-Z0-9.]*)/);
+    let ver = m ? m[1] : line;
+    if (ver) {
+        print(sprintf("{\"success\":true,\"new_version\":\"%s\",\"msg\":\"Mihomo 核心已成功更新\"}\n", ver));
+    } else {
+        print("{\"success\":false,\"error\":\"未检测到核心二进制或更新失败\"}\n");
+    }
 } else if (action == "apply_cron") {
     let cron_enable = uci.get("omniclash", "config", "scheduled_restart") == "1";
     let cron_time = uci.get("omniclash", "config", "scheduled_restart_cron") || "0 3 * * *";
@@ -501,8 +611,11 @@ if (action == "compile") {
         "☢ 负载均衡-散列", "☢ 负载均衡-轮询", "🌐 全部节点", "🟢 直连", "🛑 黑洞"
     ];
 
+    let mode = get_run_mode();
     print(sprintf("%.J\n", {
         success: true,
+        run_mode: mode,
+        ap_host: uci.get("omniclash", "config", "ap_host") || AP_HOST,
         slots: result_slots,
         candidates: candidate_names,
         limits: limits
@@ -544,21 +657,23 @@ if (action == "compile") {
 
     let sid = p.sid;
     let disabled = (p.disabled == true || p.disabled == "1" || p.disabled == 1) ? "1" : "0";
-    let ap_section = uci.get("omniclash", sid, "ap_section");
-    let num = uci.get("omniclash", sid, "num");
+    let ap_section = uci.get("omniclash", sid, "ap_section") || sid;
+    let num = uci.get("omniclash", sid, "num") || sid;
 
-    uci.set("omniclash", sid, "disabled", disabled);
-    uci.commit("omniclash");
+    if (uci.get("omniclash", sid)) {
+        uci.set("omniclash", sid, "disabled", disabled);
+        uci.commit("omniclash");
+    }
 
     if (ap_section) {
-        ap_exec(sprintf("
+        wireless_exec(sprintf("
             uci set wireless.%s.disabled='%s'
             uci commit wireless
             wifi reload
         ", ap_section, disabled));
     }
 
-    print(sprintf("{\"success\":true,\"msg\":\"WiFi #%s 状态已切换为: %s\"}\n", num, disabled == "1" ? "已禁用" : "已启用"));
+    print(sprintf("{\"success\":true,\"msg\":\"WiFi %s 状态已切换为: %s\"}\n", num, disabled == "1" ? "已禁用" : "已启用"));
 } else if (action == "save_slot") {
     let input_raw = fs.readfile("/dev/stdin") || "";
     let p = {};
@@ -567,14 +682,16 @@ if (action == "compile") {
     let sid = p.sid;
     let old_ssid = uci.get("omniclash", sid, "ssid");
     let old_key = uci.get("omniclash", sid, "key");
-    let ap_section = uci.get("omniclash", sid, "ap_section");
+    let ap_section = uci.get("omniclash", sid, "ap_section") || sid;
 
-    uci.set("omniclash", sid, "ssid", p.ssid);
-    uci.set("omniclash", sid, "key", p.key);
-    uci.commit("omniclash");
+    if (uci.get("omniclash", sid)) {
+        uci.set("omniclash", sid, "ssid", p.ssid);
+        uci.set("omniclash", sid, "key", p.key);
+        uci.commit("omniclash");
+    }
 
     if (ap_section && (p.ssid != old_ssid || p.key != old_key)) {
-        ap_exec(sprintf("
+        wireless_exec(sprintf("
             uci set wireless.%s.ssid='%s'
             uci set wireless.%s.key='%s'
             uci commit wireless
@@ -583,6 +700,83 @@ if (action == "compile") {
     }
 
     print("{\"success\":true,\"msg\":\"WiFi 保存成功\"}\n");
+} else if (action == "test_ap") {
+    let input_raw = fs.readfile("/dev/stdin") || "";
+    let p = {};
+    try { p = json(input_raw) || {}; } catch(e) {}
+
+    let host = p.host || ARGV[1] || uci.get("omniclash", "config", "ap_host") || AP_HOST;
+    let port = p.port || uci.get("omniclash", "config", "ap_port") || "22";
+    let user = p.user || uci.get("omniclash", "config", "ap_user") || "root";
+    let pass = p.password || uci.get("omniclash", "config", "ap_password") || "";
+    let key = uci.get("omniclash", "config", "ap_key") || DROPBEAR_KEY;
+
+    let res = null;
+    if (pass) {
+        let escaped_pass = replace(pass, "'", "'\\''");
+        res = shell_exec(sprintf("sshpass -p '%s' dbclient -y -y -p '%s' '%s@%s' 'echo OK' 2>&1", escaped_pass, port, user, host));
+    }
+
+    if (!res || !match(res.out, /OK/)) {
+        if (fs.access(key)) {
+            let key_res = shell_exec(sprintf("dbclient -y -y -p '%s' -i '%s' '%s@%s' 'echo OK' 2>&1", port, key, user, host));
+            if (match(key_res.out, /OK/)) {
+                res = key_res;
+            }
+        }
+    }
+
+    if (res && match(res.out, /OK/)) {
+        print(sprintf("{\"success\":true,\"msg\":\"子 AP (%s:%s) 连接成功！\"}\n", host, port));
+    } else {
+        let err_msg = trim((res ? res.out : "") || "连接失败或超时");
+        if (!pass && !fs.access(key)) {
+            err_msg = "未检测到免密公钥，请在密码框输入子 AP 登录密码后再进行测试或一键配对";
+        }
+        print(sprintf("{\"success\":false,\"error\":\"无法连接子 AP (%s:%s): %s\"}\n", host, port, err_msg));
+    }
+} else if (action == "pair_ap") {
+    let input_raw = fs.readfile("/dev/stdin") || "";
+    let p = {};
+    try { p = json(input_raw) || {}; } catch(e) {}
+
+    let host = p.host || ARGV[1] || uci.get("omniclash", "config", "ap_host") || AP_HOST;
+    let port = p.port || uci.get("omniclash", "config", "ap_port") || "22";
+    let user = p.user || uci.get("omniclash", "config", "ap_user") || "root";
+    let pass = p.password || uci.get("omniclash", "config", "ap_password") || "";
+    let key = uci.get("omniclash", "config", "ap_key") || DROPBEAR_KEY;
+
+    if (!pass) {
+        print("{\"success\":false,\"error\":\"请提供子 AP 的 SSH 登录密码以执行首次公钥配对\"}\n");
+    } else {
+        if (!fs.access(key)) {
+            shell_exec(sprintf("mkdir -p /root/.ssh && dropbearkey -t ed25519 -f '%s' >/dev/null 2>&1", key));
+        }
+
+        let pk_res = shell_exec(sprintf("dropbearkey -y -f '%s' | grep '^ssh-'", key));
+        let pubkey = trim(pk_res.out || "");
+        if (!pubkey) {
+            print("{\"success\":false,\"error\":\"无法提取本地 SSH 公钥\"}\n");
+        } else {
+            let escaped_pass = replace(pass, "'", "'\\''");
+            let escaped_pub = replace(pubkey, "'", "'\\''");
+            let deploy_cmd = sprintf("mkdir -p /etc/dropbear && grep -q -F '%s' /etc/dropbear/authorized_keys 2>/dev/null || echo '%s' >> /etc/dropbear/authorized_keys", escaped_pub, escaped_pub);
+            let escaped_deploy = replace(deploy_cmd, "'", "'\\''");
+
+            let dep_res = shell_exec(sprintf("sshpass -p '%s' dbclient -y -y -p '%s' '%s@%s' '%s' 2>&1", escaped_pass, port, user, host, escaped_deploy));
+
+            let test_res = shell_exec(sprintf("dbclient -y -y -p '%s' -i '%s' '%s@%s' 'echo OK' 2>&1", port, key, user, host));
+            if (match(test_res.out, /OK/)) {
+                uci.set("omniclash", "config", "ap_host", host);
+                uci.set("omniclash", "config", "ap_port", port);
+                uci.set("omniclash", "config", "ap_user", user);
+                uci.commit("omniclash");
+                print(sprintf("{\"success\":true,\"msg\":\"🎉 成功与子 AP (%s:%s) 建立 SSH 密钥免密互信！后续将实现毫秒级快速通信。\"}\n", host, port));
+            } else {
+                print(sprintf("{\"success\":false,\"error\":\"密钥下发后验证失败: %s\"}\n", trim(test_res.out || dep_res.out || "连接超时")));
+            }
+        }
+    }
 } else if (action == "init_all_32") {
     print("[OmniClash] 开始一键生成 AP 网卡最大能力 32 满额架构...\n");
     let net_cmds = [];
@@ -682,9 +876,50 @@ if (action == "compile") {
 
     uci.commit("omniclash");
     shell_exec(join("\n", net_cmds) + "\nuci commit network; uci commit dhcp; uci commit firewall; /etc/init.d/network reload; /etc/init.d/dnsmasq reload; /etc/init.d/firewall reload;");
-    ap_exec(join("\n", ap_cmds) + "\nuci commit network; uci commit wireless; /etc/init.d/network reload; wifi reload;");
+    wireless_exec(join("\n", ap_cmds) + "\nuci commit network; uci commit wireless; /etc/init.d/network reload; wifi reload;");
 
     compile_config();
     shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
     print("{\"success\":true,\"msg\":\"32满额WiFi全架构常驻初始化完成！\"}\n");
+} else if (action == "save_wifi_normal") {
+    let input_raw = fs.readfile("/dev/stdin") || "";
+    let p = {};
+    try { p = json(input_raw) || {}; } catch(e) {}
+    let items = p.items || [];
+    fs.writefile(NORMAL_WIFI_FILE, sprintf("%.J\n", items));
+
+    for (let item in items) {
+        let sec = (item.band == "5g") ? "default_radio1" : "default_radio0";
+        wireless_exec(sprintf("
+            uci -q set wireless.%s.ssid='%s'
+            uci -q set wireless.%s.key='%s'
+            uci -q set wireless.%s.disabled='%s'
+        ", sec, item.ssid, item.key, item.disabled ? "1" : "0"));
+    }
+    wireless_exec("uci commit wireless; wifi reload");
+    print("{\"success\":true,\"msg\":\"标准普通 WiFi 已成功保存并同步！\"}\n");
+} else if (action == "reset_wifi_normal") {
+    if (fs.access(NORMAL_WIFI_DEF_FILE)) {
+        fs.writefile(NORMAL_WIFI_FILE, fs.readfile(NORMAL_WIFI_DEF_FILE));
+    }
+    let items = json(fs.readfile(NORMAL_WIFI_FILE) || "[]");
+    for (let item in items) {
+        let sec = (item.band == "5g") ? "default_radio1" : "default_radio0";
+        wireless_exec(sprintf("
+            uci -q set wireless.%s.ssid='%s'
+            uci -q set wireless.%s.key='%s'
+            uci -q set wireless.%s.disabled='%s'
+        ", sec, item.ssid, item.key, item.disabled ? "1" : "0"));
+    }
+    wireless_exec("uci commit wireless; wifi reload");
+    print("{\"success\":true,\"msg\":\"标准普通 WiFi 已恢复默认并生效！\"}\n");
+} else if (action == "reset_matrix_32") {
+    uci.foreach("omniclash", "slot", function(s) {
+        uci.delete("omniclash", s[".name"]);
+    });
+    uci.commit("omniclash");
+    let p = fs.popen("/usr/bin/omniclash init_all_32");
+    let out = p ? p.read("all") : "";
+    if (p) p.close();
+    print("{\"success\":true,\"msg\":\"32-WiFi 矩阵已成功重置为全量默认架构！\"}\n");
 }

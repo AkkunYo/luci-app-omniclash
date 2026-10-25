@@ -1,0 +1,799 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Project-Id-Version: luci-app-omniclash\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "%d minutes ago"
+msgstr "%d 分钟前"
+
+msgid "%d seconds ago"
+msgstr "%d 秒前"
+
+msgid "%sd %sh %sm"
+msgstr "%s天 %s小时 %s分钟"
+
+msgid "(Default: 0 3 * * * Daily at 03:00)"
+msgstr "(默认 0 3 * * * 每天凌晨3点)"
+
+msgid "(Default: 1080)"
+msgstr "(默认 1080)"
+
+msgid "(Default: 7890, supports HTTP/SOCKS5 mixed)"
+msgstr "(默认 7890，支持 HTTP/SOCKS5 混合连接)"
+
+msgid "+ Add Provider"
+msgstr "+ 添加新 Provider"
+
+msgid "+ Add Proxy Group"
+msgstr "+ 添加新策略组"
+
+msgid "+ Add Rule"
+msgstr "+ 添加新规则"
+
+msgid "1. Traffic Proxy & System TUN Settings"
+msgstr "1. 流量代理与系统 TUN 设置 (对标 Nikki 核心代理能力)"
+
+msgid "2. Inbound Proxy Ports"
+msgstr "2. 本地代理端口设置 (对标 Nikki 端口能力)"
+
+msgid "3. DNS & Fake-IP Settings"
+msgstr "3. DNS 模块与 Fake-IP 设置 (对标 Nikki DNS 能力)"
+
+msgid "32-WiFi architecture deployed to child AP successfully!"
+msgstr "全套 32-WiFi 架构已成功部署至子 AP！"
+
+msgid "32-WiFi matrix reset to defaults successfully!"
+msgstr "32-WiFi 矩阵已成功恢复为默认配置！"
+
+msgid "4. Logging & Scheduled Restart"
+msgstr "4. 核心日志与定时守护 (对标 Nikki 日志与 Cron 能力)"
+
+msgid "AP Host IP"
+msgstr "子 AP IP 地址"
+
+msgid "AP Physical Capacity"
+msgstr "网卡物理容量"
+
+msgid "AP Provisioning & Clone"
+msgstr "AP 场景复刻与初始化"
+
+msgid "AP configuration saved successfully!"
+msgstr "子 AP 配置已成功保存！"
+
+msgid "AP connected successfully!"
+msgstr "子 AP 连接成功！"
+
+msgid "Actions"
+msgstr "开关与操作"
+
+msgid "All settings, providers, groups, and rules successfully saved and applied!"
+msgstr "全量设置、Provider订阅、策略组与分流规则已全部保存并合流生效！"
+
+msgid "All slots ready"
+msgstr "已全部满额就绪"
+
+msgid "Already on latest version or updated successfully."
+msgstr "当前已是最新版本或已成功更新。"
+
+msgid "App Version"
+msgstr "插件版本"
+
+msgid "App check/update completed! Current app version: %s"
+msgstr "插件检查/更新完成！当前插件版本: %s"
+
+msgid "App update failed"
+msgstr "插件更新失败"
+
+msgid "Are you sure you want to deploy full 32-WiFi architecture to the child AP?\nThis will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
+msgstr "确定要向子 AP 部署全套 32-WiFi 架构吗？\n将全自动配置 AP 与主路由网络并重载无线。"
+
+msgid "Are you sure you want to reset all 32-WiFi slots to defaults?"
+msgstr "确定要将全部 32 个 WiFi 槽位恢复为默认配置吗？"
+
+msgid "Are you sure you want to reset proxy groups to default template?\nThis will reset all dedicated lines, regions, and application groups."
+msgstr "确定要将策略组恢复为全套默认模板吗？\n将重置所有专线组、地区组与应用组配置。"
+
+msgid "Are you sure you want to reset standard WiFi to defaults?"
+msgstr "确定要将标准普通 WiFi 恢复为默认配置吗？"
+
+msgid "Are you sure you want to reset to default rules?\nThis will reset 69+ rules including AI, YouTube, Google, and DIRECT."
+msgstr "确定要恢复为系统默认全套分流规则库吗？\n将重置包含 AI、YouTube、Google、私网与国内直连等 69+ 条规则。"
+
+msgid "Assigned VLAN"
+msgstr "分配独立 VLAN"
+
+msgid "Auto Pair & Trust"
+msgstr "一键建立免密互信"
+
+msgid "Auto-detect (Recommended)"
+msgstr "自动检测推荐"
+
+msgid "Auto-start: Disabled"
+msgstr "开机自启: 已禁用"
+
+msgid "Auto-start: Enabled"
+msgstr "开机自启: 已启用"
+
+msgid "Automated Deployment Steps"
+msgstr "全自动部署下发清单"
+
+msgid "Available: %s MB"
+msgstr "可用: %s MB"
+
+msgid "Band"
+msgstr "频段"
+
+msgid "Broadcast Status"
+msgstr "广播状态"
+
+msgid "Broadcasting"
+msgstr "广播中"
+
+msgid "Bypass China Mainland IP"
+msgstr "绕过中国大陆 IP"
+
+msgid "Bypassing cache..."
+msgstr "正在穿透抓取..."
+
+msgid "Cache bypassed and refreshed! Synchronized latest AP and router status."
+msgstr "缓存已穿透刷新，已同步 AP 与主路由最新状态！"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Check & Update App"
+msgstr "检查并更新插件"
+
+msgid "Check & Update Core"
+msgstr "检查并更新核心"
+
+msgid "Check Update"
+msgstr "检查更新"
+
+msgid "Checking & Updating Mihomo Core"
+msgstr "正在检查并升级 Mihomo 核心"
+
+msgid "Checking & Updating OmniClash"
+msgstr "正在检查并升级 OmniClash 插件"
+
+msgid "Checking and updating /usr/bin/mihomo core binary from releases..."
+msgstr "正在通过软件源 / GitHub Releases 检查并升级 /usr/bin/mihomo 核心二进制..."
+
+msgid "Checking and updating luci-app-omniclash from software repository..."
+msgstr "正在通过软件源 / GitHub Releases 检查并升级 luci-app-omniclash 插件..."
+
+msgid "Child AP Configuration & Authentication"
+msgstr "子 AP 连接与认证配置"
+
+msgid "Child AP SSH login password (used for initial pairing; optional after key trust is established)."
+msgstr "子 AP 登录密码 (用于首次一键建立公钥互信；已免密后可留空)。"
+
+msgid "Child AP Settings"
+msgstr "子 AP 设置"
+
+msgid "Child AP: Automatically create 32 802.1Q VLAN bridges (br-vlan101 ~ br-vlan132 on br-lan.101~132)"
+msgstr "子 AP 侧：自动创建 32 组 802.1Q VLAN 虚拟网桥 (br-vlan101 ~ br-vlan132 绑定 br-lan.101~132)"
+
+msgid "Clear Logs"
+msgstr "清空日志"
+
+msgid "Clearing Logs"
+msgstr "正在清空日志"
+
+msgid "Clearing core and plugin log files..."
+msgstr "正在清空内核日志与插件日志..."
+
+msgid "Communication Test"
+msgstr "通信与互信测试"
+
+msgid "Compile & Reload"
+msgstr "合流编译并热重载"
+
+msgid "Compiling Configuration"
+msgstr "正在合流编译"
+
+msgid "Compiling template and provider node pool with seamless reload..."
+msgstr "正在执行模板+节点池合流并平滑热重载..."
+
+msgid "Configure Child AP"
+msgstr "配置子 AP"
+
+msgid "Configured proxy groups (dedicated lines, regions, application groups). Automatically connects all provider subscriptions, filtered by node prefix and regex."
+msgstr "预置全套策略组（专线组、地区组、应用分流组）。各组自动接入全量 Provider 节点池，由节点前缀与正则统一精准过滤。"
+
+msgid "Confirm Fill All (%d slots)"
+msgstr "确认一键补全 (%d 个)"
+
+msgid "Copy All"
+msgstr "复制全部"
+
+msgid "Core Settings"
+msgstr "核心与高级设置"
+
+msgid "Core Version"
+msgstr "核心版本"
+
+msgid "Core check/update completed! Current core version: %s"
+msgstr "核心检查/更新完成！当前核心版本: %s"
+
+msgid "Core configuration successfully compiled and reloaded!"
+msgstr "核心配置已成功合流热重载！"
+
+msgid "Core update failed"
+msgstr "核心更新失败"
+
+msgid "Cron Expression"
+msgstr "定时 Cron 表达式"
+
+msgid "DNS Mode"
+msgstr "DNS 运行模式"
+
+msgid "Debug (Troubleshooting)"
+msgstr "Debug (深度排错)"
+
+msgid "Dedicated (VLAN %s)"
+msgstr "独立段 (VLAN %s)"
+
+msgid "Dedicated VLAN"
+msgstr "独立 VLAN 网段"
+
+msgid "Default Key"
+msgstr "预设密码"
+
+msgid "Default SSID"
+msgstr "预设 WiFi 名称 (SSID)"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Deploy Full 32-WiFi Architecture to AP"
+msgstr "一键向子 AP 部署全套 32-WiFi 架构"
+
+msgid "Deploy full 32-WiFi architecture to newly flashed child AP with a single click. Ideal for reproducing this setup on new routers or fresh setups."
+msgstr "专为换新子 AP 或新网络场景打造的一键初始化向导。一键将整套 32 组 VLAN 网桥与物理无线架构完整下发到全新 AP。"
+
+msgid "Deploying 32-WiFi Architecture"
+msgstr "正在部署 32-WiFi 全套架构"
+
+msgid "Deploying SSH Key Trust"
+msgstr "正在建立 SSH 密钥免密互信"
+
+msgid "Deploying SSH public key to child AP for passwordless communication..."
+msgstr "正在向子 AP 下发本地 SSH 公钥以实现免密极速通信..."
+
+msgid "Disable"
+msgstr "关闭广播"
+
+msgid "Disabled"
+msgstr "已关闭"
+
+msgid "Disabled (Managed by OmniClash rules, Recommended)"
+msgstr "关闭 (由 OmniClash 槽位规则决定，推荐)"
+
+msgid "Dismiss"
+msgstr "关闭"
+
+msgid "Dynamically compiled from settings, providers, groups, rules, and 32-WiFi matrix (read-only)."
+msgstr "由【基础设置 + 节点池 + 策略组 + 分流规则 + 32-WiFi 矩阵】动态合流编译生成，只读展示。"
+
+msgid "Enable"
+msgstr "开启广播"
+
+msgid "Enable Service"
+msgstr "启用服务"
+
+msgid "Enable scheduled task"
+msgstr "启用定时任务"
+
+msgid "Enabled (Bypass CN IP directly)"
+msgstr "开启 (内核直接绕过大陆 IP)"
+
+msgid "Enterprise Mihomo Controller & 32-WiFi AP Matrix"
+msgstr "企业级 Mihomo 内核控制与 32-WiFi AP 矩阵"
+
+msgid "Failed to connect to AP"
+msgstr "无法连接到子 AP"
+
+msgid "Failed to deploy SSH key trust"
+msgstr "建立 SSH 密钥免密互信失败"
+
+msgid "Failed to fetch update from repository."
+msgstr "无法从软件源获取更新。"
+
+msgid "Fake-IP (Recommended)"
+msgstr "Fake-IP (虚拟 IP，秒开推荐)"
+
+msgid "Fake-IP Range"
+msgstr "Fake-IP 网段范围"
+
+msgid "Fast cache hit, updated %s"
+msgstr "极速缓存已命中，更新于 %s"
+
+msgid "Fill All (%d slots)"
+msgstr "一键补全 (%d 个)"
+
+msgid "Fill All Remaining WiFi (%d slots)"
+msgstr "一键补全剩余全部 WiFi (%d 个)"
+
+msgid "Fill All Remaining WiFi Slots"
+msgstr "一键补全剩余全部 WiFi"
+
+msgid "Fillable: %d slots"
+msgstr "剩余可一键补全: %d 个"
+
+msgid "Filling All Slots"
+msgstr "正在一键补全全部槽位"
+
+msgid "Filter Regex (e.g. (?i)HK|HongKong)"
+msgstr "节点筛选正则 (如 (?i)HK|香港)"
+
+msgid "Final Compiled Configuration (/etc/omniclash/run/config.yaml)"
+msgstr "最终合流运行配置 (/etc/omniclash/run/config.yaml)"
+
+msgid "Firewall: Inject input/forward accept chains into fw4 and bind Mihomo 6-tier routing pipeline"
+msgstr "防火墙与规则：自动向 fw4 注入全量子网放行链，并接管 Mihomo 六层分流流水线"
+
+msgid "General Routing (Default Fallback)"
+msgstr "通用分流 (按序兜底)"
+
+msgid "Group Name"
+msgstr "策略组名称"
+
+msgid "Group Type"
+msgstr "组类型"
+
+msgid "Hardware capacity is already full (5G 16/16, 2.4G 16/16)!"
+msgstr "当前网卡容量已全部加满 (5G 16/16, 2.4G 16/16)，无需加满！"
+
+msgid "High-Performance Mode (Full Features)"
+msgstr "极速性能模式 (全功能与策略组)"
+
+msgid "Info (Detailed, Recommended)"
+msgstr "Info (正常详细，推荐)"
+
+msgid "Initializing VLANs, DHCP, AP radios, and routing rules, please wait 5~8 seconds..."
+msgstr "正在初始化补全全量 VLAN、DHCP、AP 射频与规则链，请稍候约 5~8 秒..."
+
+msgid "Interval (s)"
+msgstr "更新周期(秒)"
+
+msgid "Live Mihomo core log stream (auto-scrolls every 3 seconds)"
+msgstr "实时监听 Mihomo 核心运行日志流（每 3 秒自动滚动更新）"
+
+msgid "Loading 32-slot AP matrix..."
+msgstr "正在读取 32 满额 AP 矩阵..."
+
+msgid "Local Host Mode (Single All-in-One Router)"
+msgstr "本机单主机模式 (单台带无线一体机)"
+
+msgid "Log Level"
+msgstr "内核日志等级"
+
+msgid "Logs"
+msgstr "运行日志"
+
+msgid "Logs cleared, waiting for new entries..."
+msgstr "日志已清空，等待新日志写入..."
+
+msgid "Low-Memory Compact Mode (Optimized for <= 256MB)"
+msgstr "轻量小内存模式 (专为 <= 256MB 极限调优)"
+
+msgid "Main Router: Automatically configure 32 independent static VLAN subnets (192.168.101.1/24 ~ 132.1/24) and DHCP pools"
+msgstr "主路由侧：自动配置 32 组独立静态 VLAN 子网接口 (192.168.101.1/24 ~ 132.1/24) 与 DHCP 地址池"
+
+msgid "Manage external node pool subscriptions. Only imports proxy nodes without overwriting local rules."
+msgstr "管理所有外部节点池子订阅。仅提取服务器节点注入本地，绝不覆盖本地任何规则。"
+
+msgid "Memory: %s | High-Performance Mode Active: Full proxy groups and fine-grained application rule streams enabled."
+msgstr "设备内存: %s | 极速性能模式运行中：硬件性能充裕，启用完整策略组与精细分流规则流水线。"
+
+msgid "Memory: %s | Low-Memory Mode Active: GeoData disabled, process tracking off, saving 40MB+ RAM to prevent OOM on 256MB devices."
+msgstr "设备内存: %s | 轻量小内存模式运行中：已禁用臃肿 GeoData 数据库（立省 40MB+ 内存）、关闭进程追踪与大缓存，保障 256MB 硬件 7x24h 零 OOM 稳定运行。"
+
+msgid "Mihomo Core Update Result"
+msgstr "Mihomo 核心更新检查结果"
+
+msgid "Mixed"
+msgstr "Mixed (混合模式)"
+
+msgid "Mixed Proxy Port"
+msgstr "Mixed 混合代理端口"
+
+msgid "Mode Settings"
+msgstr "模式设置"
+
+msgid "Mode settings saved and applied successfully!"
+msgstr "模式设置已保存并生效！"
+
+msgid "Multi-WiFi Matrix Mode (32 Dedicated Slots, Recommended)"
+msgstr "多 WiFi 矩阵模式 (32 槽位独立分流，推荐)"
+
+msgid "New Group"
+msgstr "新策略组"
+
+msgid "No local Wi-Fi module detected on this host. Operating in Remote Child AP mode."
+msgstr "当前主机未检测到板载无线硬件，自动固定为下接子 AP 模式。"
+
+msgid "No logs"
+msgstr "暂无日志"
+
+msgid "No proxy groups configured. Click \"+ Add Proxy Group\" or \"Reset to Default Groups\"."
+msgstr "暂无策略组，可点击【+ 添加新策略组】或【恢复默认策略组】"
+
+msgid "No routing rules configured. Click \"+ Add Rule\" or \"Reset to Default Rules\"."
+msgstr "暂无分流规则，可点击【+ 添加新规则】或【恢复默认规则库】"
+
+msgid "No running logs available"
+msgstr "暂无运行日志"
+
+msgid "No standard WiFi interfaces found."
+msgstr "未检测到标准普通 WiFi 接口。"
+
+msgid "No subscription providers configured. Click \"+ Add Provider\" below."
+msgstr "暂无子订阅 Provider，点击下方【+ 添加新 Provider】添加"
+
+msgid "No-Resolve"
+msgstr "不解析IP"
+
+msgid "Node Filter (Regex)"
+msgstr "节点筛选正则 (Filter)"
+
+msgid "Node Prefix"
+msgstr "节点前缀"
+
+msgid "Not found: /usr/bin/mihomo"
+msgstr "未检测到 /usr/bin/mihomo"
+
+msgid "Not Running"
+msgstr "未运行"
+
+msgid "Not installed"
+msgstr "未安装"
+
+msgid "OK"
+msgstr "确定"
+
+msgid "OK & Refresh Page"
+msgstr "确定并刷新页面"
+
+msgid "OmniClash"
+msgstr "OmniClash"
+
+msgid "OmniClash Live Logs"
+msgstr "OmniClash 实时运行日志"
+
+msgid "OmniClash Overview"
+msgstr "OmniClash 运行概览"
+
+msgid "OmniClash Standard WiFi Settings"
+msgstr "OmniClash 标准普通 WiFi 设置"
+
+msgid "OmniClash Subscription & Routing Hub"
+msgstr "OmniClash 订阅与分流中枢"
+
+msgid "OmniClash Update Result"
+msgstr "OmniClash 插件更新检查结果"
+
+msgid "OmniClash Wireless AP Management Hub"
+msgstr "OmniClash 无线 AP 管理中枢"
+
+msgid "OmniClash Wireless AP Matrix"
+msgstr "OmniClash 无线 AP 矩阵管理"
+
+msgid "One-Click AP Provisioning & Cloning"
+msgstr "子 AP 架构一键复刻与初始化"
+
+msgid "Online Clients"
+msgstr "在线设备"
+
+msgid "Open Dashboard (Zashboard)"
+msgstr "打开控制面板 (Zashboard)"
+
+msgid "Operating Mode"
+msgstr "运行工作模式"
+
+msgid "Operating Mode: Child AP Matrix (%s)"
+msgstr "运行模式: 下接子 AP 矩阵 (%s)"
+
+msgid "Operating Mode: Local Host Matrix"
+msgstr "运行模式: 本机单主机矩阵"
+
+msgid "Optional if key trust established"
+msgstr "已建立免密互信可留空"
+
+msgid "Overview"
+msgstr "运行概览"
+
+msgid "Pairing..."
+msgstr "正在配对..."
+
+msgid "Payload (Domain / IP / GeoTag)"
+msgstr "匹配条件 (域名 / IP段 / GeoTag)"
+
+msgid "Payload (e.g. openai, cn, 192.168.1.0/24)"
+msgstr "匹配值 (如 openai, cn, 192.168.1.0/24)"
+
+msgid "Performance Profile"
+msgstr "性能配置预设"
+
+msgid "Please enter the AP SSH password first to deploy key trust!"
+msgstr "请先输入子 AP 的 SSH 登录密码以部署密钥互信！"
+
+msgid "Preconfigured 69+ rule library. Supports modifying match criteria, target groups, and reordering priority."
+msgstr "预置全套 69+ 规则库。支持直接修改匹配条件与走向策略组，支持上移/下移调整优先级。"
+
+msgid "Prefix (e.g. vc_)"
+msgstr "前缀 (如 vc_)"
+
+msgid "Provider Subscriptions"
+msgstr "Provider 订阅集"
+
+msgid "Provider Subscriptions Source List"
+msgstr "云端 Provider 子订阅源列表"
+
+msgid "Provider Tag"
+msgstr "Provider 标识"
+
+msgid "Proxy Groups"
+msgstr "分流节点组"
+
+msgid "Proxy groups successfully restored to default template!"
+msgstr "策略组已成功恢复为默认模板！"
+
+msgid "Quick Actions"
+msgstr "快捷操作"
+
+msgid "Radios: Bind 5G and 2.4G physical radios to 32 BSSID slots (16 5G + 16 2.4G) with 1:1 symmetry"
+msgstr "物理射频：将 5G 与 2.4G 双频无线网卡与 32 个虚拟 BSSID 槽位 1:1 对称绑定"
+
+msgid "Recommended to keep disabled; OmniClash slot rules determine direct connection vs proxies."
+msgstr "建议保持关闭，由 OmniClash 槽位规则决定直连还是走专线。"
+
+msgid "Redir-Host (Real IP)"
+msgstr "Redir-Host (真实 IP)"
+
+msgid "Redirect"
+msgstr "Redirect (重定向)"
+
+msgid "Refresh"
+msgstr "立即刷新"
+
+msgid "Refresh (Bypass Cache)"
+msgstr "刷新状态 (穿透缓存)"
+
+msgid "Refresh Config"
+msgstr "刷新配置"
+
+msgid "Refreshed latest running configuration!"
+msgstr "已刷新最新运行配置！"
+
+msgid "Remote Child AP Mode (Main Router + AP, Recommended)"
+msgstr "下接子 AP 模式 (主路由 + 子AP联动，推荐)"
+
+msgid "Reset"
+msgstr "重置"
+
+msgid "Reset to Default Groups"
+msgstr "恢复默认策略组"
+
+msgid "Reset to Default Matrix"
+msgstr "恢复默认多 WiFi 矩阵"
+
+msgid "Reset to Default Normal WiFi"
+msgstr "恢复默认标准 WiFi"
+
+msgid "Reset to Default Rules"
+msgstr "恢复默认规则库"
+
+msgid "Resetting"
+msgstr "正在恢复"
+
+msgid "Resetting 32-WiFi matrix to defaults..."
+msgstr "正在将 32-WiFi 矩阵恢复为默认配置..."
+
+msgid "Resetting default proxy groups template..."
+msgstr "正在恢复默认策略组模板..."
+
+msgid "Resetting default routing rules..."
+msgstr "正在恢复默认分流规则库..."
+
+msgid "Resetting standard WiFi to defaults..."
+msgstr "正在恢复默认标准普通 WiFi..."
+
+msgid "Routing Target"
+msgstr "分流走向"
+
+msgid "Routing rules successfully restored to default!"
+msgstr "分流规则已成功恢复为默认规则库！"
+
+msgid "Rule Type"
+msgstr "规则类型"
+
+msgid "Rules"
+msgstr "分流规则 (Rule)"
+
+msgid "Running (PID: %s)"
+msgstr "运行中 (PID: %s)"
+
+msgid "Running Config (Readonly)"
+msgstr "运行配置 (只读)"
+
+msgid "Running Status"
+msgstr "运行状态"
+
+msgid "Running configuration copied to clipboard!"
+msgstr "运行配置已复制到剪贴板！"
+
+msgid "Running logs cleared successfully!"
+msgstr "运行日志已全部清空！"
+
+msgid "SOCKS5 Port"
+msgstr "SOCKS5 独立端口"
+
+msgid "SSH Password"
+msgstr "SSH 登录密码"
+
+msgid "SSH Port"
+msgstr "SSH 端口"
+
+msgid "SSH User"
+msgstr "登录用户名"
+
+msgid "SSH key trust successfully deployed!"
+msgstr "SSH 密钥免密互信建立成功！"
+
+msgid "SSID cannot be empty and password must be at least 8 characters!"
+msgstr "SSID 不能为空且 WiFi 密码必须至少 8 位！"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Save & Apply"
+msgstr "保存并应用"
+
+msgid "Save Mode Settings"
+msgstr "保存模式设置"
+
+msgid "Saving"
+msgstr "正在保存"
+
+msgid "Saving & Applying"
+msgstr "Saving & Applying"
+
+msgid "Saving operating modes and reloading configuration..."
+msgstr "正在保存运行模式并重载核心配置..."
+
+msgid "Saving settings, providers, groups, rules, and compiling configuration..."
+msgstr "正在写入全量核心设置、Provider、策略组与分流规则并合流生效..."
+
+msgid "Saving standard WiFi settings and smoothly reloading wireless..."
+msgstr "正在保存标准普通 WiFi 配置并平滑重载无线..."
+
+msgid "Scheduled Restart"
+msgstr "开启定时重启/重载"
+
+msgid "Slot"
+msgstr "序号"
+
+msgid "Standard Dual-Band WiFi (5G / 2.4G) | Stored in /etc/omniclash/wifi_normal.json"
+msgstr "标准双频 WiFi (5G / 2.4G) | 独立存储于 /etc/omniclash/wifi_normal.json"
+
+msgid "Standard Normal WiFi Mode (Dual-Band 2.4G/5G)"
+msgstr "标准普通 WiFi 模式 (标准双频 2.4G/5G)"
+
+msgid "Standard WiFi reset to defaults successfully!"
+msgstr "标准普通 WiFi 已恢复默认！"
+
+msgid "Standard WiFi settings saved and applied successfully!"
+msgstr "标准普通 WiFi 配置已保存并成功同步！"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Structured Proxy Groups"
+msgstr "结构化分流策略组全景"
+
+msgid "Subscription & Routing"
+msgstr "订阅与分流"
+
+msgid "Subscription URL"
+msgstr "订阅文件地址 URL"
+
+msgid "Successfully filled full WiFi matrix!"
+msgstr "已成功一键补全全部满额 WiFi 矩阵！"
+
+msgid "Switch between 32-slot matrix and standard dual-band WiFi. Configurations are stored separately."
+msgstr "自由在 32 槽位矩阵与标准普通 WiFi 间切换，两套配置独立安全存储。"
+
+msgid "Switching"
+msgstr "正在切换"
+
+msgid "Switching WiFi #%s to %s..."
+msgstr "正在切换 WiFi #%s 为 %s..."
+
+msgid "Synchronizing WiFi #%s and smoothly reloading wireless..."
+msgstr "正在双向同步 WiFi #%s 并平滑重载无线..."
+
+msgid "System (Kernel Native, High Performance)"
+msgstr "System (内核原生，极高性能)"
+
+msgid "System TUN Stack"
+msgstr "系统 TUN 网络堆栈"
+
+msgid "System Uptime"
+msgstr "系统连续运行时间"
+
+msgid "System will automatically link AP radios, dedicated VLANs, DHCP pools, and routing rules to fill all empty slots."
+msgstr "系统将全自动联动 AP 物理射频、主路由独立 VLAN 子网、DHCP 池与通用分流链，一键补齐所有空缺名额。"
+
+msgid "TCP Proxy Mode"
+msgstr "TCP 代理模式"
+
+msgid "TPROXY (Transparent Proxy)"
+msgstr "TPROXY (透明代理)"
+
+msgid "TUN (Pure TUN Mode, Recommended)"
+msgstr "TUN (纯 TUN 模式，零泄漏推荐)"
+
+msgid "Tag (e.g. vpscloud)"
+msgstr "标识名 (如 vpscloud)"
+
+msgid "Target (Group / DIRECT / REJECT)"
+msgstr "走向 (策略组/直连/拦截)"
+
+msgid "Test Connection"
+msgstr "测试连通性"
+
+msgid "Testing AP Connection"
+msgstr "正在测试 AP 连接"
+
+msgid "Testing SSH connection to %s..."
+msgstr "正在测试与子 AP (%s) 的 SSH 连通性..."
+
+msgid "Testing..."
+msgstr "正在连接..."
+
+msgid "Toggling wireless broadcast..."
+msgstr "正在切换无线广播状态..."
+
+msgid "Traffic Routing Rules"
+msgstr "全量分流规则表 (Rule)"
+
+msgid "UDP Proxy Mode"
+msgstr "UDP 代理模式"
+
+msgid "Warning (Lightweight)"
+msgstr "Warning (仅告警，轻量)"
+
+msgid "WiFi #%s %s successfully!"
+msgstr "WiFi #%s %s成功！"
+
+msgid "WiFi #%s (%s) SSID and password synchronized successfully!"
+msgstr "WiFi #%s (%s) 名称与密码已双向同步成功！"
+
+msgid "WiFi AP Matrix"
+msgstr "WiFi 矩阵管理"
+
+msgid "WiFi Name (SSID)"
+msgstr "WiFi 名称 (SSID)"
+
+msgid "WiFi Password"
+msgstr "WiFi 密码"
+
+msgid "WiFi Settings"
+msgstr "WiFi 设置"
+
+msgid "Wireless Running Mode"
+msgstr "无线运行模式"
+
+msgid "Wireless Topology & Operating Mode"
+msgstr "无线拓扑与运作模式"
+
+msgid "Wireless broadcast status updated!"
+msgstr "无线广播状态已更新！"
+
+msgid "gVisor (Userspace Sandbox)"
+msgstr "gVisor (用户态沙箱)"

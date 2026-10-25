@@ -1,0 +1,16 @@
+[
+  {
+    "id": "wifi_5g",
+    "band": "5g",
+    "ssid": "DevNet-5G",
+    "key": "12345678",
+    "disabled": false
+  },
+  {
+    "id": "wifi_2g",
+    "band": "2g",
+    "ssid": "DevNet-2.4G",
+    "key": "12345678",
+    "disabled": false
+  }
+]

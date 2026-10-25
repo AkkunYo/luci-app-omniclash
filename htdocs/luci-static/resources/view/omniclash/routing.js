@@ -122,7 +122,7 @@ return view.extend({
 			tbody.innerHTML = '';
 
 			if (providersList.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">暂无子订阅 Provider，点击下方【+ 添加新 Provider】添加</td></tr>';
+				tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">' + _('No subscription providers configured. Click "+ Add Provider" below.') + '</td></tr>';
 				return;
 			}
 
@@ -130,19 +130,19 @@ return view.extend({
 				var tr = document.createElement('tr');
 				tr.innerHTML = `
 					<td style="width: 140px;">
-						<input type="text" id="prov_name_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace; font-weight: bold;" value="${p.name || ''}" placeholder="标识名 (如 vpscloud)">
+						<input type="text" id="prov_name_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace; font-weight: bold;" value="${p.name || ''}" placeholder="${_('Tag (e.g. vpscloud)')}">
 					</td>
 					<td style="width: 90px;">
-						<input type="text" id="prov_prefix_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${p.prefix || ''}" placeholder="前缀(如 vc_)">
+						<input type="text" id="prov_prefix_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${p.prefix || ''}" placeholder="${_('Prefix (e.g. vc_)')}">
 					</td>
 					<td>
-						<input type="text" id="prov_url_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${p.url || ''}" placeholder="订阅文件地址 URL">
+						<input type="text" id="prov_url_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${p.url || ''}" placeholder="${_('Subscription URL')}">
 					</td>
 					<td style="width: 90px;">
 						<input type="text" id="prov_interval_${idx}" class="cbi-input-text" style="width: 100%; text-align: center;" value="${p.interval || '1800'}">
 					</td>
 					<td style="width: 70px; text-align: center;">
-						<button type="button" class="cbi-button cbi-button-remove" onclick="removeProvider(${idx})">删除</button>
+						<button type="button" class="cbi-button cbi-button-remove" onclick="removeProvider(${idx})">${_('Delete')}</button>
 					</td>
 				`;
 				tbody.appendChild(tr);
@@ -181,33 +181,29 @@ return view.extend({
 			tbody.innerHTML = '';
 
 			if (groupsList.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">暂无策略组，可点击【+ 添加新策略组】或【恢复默认策略组】</td></tr>';
+				tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">' + _('No proxy groups configured. Click "+ Add Proxy Group" or "Reset to Default Groups".') + '</td></tr>';
 				return;
 			}
 
 			groupsList.forEach(function(g, idx) {
 				var tr = document.createElement('tr');
-				var useStr = (g.use && g.use.length) ? g.use.join(', ') : '-';
 				var filterStr = g.filter || '';
 
 				tr.innerHTML = `
-					<td style="font-weight: bold; width: 40px;">${idx + 1}</td>
-					<td style="width: 180px;">
-						<input type="text" id="grp_name_${idx}" class="cbi-input-text" style="width: 100%; font-weight: bold; color: #2563eb;" value="${g.name || ''}" placeholder="组名称">
+					<td style="font-weight: bold; width: 40px; text-align: center;">${idx + 1}</td>
+					<td style="width: 220px;">
+						<input type="text" id="grp_name_${idx}" class="cbi-input-text" style="width: 100%; font-weight: bold; color: #2563eb;" value="${g.name || ''}" placeholder="${_('Group Name')}">
 					</td>
-					<td style="width: 120px;">
+					<td style="width: 140px;">
 						<select id="grp_type_${idx}" class="cbi-input-select" style="width: 100%;">
 							${groupTypes.map(t => `<option value="${t}" ${t === g.type ? 'selected' : ''}>${t}</option>`).join('')}
 						</select>
 					</td>
-					<td style="width: 220px;">
-						<input type="text" id="grp_filter_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${filterStr}" placeholder="节点过滤正则 (如 (?i)HK|香港)">
-					</td>
-					<td style="width: 150px;">
-						<input type="text" id="grp_use_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${useStr}" placeholder="使用Provider(逗号分隔)">
+					<td>
+						<input type="text" id="grp_filter_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${filterStr}" placeholder="${_('Filter Regex (e.g. (?i)HK|HongKong)')}">
 					</td>
 					<td style="width: 70px; text-align: center;">
-						<button type="button" class="cbi-button cbi-button-remove" onclick="removeGroup(${idx})">删除</button>
+						<button type="button" class="cbi-button cbi-button-remove" onclick="removeGroup(${idx})">${_('Delete')}</button>
 					</td>
 				`;
 				tbody.appendChild(tr);
@@ -222,20 +218,20 @@ return view.extend({
 
 		window.addGroup = function() {
 			syncGroupsFromDom();
-			groupsList.push({ name: '新策略组', type: 'select', filter: '', use: ['vpscloud'], proxies: ['🟢 直连'] });
+			groupsList.push({ name: _('New Group'), type: 'select', filter: '(?i)HK|香港', proxies: ['DIRECT'] });
 			renderGroupRows();
 		};
 
 		window.resetDefaultGroups = function() {
-			if (!confirm('确定要将策略组恢复为全套默认模板吗？\n将重置所有专线组、地区组与应用组配置。')) return;
-			ui.showModal(_('正在恢复'), [ E('p', { 'class': 'spinning' }, _('正在恢复默认策略组模板...')) ]);
+			if (!confirm(_('Are you sure you want to reset proxy groups to default template?\nThis will reset all dedicated lines, regions, and application groups.'))) return;
+			ui.showModal(_('Resetting'), [ E('p', { 'class': 'spinning' }, _('Resetting default proxy groups template...')) ]);
 			callResetGroups().then(function() {
 				return callGetGroups();
 			}).then(function(res) {
 				groupsList = (res && res.groups) ? res.groups : [];
 				renderGroupRows();
 				ui.hideModal();
-				ui.addNotification(null, E('p', {}, _('✅ 策略组已成功恢复为默认模板！')), 'success');
+				ui.addNotification(null, E('p', {}, '✅ ' + _('Proxy groups successfully restored to default template!')), 'success');
 			}).catch(function(err) {
 				ui.hideModal();
 				ui.addNotification(null, E('p', {}, err.message), 'error');
@@ -247,14 +243,9 @@ return view.extend({
 				var nameEl = document.getElementById('grp_name_' + idx);
 				var typeEl = document.getElementById('grp_type_' + idx);
 				var filterEl = document.getElementById('grp_filter_' + idx);
-				var useEl = document.getElementById('grp_use_' + idx);
 				if (nameEl) g.name = nameEl.value.trim();
 				if (typeEl) g.type = typeEl.value;
 				if (filterEl) g.filter = filterEl.value.trim();
-				if (useEl) {
-					var rawUse = useEl.value.trim();
-					g.use = (rawUse && rawUse !== '-') ? rawUse.split(',').map(s => s.trim()).filter(Boolean) : [];
-				}
 			});
 		}
 
@@ -265,7 +256,7 @@ return view.extend({
 			tbody.innerHTML = '';
 
 			if (rulesList.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">暂无分流规则，可点击【+ 添加新规则】或【恢复默认规则库】</td></tr>';
+				tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">' + _('No routing rules configured. Click "+ Add Rule" or "Reset to Default Rules".') + '</td></tr>';
 				return;
 			}
 
@@ -281,7 +272,7 @@ return view.extend({
 						</select>
 					</td>
 					<td>
-						<input type="text" id="rule_payload_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${r.payload || ''}" placeholder="匹配值 (如 openai, cn, 192.168.1.0/24)">
+						<input type="text" id="rule_payload_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${r.payload || ''}" placeholder="${_('Payload (e.g. openai, cn, 192.168.1.0/24)')}">
 					</td>
 					<td style="width: 180px;">
 						<select id="rule_target_${idx}" class="cbi-input-select" style="width: 100%;">
@@ -294,7 +285,7 @@ return view.extend({
 					<td style="width: 120px; text-align: center; white-space: nowrap;">
 						<button type="button" class="cbi-button" style="padding: 2px 6px; margin-right: 2px;" onclick="moveRule(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
 						<button type="button" class="cbi-button" style="padding: 2px 6px; margin-right: 4px;" onclick="moveRule(${idx}, 1)" ${idx === rulesList.length - 1 ? 'disabled' : ''}>↓</button>
-						<button type="button" class="cbi-button cbi-button-remove" style="padding: 2px 6px;" onclick="removeRule(${idx})">删</button>
+						<button type="button" class="cbi-button cbi-button-remove" style="padding: 2px 6px;" onclick="removeRule(${idx})">${_('Delete')}</button>
 					</td>
 				`;
 				tbody.appendChild(tr);
@@ -324,15 +315,15 @@ return view.extend({
 		};
 
 		window.resetDefaultRules = function() {
-			if (!confirm('确定要恢复为系统默认全套分流规则库吗？\n将重置包含 AI、YouTube、Google、私网与国内直连等 69+ 条规则。')) return;
-			ui.showModal(_('正在恢复'), [ E('p', { 'class': 'spinning' }, _('正在恢复默认分流规则库...')) ]);
+			if (!confirm(_('Are you sure you want to reset to default rules?\nThis will reset 69+ rules including AI, YouTube, Google, and DIRECT.'))) return;
+			ui.showModal(_('Resetting'), [ E('p', { 'class': 'spinning' }, _('Resetting default routing rules...')) ]);
 			callResetRules().then(function() {
 				return callGetRules();
 			}).then(function(res) {
 				rulesList = (res && res.rules) ? res.rules : [];
 				renderRuleRows();
 				ui.hideModal();
-				ui.addNotification(null, E('p', {}, _('✅ 分流规则已成功恢复为默认规则库！')), 'success');
+				ui.addNotification(null, E('p', {}, '✅ ' + _('Routing rules successfully restored to default!')), 'success');
 			}).catch(function(err) {
 				ui.hideModal();
 				ui.addNotification(null, E('p', {}, err.message), 'error');
@@ -374,7 +365,7 @@ return view.extend({
 			var validGroups = groupsList.filter(g => g.name);
 			var validRules = rulesList.filter(r => (r.type === 'MATCH' || r.payload));
 
-			ui.showModal(_('正在保存并应用'), [ E('p', { 'class': 'spinning' }, _('正在写入全量核心设置、Provider、策略组与分流规则并合流生效...')) ]);
+			ui.showModal(_('Saving & Applying'), [ E('p', { 'class': 'spinning' }, _('Saving settings, providers, groups, rules, and compiling configuration...')) ]);
 
 			uci.set('omniclash', 'config', 'tcp_mode', newTcp);
 			uci.set('omniclash', 'config', 'udp_mode', newUdp);
@@ -398,7 +389,7 @@ return view.extend({
 				return callCompileReload();
 			}).then(function() {
 				ui.hideModal();
-				ui.addNotification(null, E('p', {}, _('✅ 全量设置、Provider订阅、策略组与分流规则已全部保存并合流生效！')), 'success');
+				ui.addNotification(null, E('p', {}, '✅ ' + _('All settings, providers, groups, and rules successfully saved and applied!')), 'success');
 			}).catch(function(err) {
 				ui.hideModal();
 				ui.addNotification(null, E('p', {}, err.message), 'error');
@@ -406,7 +397,7 @@ return view.extend({
 		};
 
 		var viewEl = E('div', { 'class': 'cbi-map' }, [
-			E('h2', {}, _('OmniClash 订阅与分流中枢')),
+			E('h2', {}, _('OmniClash Subscription & Routing Hub')),
 
 			// 五大子 Tab 顶栏导航
 			E('div', {
@@ -418,113 +409,113 @@ return view.extend({
 					'data-tab': 'settings',
 					'style': 'background: none; border: none; padding: 10px 16px; font-size: 14px; cursor: pointer; border-bottom: 2px solid #3b82f6; color: #3b82f6; font-weight: bold;',
 					'click': function() { switchRoutingSubTab('settings'); }
-				}, _('⚙️ 核心与高级设置')),
+				}, '⚙️ ' + _('Core Settings')),
 				E('button', {
 					'type': 'button',
 					'class': 'subtab-btn',
 					'data-tab': 'providers',
 					'style': 'background: none; border: none; padding: 10px 16px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent;',
 					'click': function() { switchRoutingSubTab('providers'); }
-				}, _('📦 Provider 订阅集')),
+				}, '📦 ' + _('Provider Subscriptions')),
 				E('button', {
 					'type': 'button',
 					'class': 'subtab-btn',
 					'data-tab': 'groups',
 					'style': 'background: none; border: none; padding: 10px 16px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent;',
 					'click': function() { switchRoutingSubTab('groups'); }
-				}, _('🎯 分流节点组')),
+				}, '🎯 ' + _('Proxy Groups')),
 				E('button', {
 					'type': 'button',
 					'class': 'subtab-btn',
 					'data-tab': 'rules',
 					'style': 'background: none; border: none; padding: 10px 16px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent;',
 					'click': function() { switchRoutingSubTab('rules'); }
-				}, _('🔀 分流规则 (Rule)')),
+				}, '🔀 ' + _('Rules')),
 				E('button', {
 					'type': 'button',
 					'class': 'subtab-btn',
 					'data-tab': 'runconfig',
 					'style': 'background: none; border: none; padding: 10px 16px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent;',
 					'click': function() { switchRoutingSubTab('runconfig'); }
-				}, _('📄 运行配置 (只读)'))
+				}, '📄 ' + _('Running Config (Readonly)'))
 			]),
 
 			// 子 Tab 1: 核心与高级设置
 			E('div', { 'id': 'pane_settings', 'class': 'subtab-pane', 'style': 'display: block;' }, [
 				E('div', { 'class': 'cbi-section' }, [
-					E('h3', {}, _('1. 流量代理与系统 TUN 设置 (对标 Nikki 核心代理能力)')),
+					E('h3', {}, _('1. Traffic Proxy & System TUN Settings')),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('TCP 代理模式')),
+						E('label', { 'class': 'cbi-value-title' }, _('TCP Proxy Mode')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('select', { 'id': 'tab_tcp_mode', 'class': 'cbi-input-select', 'style': 'width: 280px;' }, [
-								E('option', { 'value': 'tun', 'selected': curTcpMode === 'tun' ? 'selected' : null }, _('TUN (纯 TUN 模式，零泄漏推荐)')),
-								E('option', { 'value': 'tproxy', 'selected': curTcpMode === 'tproxy' ? 'selected' : null }, _('TPROXY (透明代理)')),
-								E('option', { 'value': 'redirect', 'selected': curTcpMode === 'redirect' ? 'selected' : null }, _('Redirect (重定向)'))
+								E('option', { 'value': 'tun', 'selected': curTcpMode === 'tun' ? 'selected' : null }, _('TUN (Pure TUN Mode, Recommended)')),
+								E('option', { 'value': 'tproxy', 'selected': curTcpMode === 'tproxy' ? 'selected' : null }, _('TPROXY (Transparent Proxy)')),
+								E('option', { 'value': 'redirect', 'selected': curTcpMode === 'redirect' ? 'selected' : null }, _('Redirect'))
 							])
 						])
 					]),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('UDP 代理模式')),
+						E('label', { 'class': 'cbi-value-title' }, _('UDP Proxy Mode')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('select', { 'id': 'tab_udp_mode', 'class': 'cbi-input-select', 'style': 'width: 280px;' }, [
-								E('option', { 'value': 'tun', 'selected': curUdpMode === 'tun' ? 'selected' : null }, _('TUN (纯 TUN 模式，零泄漏推荐)')),
-								E('option', { 'value': 'tproxy', 'selected': curUdpMode === 'tproxy' ? 'selected' : null }, _('TPROXY (透明代理)'))
+								E('option', { 'value': 'tun', 'selected': curUdpMode === 'tun' ? 'selected' : null }, _('TUN (Pure TUN Mode, Recommended)')),
+								E('option', { 'value': 'tproxy', 'selected': curUdpMode === 'tproxy' ? 'selected' : null }, _('TPROXY (Transparent Proxy)'))
 							])
 						])
 					]),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('系统 TUN 网络堆栈')),
+						E('label', { 'class': 'cbi-value-title' }, _('System TUN Stack')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('select', { 'id': 'tab_tun_stack', 'class': 'cbi-input-select', 'style': 'width: 280px;' }, [
-								E('option', { 'value': 'system', 'selected': curTunStack === 'system' ? 'selected' : null }, _('System (内核原生，极高性能)')),
-								E('option', { 'value': 'gvisor', 'selected': curTunStack === 'gvisor' ? 'selected' : null }, _('gVisor (用户态沙箱)')),
-								E('option', { 'value': 'mixed', 'selected': curTunStack === 'mixed' ? 'selected' : null }, _('Mixed (混合模式)'))
+								E('option', { 'value': 'system', 'selected': curTunStack === 'system' ? 'selected' : null }, _('System (Kernel Native, High Performance)')),
+								E('option', { 'value': 'gvisor', 'selected': curTunStack === 'gvisor' ? 'selected' : null }, _('gVisor (Userspace Sandbox)')),
+								E('option', { 'value': 'mixed', 'selected': curTunStack === 'mixed' ? 'selected' : null }, _('Mixed'))
 							])
 						])
 					]),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('绕过中国大陆 IP')),
+						E('label', { 'class': 'cbi-value-title' }, _('Bypass China Mainland IP')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('select', { 'id': 'tab_bypass_cn', 'class': 'cbi-input-select', 'style': 'width: 280px;' }, [
-								E('option', { 'value': '0', 'selected': curBypassCn === '0' ? 'selected' : null }, _('关闭 (由 OmniClash 槽位规则决定，推荐)')),
-								E('option', { 'value': '1', 'selected': curBypassCn === '1' ? 'selected' : null }, _('开启 (内核直接绕过大陆 IP)'))
+								E('option', { 'value': '0', 'selected': curBypassCn === '0' ? 'selected' : null }, _('Disabled (Managed by OmniClash rules, Recommended)')),
+								E('option', { 'value': '1', 'selected': curBypassCn === '1' ? 'selected' : null }, _('Enabled (Bypass CN IP directly)'))
 							]),
-							E('div', { 'class': 'cbi-value-description' }, _('建议保持关闭，由 OmniClash 槽位规则决定直连还是走专线。'))
+							E('div', { 'class': 'cbi-value-description' }, _('Recommended to keep disabled; OmniClash slot rules determine direct connection vs proxies.'))
 						])
 					])
 				]),
 
 				E('div', { 'class': 'cbi-section' }, [
-					E('h3', {}, _('2. 本地代理端口设置 (对标 Nikki 端口能力)')),
+					E('h3', {}, _('2. Inbound Proxy Ports')),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('Mixed 混合代理端口')),
+						E('label', { 'class': 'cbi-value-title' }, _('Mixed Proxy Port')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('input', { 'type': 'text', 'id': 'tab_mixed_port', 'class': 'cbi-input-text', 'style': 'width: 180px; font-family: monospace;', 'value': curMixedPort }),
-							E('span', { 'style': 'color: #94a3b8; margin-left: 8px;' }, _('(默认 7890，支持 HTTP/SOCKS5 混合连接)'))
+							E('span', { 'style': 'color: #94a3b8; margin-left: 8px;' }, _('(Default: 7890, supports HTTP/SOCKS5 mixed)'))
 						])
 					]),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('SOCKS5 独立端口')),
+						E('label', { 'class': 'cbi-value-title' }, _('SOCKS5 Port')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('input', { 'type': 'text', 'id': 'tab_socks_port', 'class': 'cbi-input-text', 'style': 'width: 180px; font-family: monospace;', 'value': curSocksPort }),
-							E('span', { 'style': 'color: #94a3b8; margin-left: 8px;' }, _('(默认 1080)'))
+							E('span', { 'style': 'color: #94a3b8; margin-left: 8px;' }, _('(Default: 1080)'))
 						])
 					])
 				]),
 
 				E('div', { 'class': 'cbi-section' }, [
-					E('h3', {}, _('3. DNS 模块与 Fake-IP 设置 (对标 Nikki DNS 能力)')),
+					E('h3', {}, _('3. DNS & Fake-IP Settings')),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('DNS 运行模式')),
+						E('label', { 'class': 'cbi-value-title' }, _('DNS Mode')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('select', { 'id': 'tab_dns_mode', 'class': 'cbi-input-select', 'style': 'width: 280px;' }, [
-								E('option', { 'value': 'fake-ip', 'selected': curDnsMode === 'fake-ip' ? 'selected' : null }, _('Fake-IP (虚拟 IP，秒开推荐)')),
-								E('option', { 'value': 'redir-host', 'selected': curDnsMode === 'redir-host' ? 'selected' : null }, _('Redir-Host (真实 IP)'))
+								E('option', { 'value': 'fake-ip', 'selected': curDnsMode === 'fake-ip' ? 'selected' : null }, _('Fake-IP (Recommended)')),
+								E('option', { 'value': 'redir-host', 'selected': curDnsMode === 'redir-host' ? 'selected' : null }, _('Redir-Host (Real IP)'))
 							])
 						])
 					]),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('Fake-IP 网段范围')),
+						E('label', { 'class': 'cbi-value-title' }, _('Fake-IP Range')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('input', { 'id': 'tab_fake_ip', 'type': 'text', 'class': 'cbi-input-text', 'style': 'width: 280px; font-family: monospace;', 'value': curFakeIp })
 						])
@@ -532,29 +523,29 @@ return view.extend({
 				]),
 
 				E('div', { 'class': 'cbi-section' }, [
-					E('h3', {}, _('4. 核心日志与定时守护 (对标 Nikki 日志与 Cron 能力)')),
+					E('h3', {}, _('4. Logging & Scheduled Restart')),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('内核日志等级')),
+						E('label', { 'class': 'cbi-value-title' }, _('Log Level')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('select', { 'id': 'tab_log_level', 'class': 'cbi-input-select', 'style': 'width: 280px;' }, [
-								E('option', { 'value': 'warning', 'selected': curLogLevel === 'warning' ? 'selected' : null }, 'Warning (仅告警，轻量)'),
-								E('option', { 'value': 'info', 'selected': curLogLevel === 'info' ? 'selected' : null }, 'Info (正常详细，推荐)'),
-								E('option', { 'value': 'debug', 'selected': curLogLevel === 'debug' ? 'selected' : null }, 'Debug (深度排错)')
+								E('option', { 'value': 'warning', 'selected': curLogLevel === 'warning' ? 'selected' : null }, _('Warning (Lightweight)')),
+								E('option', { 'value': 'info', 'selected': curLogLevel === 'info' ? 'selected' : null }, _('Info (Detailed, Recommended)')),
+								E('option', { 'value': 'debug', 'selected': curLogLevel === 'debug' ? 'selected' : null }, _('Debug (Troubleshooting)'))
 							])
 						])
 					]),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('开启定时重启/重载')),
+						E('label', { 'class': 'cbi-value-title' }, _('Scheduled Restart')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('input', { 'type': 'checkbox', 'id': 'tab_cron_enable', 'checked': curCronEnable === '1' ? 'checked' : null }),
-							E('span', { 'style': 'margin-left: 8px;' }, _('启用定时任务'))
+							E('span', { 'style': 'margin-left: 8px;' }, _('Enable scheduled task'))
 						])
 					]),
 					E('div', { 'class': 'cbi-value' }, [
-						E('label', { 'class': 'cbi-value-title' }, _('定时 Cron 表达式')),
+						E('label', { 'class': 'cbi-value-title' }, _('Cron Expression')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('input', { 'type': 'text', 'id': 'tab_cron_time', 'class': 'cbi-input-text', 'style': 'width: 280px; font-family: monospace;', 'value': curCronTime }),
-							E('span', { 'style': 'color: #94a3b8; margin-left: 8px;' }, _('(默认 0 3 * * * 每天凌晨3点)'))
+							E('span', { 'style': 'color: #94a3b8; margin-left: 8px;' }, _('(Default: 0 3 * * * Daily at 03:00)'))
 						])
 					])
 				])
@@ -563,18 +554,18 @@ return view.extend({
 			// 子 Tab 2: Provider 集
 			E('div', { 'id': 'pane_providers', 'class': 'subtab-pane', 'style': 'display: none;' }, [
 				E('div', { 'class': 'cbi-section' }, [
-					E('h3', {}, _('云端 Provider 子订阅源列表')),
+					E('h3', {}, _('Provider Subscriptions Source List')),
 					E('p', { 'style': 'margin-bottom: 12px;' },
-						_('管理所有外部节点池子订阅。仅提取服务器节点注入本地，绝不覆盖本地任何规则。')
+						_('Manage external node pool subscriptions. Only imports proxy nodes without overwriting local rules.')
 					),
 					E('table', { 'class': 'table', 'style': 'width: 100%; border-collapse: collapse; margin-bottom: 16px;' }, [
 						E('thead', {}, [
 							E('tr', {}, [
-								E('th', { 'style': 'width: 140px;' }, _('Provider 标识')),
-								E('th', { 'style': 'width: 90px;' }, _('节点前缀')),
-								E('th', {}, _('订阅文件 URL (支持直接编辑)')),
-								E('th', { 'style': 'width: 90px; text-align: center;' }, _('更新周期(秒)')),
-								E('th', { 'style': 'width: 70px; text-align: center;' }, _('操作'))
+								E('th', { 'style': 'width: 140px;' }, _('Provider Tag')),
+								E('th', { 'style': 'width: 90px;' }, _('Node Prefix')),
+								E('th', {}, _('Subscription URL')),
+								E('th', { 'style': 'width: 90px; text-align: center;' }, _('Interval (s)')),
+								E('th', { 'style': 'width: 70px; text-align: center;' }, _('Actions'))
 							])
 						]),
 						E('tbody', { 'id': 'omniclash_providers_tbody' })
@@ -583,7 +574,7 @@ return view.extend({
 						'type': 'button',
 						'class': 'cbi-button cbi-button-action',
 						'click': function() { addProvider(); }
-					}, _('+ 添加新 Provider'))
+					}, _('+ Add Provider'))
 				])
 			]),
 
@@ -592,9 +583,9 @@ return view.extend({
 				E('div', { 'class': 'cbi-section' }, [
 					E('div', { 'style': 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;' }, [
 						E('div', {}, [
-							E('h3', { 'style': 'margin: 0;' }, _('结构化分流策略组全景')),
+							E('h3', { 'style': 'margin: 0;' }, _('Structured Proxy Groups')),
 							E('p', { 'style': 'margin: 4px 0 0 0; color: #94a3b8;' },
-								_('预置模板中的全套 42 个策略组（专线组、地区组、应用分流组）。支持直接编辑、增删与恢复默认。')
+								_('Configured proxy groups (dedicated lines, regions, application groups). Automatically connects all provider subscriptions, filtered by node prefix and regex.')
 							)
 						]),
 						E('div', {}, [
@@ -603,23 +594,22 @@ return view.extend({
 								'class': 'cbi-button cbi-button-action',
 								'style': 'margin-right: 6px;',
 								'click': function() { addGroup(); }
-							}, _('+ 添加新策略组')),
+							}, _('+ Add Proxy Group')),
 							E('button', {
 								'type': 'button',
 								'class': 'cbi-button cbi-button-reset',
 								'click': function() { resetDefaultGroups(); }
-							}, _('🔄 恢复默认策略组'))
+							}, '🔄 ' + _('Reset to Default Groups'))
 						])
 					]),
 					E('table', { 'class': 'table', 'style': 'width: 100%; border-collapse: collapse;' }, [
 						E('thead', {}, [
 							E('tr', {}, [
-								E('th', { 'style': 'width: 40px;' }, '#'),
-								E('th', { 'style': 'width: 180px;' }, _('策略组名称')),
-								E('th', { 'style': 'width: 120px;' }, _('组类型')),
-								E('th', { 'style': 'width: 220px;' }, _('节点筛选正则 (Filter)')),
-								E('th', { 'style': 'width: 150px;' }, _('引用 Provider')),
-								E('th', { 'style': 'width: 70px; text-align: center;' }, _('操作'))
+								E('th', { 'style': 'width: 40px; text-align: center;' }, '#'),
+								E('th', { 'style': 'width: 220px;' }, _('Group Name')),
+								E('th', { 'style': 'width: 140px;' }, _('Group Type')),
+								E('th', {}, _('Node Filter (Regex)')),
+								E('th', { 'style': 'width: 70px; text-align: center;' }, _('Actions'))
 							])
 						]),
 						E('tbody', { 'id': 'omniclash_groups_tbody' })
@@ -632,9 +622,9 @@ return view.extend({
 				E('div', { 'class': 'cbi-section' }, [
 					E('div', { 'style': 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;' }, [
 						E('div', {}, [
-							E('h3', { 'style': 'margin: 0;' }, _('全量分流规则表 (Rule)')),
+							E('h3', { 'style': 'margin: 0;' }, _('Traffic Routing Rules')),
 							E('p', { 'style': 'margin: 4px 0 0 0; color: #94a3b8;' },
-								_('预置全套 69+ 规则库。支持直接修改匹配条件与走向策略组，支持上移/下移调整优先级。')
+								_('Preconfigured 69+ rule library. Supports modifying match criteria, target groups, and reordering priority.')
 							)
 						]),
 						E('div', {}, [
@@ -643,23 +633,23 @@ return view.extend({
 								'class': 'cbi-button cbi-button-action',
 								'style': 'margin-right: 6px;',
 								'click': function() { addRule(); }
-							}, _('+ 添加新规则')),
+							}, _('+ Add Rule')),
 							E('button', {
 								'type': 'button',
 								'class': 'cbi-button cbi-button-reset',
 								'click': function() { resetDefaultRules(); }
-							}, _('🔄 恢复默认规则库'))
+							}, '🔄 ' + _('Reset to Default Rules'))
 						])
 					]),
 					E('table', { 'class': 'table', 'style': 'width: 100%; border-collapse: collapse; margin-bottom: 12px;' }, [
 						E('thead', {}, [
 							E('tr', {}, [
 								E('th', { 'style': 'width: 40px; text-align: center;' }, '#'),
-								E('th', { 'style': 'width: 140px;' }, _('规则类型')),
-								E('th', {}, _('匹配条件 (域名 / IP段 / GeoTag)')),
-								E('th', { 'style': 'width: 180px;' }, _('走向 (策略组/直连/拦截)')),
-								E('th', { 'style': 'width: 80px; text-align: center;' }, _('不解析IP')),
-								E('th', { 'style': 'width: 120px; text-align: center;' }, _('操作'))
+								E('th', { 'style': 'width: 140px;' }, _('Rule Type')),
+								E('th', {}, _('Payload (Domain / IP / GeoTag)')),
+								E('th', { 'style': 'width: 180px;' }, _('Target (Group / DIRECT / REJECT)')),
+								E('th', { 'style': 'width: 80px; text-align: center;' }, _('No-Resolve')),
+								E('th', { 'style': 'width: 120px; text-align: center;' }, _('Actions'))
 							])
 						]),
 						E('tbody', { 'id': 'omniclash_rules_tbody' })
@@ -672,9 +662,9 @@ return view.extend({
 				E('div', { 'class': 'cbi-section' }, [
 					E('div', { 'style': 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;' }, [
 						E('div', {}, [
-							E('h3', { 'style': 'margin: 0;' }, _('最终合流运行配置 (/etc/omniclash/run/config.yaml)')),
+							E('h3', { 'style': 'margin: 0;' }, _('Final Compiled Configuration (/etc/omniclash/run/config.yaml)')),
 							E('div', { 'style': 'font-size: 12px; color: #94a3b8; margin-top: 4px;' },
-								_('由【基础设置 + 节点池 + 策略组 + 分流规则 + 32-WiFi 矩阵】动态合流编译生成，只读展示。')
+								_('Dynamically compiled from settings, providers, groups, rules, and 32-WiFi matrix (read-only).')
 							)
 						]),
 						E('div', { 'style': 'display: flex; gap: 8px;' }, [
@@ -685,10 +675,10 @@ return view.extend({
 									fs.read('/etc/omniclash/run/config.yaml').then(function(txt) {
 										var el = document.getElementById('omniclash_runconfig_area');
 										if (el) el.value = txt || '';
-										ui.addNotification(null, E('p', {}, _('✅ 已刷新最新运行配置！')), 'success');
+										ui.addNotification(null, E('p', {}, '✅ ' + _('Refreshed latest running configuration!')), 'success');
 									});
 								}
-							}, _('🔄 刷新配置')),
+							}, '🔄 ' + _('Refresh Config')),
 							E('button', {
 								'type': 'button',
 								'class': 'cbi-button cbi-button-neutral',
@@ -696,11 +686,11 @@ return view.extend({
 									var el = document.getElementById('omniclash_runconfig_area');
 									if (el && navigator.clipboard) {
 										navigator.clipboard.writeText(el.value).then(function() {
-											ui.addNotification(null, E('p', {}, _('✅ 运行配置已复制到剪贴板！')), 'success');
+											ui.addNotification(null, E('p', {}, '✅ ' + _('Running configuration copied to clipboard!')), 'success');
 										});
 									}
 								}
-							}, _('📋 复制全部'))
+							}, '📋 ' + _('Copy All'))
 						])
 					]),
 					E('textarea', {
@@ -718,13 +708,7 @@ return view.extend({
 					'type': 'button',
 					'class': 'cbi-button cbi-button-apply',
 					'click': function() { window.saveAllRoutingSettings(); }
-				}, _('保存并应用')),
-				E('span', {}, ' '),
-				E('button', {
-					'type': 'button',
-					'class': 'cbi-button cbi-button-reset',
-					'click': function() { window.location.reload(); }
-				}, _('重置'))
+				}, _('Save & Apply'))
 			])
 		]);
 

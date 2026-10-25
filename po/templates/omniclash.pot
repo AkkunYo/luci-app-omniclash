@@ -1,0 +1,794 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "%d minutes ago"
+msgstr ""
+
+msgid "%d seconds ago"
+msgstr ""
+
+msgid "%sd %sh %sm"
+msgstr ""
+
+msgid "(Default: 0 3 * * * Daily at 03:00)"
+msgstr ""
+
+msgid "(Default: 1080)"
+msgstr ""
+
+msgid "(Default: 7890, supports HTTP/SOCKS5 mixed)"
+msgstr ""
+
+msgid "+ Add Provider"
+msgstr ""
+
+msgid "+ Add Proxy Group"
+msgstr ""
+
+msgid "+ Add Rule"
+msgstr ""
+
+msgid "1. Traffic Proxy & System TUN Settings"
+msgstr ""
+
+msgid "2. Inbound Proxy Ports"
+msgstr ""
+
+msgid "3. DNS & Fake-IP Settings"
+msgstr ""
+
+msgid "32-WiFi architecture deployed to child AP successfully!"
+msgstr ""
+
+msgid "32-WiFi matrix reset to defaults successfully!"
+msgstr ""
+
+msgid "4. Logging & Scheduled Restart"
+msgstr ""
+
+msgid "AP Host IP"
+msgstr ""
+
+msgid "AP Physical Capacity"
+msgstr ""
+
+msgid "AP Provisioning & Clone"
+msgstr ""
+
+msgid "AP configuration saved successfully!"
+msgstr ""
+
+msgid "AP connected successfully!"
+msgstr ""
+
+msgid "Actions"
+msgstr ""
+
+msgid "All settings, providers, groups, and rules successfully saved and applied!"
+msgstr ""
+
+msgid "All slots ready"
+msgstr ""
+
+msgid "Already on latest version or updated successfully."
+msgstr ""
+
+msgid "App Version"
+msgstr ""
+
+msgid "App check/update completed! Current app version: %s"
+msgstr ""
+
+msgid "App update failed"
+msgstr ""
+
+msgid "Are you sure you want to deploy full 32-WiFi architecture to the child AP?\nThis will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
+msgstr ""
+
+msgid "Are you sure you want to reset all 32-WiFi slots to defaults?"
+msgstr ""
+
+msgid "Are you sure you want to reset proxy groups to default template?\nThis will reset all dedicated lines, regions, and application groups."
+msgstr ""
+
+msgid "Are you sure you want to reset standard WiFi to defaults?"
+msgstr ""
+
+msgid "Are you sure you want to reset to default rules?\nThis will reset 69+ rules including AI, YouTube, Google, and DIRECT."
+msgstr ""
+
+msgid "Assigned VLAN"
+msgstr ""
+
+msgid "Auto Pair & Trust"
+msgstr ""
+
+msgid "Auto-detect (Recommended)"
+msgstr ""
+
+msgid "Auto-start: Disabled"
+msgstr ""
+
+msgid "Auto-start: Enabled"
+msgstr ""
+
+msgid "Automated Deployment Steps"
+msgstr ""
+
+msgid "Available: %s MB"
+msgstr ""
+
+msgid "Band"
+msgstr ""
+
+msgid "Broadcast Status"
+msgstr ""
+
+msgid "Broadcasting"
+msgstr ""
+
+msgid "Bypass China Mainland IP"
+msgstr ""
+
+msgid "Bypassing cache..."
+msgstr ""
+
+msgid "Cache bypassed and refreshed! Synchronized latest AP and router status."
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Check & Update App"
+msgstr ""
+
+msgid "Check & Update Core"
+msgstr ""
+
+msgid "Check Update"
+msgstr ""
+
+msgid "Checking & Updating Mihomo Core"
+msgstr ""
+
+msgid "Checking & Updating OmniClash"
+msgstr ""
+
+msgid "Checking and updating /usr/bin/mihomo core binary from releases..."
+msgstr ""
+
+msgid "Checking and updating luci-app-omniclash from software repository..."
+msgstr ""
+
+msgid "Child AP Configuration & Authentication"
+msgstr ""
+
+msgid "Child AP SSH login password (used for initial pairing; optional after key trust is established)."
+msgstr ""
+
+msgid "Child AP Settings"
+msgstr ""
+
+msgid "Child AP: Automatically create 32 802.1Q VLAN bridges (br-vlan101 ~ br-vlan132 on br-lan.101~132)"
+msgstr ""
+
+msgid "Clear Logs"
+msgstr ""
+
+msgid "Clearing Logs"
+msgstr ""
+
+msgid "Clearing core and plugin log files..."
+msgstr ""
+
+msgid "Communication Test"
+msgstr ""
+
+msgid "Compile & Reload"
+msgstr ""
+
+msgid "Compiling Configuration"
+msgstr ""
+
+msgid "Compiling template and provider node pool with seamless reload..."
+msgstr ""
+
+msgid "Configure Child AP"
+msgstr ""
+
+msgid "Configured proxy groups (dedicated lines, regions, application groups). Automatically connects all provider subscriptions, filtered by node prefix and regex."
+msgstr ""
+
+msgid "Confirm Fill All (%d slots)"
+msgstr ""
+
+msgid "Copy All"
+msgstr ""
+
+msgid "Core Settings"
+msgstr ""
+
+msgid "Core Version"
+msgstr ""
+
+msgid "Core check/update completed! Current core version: %s"
+msgstr ""
+
+msgid "Core configuration successfully compiled and reloaded!"
+msgstr ""
+
+msgid "Core update failed"
+msgstr ""
+
+msgid "Cron Expression"
+msgstr ""
+
+msgid "DNS Mode"
+msgstr ""
+
+msgid "Debug (Troubleshooting)"
+msgstr ""
+
+msgid "Dedicated (VLAN %s)"
+msgstr ""
+
+msgid "Dedicated VLAN"
+msgstr ""
+
+msgid "Default Key"
+msgstr ""
+
+msgid "Default SSID"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Deploy Full 32-WiFi Architecture to AP"
+msgstr ""
+
+msgid "Deploy full 32-WiFi architecture to newly flashed child AP with a single click. Ideal for reproducing this setup on new routers or fresh setups."
+msgstr ""
+
+msgid "Deploying 32-WiFi Architecture"
+msgstr ""
+
+msgid "Deploying SSH Key Trust"
+msgstr ""
+
+msgid "Deploying SSH public key to child AP for passwordless communication..."
+msgstr ""
+
+msgid "Disable"
+msgstr ""
+
+msgid "Disabled"
+msgstr ""
+
+msgid "Disabled (Managed by OmniClash rules, Recommended)"
+msgstr ""
+
+msgid "Dismiss"
+msgstr ""
+
+msgid "Dynamically compiled from settings, providers, groups, rules, and 32-WiFi matrix (read-only)."
+msgstr ""
+
+msgid "Enable"
+msgstr ""
+
+msgid "Enable Service"
+msgstr ""
+
+msgid "Enable scheduled task"
+msgstr ""
+
+msgid "Enabled (Bypass CN IP directly)"
+msgstr ""
+
+msgid "Enterprise Mihomo Controller & 32-WiFi AP Matrix"
+msgstr ""
+
+msgid "Failed to connect to AP"
+msgstr ""
+
+msgid "Failed to deploy SSH key trust"
+msgstr ""
+
+msgid "Failed to fetch update from repository."
+msgstr ""
+
+msgid "Fake-IP (Recommended)"
+msgstr ""
+
+msgid "Fake-IP Range"
+msgstr ""
+
+msgid "Fast cache hit, updated %s"
+msgstr ""
+
+msgid "Fill All (%d slots)"
+msgstr ""
+
+msgid "Fill All Remaining WiFi (%d slots)"
+msgstr ""
+
+msgid "Fill All Remaining WiFi Slots"
+msgstr ""
+
+msgid "Fillable: %d slots"
+msgstr ""
+
+msgid "Filling All Slots"
+msgstr ""
+
+msgid "Filter Regex (e.g. (?i)HK|HongKong)"
+msgstr ""
+
+msgid "Final Compiled Configuration (/etc/omniclash/run/config.yaml)"
+msgstr ""
+
+msgid "Firewall: Inject input/forward accept chains into fw4 and bind Mihomo 6-tier routing pipeline"
+msgstr ""
+
+msgid "General Routing (Default Fallback)"
+msgstr ""
+
+msgid "Group Name"
+msgstr ""
+
+msgid "Group Type"
+msgstr ""
+
+msgid "Hardware capacity is already full (5G 16/16, 2.4G 16/16)!"
+msgstr ""
+
+msgid "High-Performance Mode (Full Features)"
+msgstr ""
+
+msgid "Info (Detailed, Recommended)"
+msgstr ""
+
+msgid "Initializing VLANs, DHCP, AP radios, and routing rules, please wait 5~8 seconds..."
+msgstr ""
+
+msgid "Interval (s)"
+msgstr ""
+
+msgid "Live Mihomo core log stream (auto-scrolls every 3 seconds)"
+msgstr ""
+
+msgid "Loading 32-slot AP matrix..."
+msgstr ""
+
+msgid "Local Host Mode (Single All-in-One Router)"
+msgstr ""
+
+msgid "Log Level"
+msgstr ""
+
+msgid "Logs"
+msgstr ""
+
+msgid "Logs cleared, waiting for new entries..."
+msgstr ""
+
+msgid "Low-Memory Compact Mode (Optimized for <= 256MB)"
+msgstr ""
+
+msgid "Main Router: Automatically configure 32 independent static VLAN subnets (192.168.101.1/24 ~ 132.1/24) and DHCP pools"
+msgstr ""
+
+msgid "Manage external node pool subscriptions. Only imports proxy nodes without overwriting local rules."
+msgstr ""
+
+msgid "Memory: %s | High-Performance Mode Active: Full proxy groups and fine-grained application rule streams enabled."
+msgstr ""
+
+msgid "Memory: %s | Low-Memory Mode Active: GeoData disabled, process tracking off, saving 40MB+ RAM to prevent OOM on 256MB devices."
+msgstr ""
+
+msgid "Mihomo Core Update Result"
+msgstr ""
+
+msgid "Mixed"
+msgstr ""
+
+msgid "Mixed Proxy Port"
+msgstr ""
+
+msgid "Mode Settings"
+msgstr ""
+
+msgid "Mode settings saved and applied successfully!"
+msgstr ""
+
+msgid "Multi-WiFi Matrix Mode (32 Dedicated Slots, Recommended)"
+msgstr ""
+
+msgid "New Group"
+msgstr ""
+
+msgid "No local Wi-Fi module detected on this host. Operating in Remote Child AP mode."
+msgstr ""
+
+msgid "No logs"
+msgstr ""
+
+msgid "No proxy groups configured. Click \"+ Add Proxy Group\" or \"Reset to Default Groups\"."
+msgstr ""
+
+msgid "No routing rules configured. Click \"+ Add Rule\" or \"Reset to Default Rules\"."
+msgstr ""
+
+msgid "No running logs available"
+msgstr ""
+
+msgid "No standard WiFi interfaces found."
+msgstr ""
+
+msgid "No subscription providers configured. Click \"+ Add Provider\" below."
+msgstr ""
+
+msgid "No-Resolve"
+msgstr ""
+
+msgid "Node Filter (Regex)"
+msgstr ""
+
+msgid "Node Prefix"
+msgstr ""
+
+msgid "Not found: /usr/bin/mihomo"
+msgstr ""
+
+msgid "Not Running"
+msgstr ""
+
+msgid "Not installed"
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
+msgid "OK & Refresh Page"
+msgstr ""
+
+msgid "OmniClash"
+msgstr ""
+
+msgid "OmniClash Live Logs"
+msgstr ""
+
+msgid "OmniClash Overview"
+msgstr ""
+
+msgid "OmniClash Standard WiFi Settings"
+msgstr ""
+
+msgid "OmniClash Subscription & Routing Hub"
+msgstr ""
+
+msgid "OmniClash Update Result"
+msgstr ""
+
+msgid "OmniClash Wireless AP Management Hub"
+msgstr ""
+
+msgid "OmniClash Wireless AP Matrix"
+msgstr ""
+
+msgid "One-Click AP Provisioning & Cloning"
+msgstr ""
+
+msgid "Online Clients"
+msgstr ""
+
+msgid "Open Dashboard (Zashboard)"
+msgstr ""
+
+msgid "Operating Mode"
+msgstr ""
+
+msgid "Operating Mode: Child AP Matrix (%s)"
+msgstr ""
+
+msgid "Operating Mode: Local Host Matrix"
+msgstr ""
+
+msgid "Optional if key trust established"
+msgstr ""
+
+msgid "Overview"
+msgstr ""
+
+msgid "Pairing..."
+msgstr ""
+
+msgid "Payload (Domain / IP / GeoTag)"
+msgstr ""
+
+msgid "Payload (e.g. openai, cn, 192.168.1.0/24)"
+msgstr ""
+
+msgid "Performance Profile"
+msgstr ""
+
+msgid "Please enter the AP SSH password first to deploy key trust!"
+msgstr ""
+
+msgid "Preconfigured 69+ rule library. Supports modifying match criteria, target groups, and reordering priority."
+msgstr ""
+
+msgid "Prefix (e.g. vc_)"
+msgstr ""
+
+msgid "Provider Subscriptions"
+msgstr ""
+
+msgid "Provider Subscriptions Source List"
+msgstr ""
+
+msgid "Provider Tag"
+msgstr ""
+
+msgid "Proxy Groups"
+msgstr ""
+
+msgid "Proxy groups successfully restored to default template!"
+msgstr ""
+
+msgid "Quick Actions"
+msgstr ""
+
+msgid "Radios: Bind 5G and 2.4G physical radios to 32 BSSID slots (16 5G + 16 2.4G) with 1:1 symmetry"
+msgstr ""
+
+msgid "Recommended to keep disabled; OmniClash slot rules determine direct connection vs proxies."
+msgstr ""
+
+msgid "Redir-Host (Real IP)"
+msgstr ""
+
+msgid "Redirect"
+msgstr ""
+
+msgid "Refresh"
+msgstr ""
+
+msgid "Refresh (Bypass Cache)"
+msgstr ""
+
+msgid "Refresh Config"
+msgstr ""
+
+msgid "Refreshed latest running configuration!"
+msgstr ""
+
+msgid "Remote Child AP Mode (Main Router + AP, Recommended)"
+msgstr ""
+
+msgid "Reset"
+msgstr ""
+
+msgid "Reset to Default Groups"
+msgstr ""
+
+msgid "Reset to Default Matrix"
+msgstr ""
+
+msgid "Reset to Default Normal WiFi"
+msgstr ""
+
+msgid "Reset to Default Rules"
+msgstr ""
+
+msgid "Resetting"
+msgstr ""
+
+msgid "Resetting 32-WiFi matrix to defaults..."
+msgstr ""
+
+msgid "Resetting default proxy groups template..."
+msgstr ""
+
+msgid "Resetting default routing rules..."
+msgstr ""
+
+msgid "Resetting standard WiFi to defaults..."
+msgstr ""
+
+msgid "Routing Target"
+msgstr ""
+
+msgid "Routing rules successfully restored to default!"
+msgstr ""
+
+msgid "Rule Type"
+msgstr ""
+
+msgid "Rules"
+msgstr ""
+
+msgid "Running (PID: %s)"
+msgstr ""
+
+msgid "Running Config (Readonly)"
+msgstr ""
+
+msgid "Running Status"
+msgstr ""
+
+msgid "Running configuration copied to clipboard!"
+msgstr ""
+
+msgid "Running logs cleared successfully!"
+msgstr ""
+
+msgid "SOCKS5 Port"
+msgstr ""
+
+msgid "SSH Password"
+msgstr ""
+
+msgid "SSH Port"
+msgstr ""
+
+msgid "SSH User"
+msgstr ""
+
+msgid "SSH key trust successfully deployed!"
+msgstr ""
+
+msgid "SSID cannot be empty and password must be at least 8 characters!"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Save & Apply"
+msgstr ""
+
+msgid "Save Mode Settings"
+msgstr ""
+
+msgid "Saving"
+msgstr ""
+
+msgid "Saving & Applying"
+msgstr ""
+
+msgid "Saving operating modes and reloading configuration..."
+msgstr ""
+
+msgid "Saving settings, providers, groups, rules, and compiling configuration..."
+msgstr ""
+
+msgid "Saving standard WiFi settings and smoothly reloading wireless..."
+msgstr ""
+
+msgid "Scheduled Restart"
+msgstr ""
+
+msgid "Slot"
+msgstr ""
+
+msgid "Standard Dual-Band WiFi (5G / 2.4G) | Stored in /etc/omniclash/wifi_normal.json"
+msgstr ""
+
+msgid "Standard Normal WiFi Mode (Dual-Band 2.4G/5G)"
+msgstr ""
+
+msgid "Standard WiFi reset to defaults successfully!"
+msgstr ""
+
+msgid "Standard WiFi settings saved and applied successfully!"
+msgstr ""
+
+msgid "Stopped"
+msgstr ""
+
+msgid "Structured Proxy Groups"
+msgstr ""
+
+msgid "Subscription & Routing"
+msgstr ""
+
+msgid "Subscription URL"
+msgstr ""
+
+msgid "Successfully filled full WiFi matrix!"
+msgstr ""
+
+msgid "Switch between 32-slot matrix and standard dual-band WiFi. Configurations are stored separately."
+msgstr ""
+
+msgid "Switching"
+msgstr ""
+
+msgid "Switching WiFi #%s to %s..."
+msgstr ""
+
+msgid "Synchronizing WiFi #%s and smoothly reloading wireless..."
+msgstr ""
+
+msgid "System (Kernel Native, High Performance)"
+msgstr ""
+
+msgid "System TUN Stack"
+msgstr ""
+
+msgid "System Uptime"
+msgstr ""
+
+msgid "System will automatically link AP radios, dedicated VLANs, DHCP pools, and routing rules to fill all empty slots."
+msgstr ""
+
+msgid "TCP Proxy Mode"
+msgstr ""
+
+msgid "TPROXY (Transparent Proxy)"
+msgstr ""
+
+msgid "TUN (Pure TUN Mode, Recommended)"
+msgstr ""
+
+msgid "Tag (e.g. vpscloud)"
+msgstr ""
+
+msgid "Target (Group / DIRECT / REJECT)"
+msgstr ""
+
+msgid "Test Connection"
+msgstr ""
+
+msgid "Testing AP Connection"
+msgstr ""
+
+msgid "Testing SSH connection to %s..."
+msgstr ""
+
+msgid "Testing..."
+msgstr ""
+
+msgid "Toggling wireless broadcast..."
+msgstr ""
+
+msgid "Traffic Routing Rules"
+msgstr ""
+
+msgid "UDP Proxy Mode"
+msgstr ""
+
+msgid "Warning (Lightweight)"
+msgstr ""
+
+msgid "WiFi #%s %s successfully!"
+msgstr ""
+
+msgid "WiFi #%s (%s) SSID and password synchronized successfully!"
+msgstr ""
+
+msgid "WiFi AP Matrix"
+msgstr ""
+
+msgid "WiFi Name (SSID)"
+msgstr ""
+
+msgid "WiFi Password"
+msgstr ""
+
+msgid "WiFi Settings"
+msgstr ""
+
+msgid "Wireless Running Mode"
+msgstr ""
+
+msgid "Wireless Topology & Operating Mode"
+msgstr ""
+
+msgid "Wireless broadcast status updated!"
+msgstr ""
+
+msgid "gVisor (Userspace Sandbox)"
+msgstr ""

@@ -9,7 +9,7 @@
 		}
 	},
 	"admin/services/omniclash/overview": {
-		"title": "运行概览",
+		"title": "Overview",
 		"order": 10,
 		"action": {
 			"type": "view",
@@ -20,7 +20,7 @@
 		}
 	},
 	"admin/services/omniclash/matrix": {
-		"title": "WiFi 矩阵管理",
+		"title": "WiFi AP Matrix",
 		"order": 20,
 		"action": {
 			"type": "view",
@@ -31,7 +31,7 @@
 		}
 	},
 	"admin/services/omniclash/routing": {
-		"title": "订阅与分流",
+		"title": "Subscription & Routing",
 		"order": 30,
 		"action": {
 			"type": "view",
@@ -42,7 +42,7 @@
 		}
 	},
 	"admin/services/omniclash/log": {
-		"title": "运行日志",
+		"title": "Logs",
 		"order": 40,
 		"action": {
 			"type": "view",

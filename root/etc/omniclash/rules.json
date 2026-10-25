@@ -1,0 +1,392 @@
+[
+  {
+    "type": "GEOSITE",
+    "payload": "private",
+    "target": "DIRECT",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOIP",
+    "payload": "private",
+    "target": "DIRECT",
+    "no_resolve": true
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "bxcdn.net",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-KEYWORD",
+    "payload": "-ad-sign.byteimg.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "pangle.io",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "pangolin-sdk-toutiao.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "pangolin-sdk-toutiao-b.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "pglstatp-toutiao.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "volcsirius.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "ulogs.umeng.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "alog.umeng.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "gdt.qq.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "e.qq.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "mi.gdt.qq.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "tmead.y.qq.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "adkwai.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "e.kuaishou.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "mobads.baidu.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "cpro.baidustatic.com",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "RULE-SET",
+    "payload": "reject_ad",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "category-ads-all",
+    "target": "REJECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "hybgzs.com",
+    "target": "🇨🇳 特殊直连",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "mob.com",
+    "target": "DIRECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "ghfast.top",
+    "target": "DIRECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "gh-proxy.org",
+    "target": "DIRECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "spaceship.com",
+    "target": "DIRECT",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "services.googleapis.cn",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "googleapis.cn",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "google.cn",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "gstatic.cn",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "g.cn",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "gvt1.com",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "gvt2.com",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "gvt3.com",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "googleusercontent.com",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "play.google.com",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-SUFFIX",
+    "payload": "android.clients.google.com",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "DOMAIN-KEYWORD",
+    "payload": "xn--ngstr-lra8j",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "apple-cn",
+    "target": "🍎 Apple",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "category-ai-chat-!cn",
+    "target": "🤖 AI",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "openai",
+    "target": "🤖 AI",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "anthropic",
+    "target": "🤖 AI",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOIP",
+    "payload": "ai",
+    "target": "🤖 AI",
+    "no_resolve": true
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "github",
+    "target": "🐙 GitHub",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "twitter",
+    "target": "🐦 Twitter",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "bilibili",
+    "target": "📹 哔哩哔哩",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "biliintl",
+    "target": "📹 哔哩哔哩",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "spotify",
+    "target": "🎵 Spotify",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "bahamut",
+    "target": "📹 巴哈姆特",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "youtube",
+    "target": "📹 YouTube",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "google",
+    "target": "🍀 Google",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "onedrive",
+    "target": "🐬 OneDrive",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "microsoft",
+    "target": "🪟 Microsoft",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "tiktok",
+    "target": "🎵 TikTok",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "telegram",
+    "target": "📲 Telegram",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "netflix",
+    "target": "🎥 NETFLIX",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "notion",
+    "target": "📖 Notion",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "paypal",
+    "target": "💶 PayPal",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "geolocation-!cn",
+    "target": "🚀 节点选择",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOSITE",
+    "payload": "cn",
+    "target": "DIRECT",
+    "no_resolve": false
+  },
+  {
+    "type": "GEOIP",
+    "payload": "google",
+    "target": "🍀 Google",
+    "no_resolve": true
+  },
+  {
+    "type": "GEOIP",
+    "payload": "netflix",
+    "target": "🎥 NETFLIX",
+    "no_resolve": true
+  },
+  {
+    "type": "GEOIP",
+    "payload": "telegram",
+    "target": "📲 Telegram",
+    "no_resolve": true
+  },
+  {
+    "type": "GEOIP",
+    "payload": "cn",
+    "target": "DIRECT",
+    "no_resolve": true
+  },
+  {
+    "type": "MATCH",
+    "payload": "",
+    "target": "🐟 漏网之鱼",
+    "no_resolve": false
+  }
+]

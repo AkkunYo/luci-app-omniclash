@@ -2,7 +2,7 @@
 
 'use strict';
 
-import { popen, readfile, access } from 'fs';
+import { popen, readfile, access, glob } from 'fs';
 
 const methods = {
 	get_status: {
@@ -25,8 +25,8 @@ const methods = {
 				if (v) app_ver = v;
 			}
 
-			let core_ver = '未安装';
-			let core_full = '未检测到 /usr/bin/mihomo';
+			let core_ver = 'Not installed';
+			let core_full = 'Not found: /usr/bin/mihomo';
 			if (access('/usr/bin/mihomo')) {
 				let pc = popen('/usr/bin/mihomo -v 2>/dev/null | head -n1');
 				if (pc) {
@@ -40,6 +40,21 @@ const methods = {
 				}
 			}
 
+			let phys = glob('/sys/class/ieee80211/*');
+			let has_local_wifi = length(phys) > 0;
+
+			let mem_raw = readfile('/proc/meminfo') || '';
+			let m_tot = match(mem_raw, /MemTotal:\s*([0-9]+)/);
+			let m_avail = match(mem_raw, /MemAvailable:\s*([0-9]+)/);
+			let tot_mb = m_tot ? int(int(m_tot[1]) / 1024) : 0;
+			let avail_mb = m_avail ? int(int(m_avail[1]) / 1024) : 0;
+
+			let pref_profile = uci.get('omniclash', 'config', 'perf_profile') || 'auto';
+			let active_profile = pref_profile;
+			if (active_profile == 'auto') {
+				active_profile = (tot_mb <= 300) ? 'compact' : 'standard';
+			}
+
 			return {
 				running: length(pid) > 0,
 				enabled: enabled,
@@ -47,7 +62,12 @@ const methods = {
 				uptime: up_secs,
 				app_version: app_ver,
 				core_version: core_ver,
-				core_full: core_full
+				core_full: core_full,
+				has_local_wifi: has_local_wifi,
+				mem_total_mb: tot_mb,
+				mem_free_mb: avail_mb,
+				perf_profile: pref_profile,
+				active_profile: active_profile
 			};
 		}
 	},
@@ -79,10 +99,77 @@ const methods = {
 			return { success: true, action: act };
 		}
 	},
+	test_ap: {
+		args: { host: 'host', port: '22', user: 'root', password: '' },
+		call: function(req) {
+			let a = req.args || {};
+			if (type(a.host) == 'object') a = a.host;
+			let json_str = sprintf('%J', a);
+			let escaped = replace(json_str, "'", "'\\''");
+			let p = popen(sprintf("echo '%s' | /usr/bin/omniclash test_ap", escaped));
+			if (!p) return { success: false, error: 'Execution failed' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: out }; }
+		}
+	},
+	pair_ap: {
+		args: { host: 'host', port: '22', user: 'root', password: '' },
+		call: function(req) {
+			let a = req.args || {};
+			if (type(a.host) == 'object') a = a.host;
+			let json_str = sprintf('%J', a);
+			let escaped = replace(json_str, "'", "'\\''");
+			let p = popen(sprintf("echo '%s' | /usr/bin/omniclash pair_ap", escaped));
+			if (!p) return { success: false, error: 'Execution failed' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: out }; }
+		}
+	},
+	save_wifi_normal: {
+		args: { items: [] },
+		call: function(req) {
+			let json_str = sprintf('%J', req.args || {});
+			let escaped = replace(json_str, "'", "'\\''");
+			let p = popen(sprintf("echo '%s' | /usr/bin/omniclash save_wifi_normal", escaped));
+			if (!p) return { success: false, error: 'Execution failed' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: out }; }
+		}
+	},
+	reset_wifi_normal: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash reset_wifi_normal');
+			if (!p) return { success: false, error: 'Execution failed' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: out }; }
+		}
+	},
+	reset_matrix_32: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash reset_matrix_32');
+			if (!p) return { success: false, error: 'Execution failed' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: out }; }
+		}
+	},
+	update_app: {
+		call: function() {
+			let p = popen('/usr/bin/omniclash update_app');
+			if (!p) return { success: false, error: 'Execution failed' };
+			let out = p.read('all');
+			p.close();
+			try { return json(out); } catch(e) { return { success: false, error: out }; }
+		}
+	},
 	update_core: {
 		call: function() {
 			let p = popen('/usr/bin/omniclash update_core');
-			if (!p) return { success: false, error: '执行失败' };
+			if (!p) return { success: false, error: 'Execution failed' };
 			let out = p.read('all');
 			p.close();
 			try { return json(out); } catch(e) { return { success: false, error: out }; }
@@ -91,7 +178,7 @@ const methods = {
 	get_logs: {
 		call: function() {
 			let p = popen('/usr/bin/omniclash get_logs');
-			if (!p) return { success: false, log: '读取失败' };
+			if (!p) return { success: false, log: 'Failed to read logs' };
 			let out = p.read('all');
 			p.close();
 			try { return json(out); } catch(e) { return { success: false, log: out }; }
@@ -109,17 +196,17 @@ const methods = {
 	get_matrix: {
 		call: function() {
 			let p = popen('/usr/bin/omniclash get_matrix');
-			if (!p) return { success: false, error: '执行失败' };
+			if (!p) return { success: false, error: 'Execution failed' };
 			let out = p.read('all');
 			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: '解析失败' }; }
+			try { return json(out); } catch(e) { return { success: false, error: 'Parse error' }; }
 		}
 	},
 	toggle_wifi: {
 		args: { sid: 'sid', disabled: false },
 		call: function(req) {
 			let p = popen('/usr/bin/omniclash toggle_wifi', 'w');
-			if (!p) return { success: false, error: '管道失败' };
+			if (!p) return { success: false, error: 'Pipe error' };
 			p.write(sprintf('%J', req.args));
 			p.close();
 			return { success: true };
@@ -129,7 +216,7 @@ const methods = {
 		args: { slot: {} },
 		call: function(req) {
 			let p = popen('/usr/bin/omniclash save_slot', 'w');
-			if (!p) return { success: false, error: '管道失败' };
+			if (!p) return { success: false, error: 'Pipe error' };
 			p.write(sprintf('%J', req.args.slot));
 			p.close();
 			return { success: true };
@@ -138,17 +225,17 @@ const methods = {
 	get_providers: {
 		call: function() {
 			let p = popen('/usr/bin/omniclash get_providers');
-			if (!p) return { success: false, error: '执行失败' };
+			if (!p) return { success: false, error: 'Execution failed' };
 			let out = p.read('all');
 			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: '解析失败' }; }
+			try { return json(out); } catch(e) { return { success: false, error: 'Parse error' }; }
 		}
 	},
 	save_providers: {
 		args: { providers: [] },
 		call: function(req) {
 			let p = popen('/usr/bin/omniclash save_providers', 'w');
-			if (!p) return { success: false, error: '管道失败' };
+			if (!p) return { success: false, error: 'Pipe error' };
 			p.write(sprintf('%J', req.args));
 			p.close();
 			return { success: true };
@@ -157,17 +244,17 @@ const methods = {
 	get_groups: {
 		call: function() {
 			let p = popen('/usr/bin/omniclash get_groups');
-			if (!p) return { success: false, error: '执行失败' };
+			if (!p) return { success: false, error: 'Execution failed' };
 			let out = p.read('all');
 			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: '解析失败' }; }
+			try { return json(out); } catch(e) { return { success: false, error: 'Parse error' }; }
 		}
 	},
 	save_groups: {
 		args: { groups: [] },
 		call: function(req) {
 			let p = popen('/usr/bin/omniclash save_groups', 'w');
-			if (!p) return { success: false, error: '管道失败' };
+			if (!p) return { success: false, error: 'Pipe error' };
 			p.write(sprintf('%J', req.args));
 			p.close();
 			return { success: true };
@@ -185,17 +272,17 @@ const methods = {
 	get_rules: {
 		call: function() {
 			let p = popen('/usr/bin/omniclash get_rules');
-			if (!p) return { success: false, error: '执行失败' };
+			if (!p) return { success: false, error: 'Execution failed' };
 			let out = p.read('all');
 			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: '解析失败' }; }
+			try { return json(out); } catch(e) { return { success: false, error: 'Parse error' }; }
 		}
 	},
 	save_rules: {
 		args: { rules: [] },
 		call: function(req) {
 			let p = popen('/usr/bin/omniclash save_rules', 'w');
-			if (!p) return { success: false, error: '管道失败' };
+			if (!p) return { success: false, error: 'Pipe error' };
 			p.write(sprintf('%J', req.args));
 			p.close();
 			return { success: true };

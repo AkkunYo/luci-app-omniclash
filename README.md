@@ -1,106 +1,125 @@
 # luci-app-omniclash
 
+**English** | [简体中文](README_ZH.md)
+
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![OpenWrt Version](https://img.shields.io/badge/OpenWrt-24.10%20%7C%20iStoreOS-brightgreen.svg)](https://openwrt.org/)
+[![OpenWrt Version](https://img.shields.io/badge/OpenWrt-23.05%20%7C%2024.10%20%7C%20iStoreOS-brightgreen.svg)](https://openwrt.org/)
 [![Architecture](https://img.shields.io/badge/Arch-All%20(x86_64%20%7C%20ARM%20%7C%20MIPS)-orange.svg)](https://github.com/AkkunYo/luci-app-omniclash)
 [![Core](https://img.shields.io/badge/Core-Mihomo%20Meta%20(TUN%20Mode)-red.svg)](https://github.com/MetaCubeX/mihomo)
 
-**OmniClash** 是专为 OpenWrt / iStoreOS 打造的企业级旗舰全能网络控制套件。集成了 **Mihomo (Meta) 独立系统级守护进程**、**32 槽位无线 AP 硬件矩阵双向联动** 与 **纯本地数据驱动全动态合流分流编译器**。
+**OmniClash** is an enterprise-grade, all-in-one network routing and proxy control suite designed specifically for OpenWrt and iStoreOS. It integrates a **standalone Mihomo (Meta) system daemon**, a **32-slot wireless AP hardware matrix with bidirectional sync**, and a **purely data-driven, dynamic configuration compilation engine**.
+
+Following official OpenWrt ecosystem packaging standards, the base package `luci-app-omniclash` defaults to standard English, while simplified Chinese support is provided via the official companion package `luci-i18n-omniclash-zh-cn`.
 
 ---
 
-## 🌟 核心特性与架构亮点
+## 🌟 Key Features & Architecture Highlights
 
-### 1. 📶 32 满额无线 AP 矩阵管理 (跨设备双向同步)
-* **硬件级满额常驻**：预设 5G Wi-Fi 6（16 槽位，`#01~#16`）+ 2.4G（16 槽位，`#17~#32`）满额物理槽位。
-* **物理 VLAN 严格隔离**：全量 32 组独立 VLAN 子网（`VLAN 101` ~ `132`）与独立 DHCP 池全网常驻，拒绝频繁重装网络。
-* **真实芯片双向同步**：自动实时探测 AP 硬件网卡真实活跃 BSSID、在线客户端数与物理广播状态。
-* **毫秒级软开关**：一键开启/关闭空中 SSID 广播，无需等待网络重载，配置永不丢失。
-* **⚡ 一键补全**：动态计算 AP 网卡剩余容量，一键弹窗清单预览并批量补齐空缺槽位。
+### 1. 📶 32-Slot Wireless AP Hardware Matrix (Bidirectional Sync)
+* **Hardware Capacity Resident by Default**: 5G Wi-Fi 6 (16 slots, `#01~#16`) + 2.4G (16 slots, `#17~#32`) fully populated.
+* **Strict Physical VLAN Isolation**: 32 dedicated VLAN subnets (`VLAN 101` ~ `132`) and independent DHCP pools reside permanently across the network.
+* **Real Chipset Bidirectional Sync**: Automatically detects real active BSSIDs, online client counts, and physical broadcast state from AP radios.
+* **Sub-millisecond Soft Switches**: Toggle on-air SSID broadcast in milliseconds without restarting wireless interfaces or losing configuration.
+* **⚡ One-Click Fill All**: Dynamically evaluates available hardware capacity, previews slot plans in a modal, and provisions remaining slots in batch.
+* **Instant Client-Side Cache**: Employs a 10-minute local cache mechanism for instant zero-latency loading, with a manual bypass-cache refresh button.
 
-### 2. 🚀 100% 独立自主守护 (告别外部依赖)
-* **独立守护进程**：基于 `/etc/init.d/omniclash` procd 进程守护，原生持有 PID 监控与自动 respawn 复活。
-* **纯 TUN 系统接管**：Mihomo 原生 `device: omniclash` 驱动，Fake-IP (`198.18.0.0/15`) DNS 劫持，全网路由自管理。
-* **原生防火墙联动**：自动向 fw4 注入 `omniclash` 虚拟网卡双向放行链，杜绝漏网与网络截胡。
+### 2. 🚀 100% Standalone System Daemon
+* **Independent Procd Service**: Managed via `/etc/init.d/omniclash` procd instance with native PID monitoring and automatic respawn.
+* **Pure TUN Kernel Takeover**: Native Mihomo `device: omniclash` driver, Fake-IP (`198.18.0.0/15`) DNS hijacking, and self-managed route table 2022.
+* **Native Firewall Integration**: Automatically injects bidirectional accept chains into fw4 (`inet fw4`) for the `omniclash` interface, preventing packet interception.
 
-### 3. 🧩 全量数据驱动动态合流编译器 (Data-Driven Engine)
-* **外部订阅纯化**：云端订阅 100% 仅作为 `proxy-providers` 节点池拉取，绝不污染或覆盖本地规则与矩阵！
-* **分流策略组全景**：预置 42 组完整策略组（自建专线组、地区自动优选组、多应用策略组），支持 UI 自由增删改与恢复默认。
-* **六层纯净直达流水线**：
-  1. `Layer 1`: 局域网私网直连 (`private`) 与 Google .cn 防劫持
-  2. `Layer 2`: **【全局模式】WiFi 槽位**（`01~08` 等）：最顶层直接锁死出口，零泄漏、零打扰
-  3. `Layer 3`: **【定向分流】WiFi 槽位**（`09~16` 等）：国内直连，国外锁死出口，防规则截胡
-  4. `Layer 4`: **广告拦截** (`RULE-SET, reject_ad` / `category-ads-all`)：仅供通用分流设备专享，不误杀工作机
-  5. `Layer 5`: **多应用规则流**：用户自定义规则 + 全套默认规则（AI、YouTube、Netflix、Telegram、国内直连）
-  6. `Layer 6`: **【通用分流】WiFi 槽位专属出口兜底**
-  7. `Layer 7`: 最终 `MATCH` 兜底
+### 3. 🧩 Fully Data-Driven Dynamic Compilation Engine
+* **Purified External Subscriptions**: Remote subscriptions are strictly treated as `proxy-providers` node pools, never overwriting or corrupting local rules or AP mappings!
+* **Structured Proxy Groups**: Pre-configured with 42 proxy groups (dedicated lines, auto-test regions, application routing), fully editable via UI with one-click restore.
+* **Ironclad 6-Tier Routing Pipeline**:
+  1. `Layer 1`: LAN & private subnet direct connection (`private`) and Google .cn anti-hijacking.
+  2. `Layer 2`: **Global Mode WiFi Slots** (`01~08`, etc.): Top-tier interception strictly locked to dedicated proxies; zero leaks, zero disturbance.
+  3. `Layer 3`: **Targeted Mode WiFi Slots** (`09~16`, etc.): Domestic traffic direct, foreign traffic strictly sent to dedicated egress, preventing subsequent rule interference.
+  4. `Layer 4`: **Ad Blocking** (`RULE-SET, reject_ad` / `category-ads-all`): Exclusively active for general devices; never interferes with dedicated development machines.
+  5. `Layer 5`: **Application Rule Streams**: Custom rules + standard presets (AI, YouTube, Netflix, Telegram, domestic direct).
+  6. `Layer 6`: **General Routing WiFi Fallback**: Unmatched foreign traffic routed via respective assigned proxy nodes.
+  7. `Layer 7`: Final `MATCH` fallback.
 
-### 4. 🖥️ 现代化纯原生 LuCI 界面
-* **运行概览**：内核状态徽标、连续运行时间、停止/启动/重启/热重载按钮、Zashboard 打开与一键加速升级。
-* **WiFi 矩阵管理**：纯原生数据绑定，10 分钟本地极速缓存直出（零延迟秒开），支持右上角穿透缓存刷新。
-* **订阅与分流**：
-  * `⚙️ 核心与高级设置`：TUN 模式/堆栈、端口自定义 (7890/1080)、DNS 模式、内核日志等级、Cron 定时重启守护
-  * `📦 Provider 订阅集`：表格化行内自由增删改查子订阅 URL 与前缀
-  * `🎯 分流节点组`：高对比度清晰全景展示全量 42 个策略组
-  * `🔀 分流规则 (Rule)`：全量 69+ 规则表格化行内增删改与上移/下移排序
-  * `📄 运行配置 (只读)`：实时只读查看与一键复制最终合流生成的 `/etc/omniclash/run/config.yaml`
-* **运行日志**：独立日志大屏，3 秒自动滚动刷新，支持一键清空日志。
+### 4. 🖥️ Modern Native LuCI Interface
+* **Overview**: Core status badge, continuous uptime, start/stop/restart/reload buttons, Zashboard launch, and one-click core update. App Version and Core Version are clearly separated.
+* **WiFi AP Matrix**: Native data binding with 10-minute instant local cache and manual cache-bypass refresh.
+* **Subscription & Routing**:
+  * `⚙️ Core Settings`: TUN mode/stack, port customization (7890/1080), DNS mode, core log level, cron scheduled restart.
+  * `📦 Provider Subscriptions`: Editable inline table for provider URLs, tags, and prefixes.
+  * `🎯 Proxy Groups`: High-contrast overview of all 42 structured proxy groups.
+  * `🔀 Rules`: Editable table for 69+ routing rules with up/down priority ordering.
+  * `📄 Running Config (Read-only)`: Real-time viewer and one-click copy of the compiled `/etc/omniclash/run/config.yaml`.
+* **Live Logs**: Dedicated log viewer with 3-second auto-scroll polling and one-click log clearing.
 
 ---
 
-## 🏗️ 架构拓扑图
+## 🏗️ Network Architecture Topology
 
 ```text
-[上级光猫 / 广域网]
+[Modem / WAN Uplink]
         │ (WAN: eth0)
         ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ 主路由: J3160 (iStoreOS / OpenWrt 24.10)                     │
-│  ├─ omniclash 核心守护进程 (/usr/bin/mihomo)                  │
-│  ├─ TUN 虚拟网卡 (198.18.0.0/30) + Fake-IP DNS 劫持 (:1053)   │
-│  ├─ Dnsmasq (10000 缓存) + 32 组独立 VLAN DHCP 地址池        │
-│  └─ eth1 单臂 Trunk 复用 (主网 + VLAN 101~132)                │
+│ Main Router: J3160 (iStoreOS / OpenWrt 24.10)                │
+│  ├─ omniclash core daemon (/usr/bin/mihomo)                  │
+│  ├─ TUN virtual interface (198.18.0.0/30) + Fake-IP DNS      │
+│  ├─ Dnsmasq (10000 cache) + 32 dedicated VLAN DHCP pools     │
+│  └─ eth1 single-arm trunk (Main LAN + VLAN 101~132)          │
 └──────────────────────────────────────────────────────────────┘
-        │ (802.1Q VLAN Trunk 盲插网线)
+        │ (802.1Q VLAN Trunk Cable)
         ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ 纯 AP: 京东云鲁班 RE-CP-02 (ImmortalWrt / OpenWrt)           │
-│  ├─ 5G 射频 (MT7915E Wi-Fi 6, 满额 16 槽位): #01 ~ #16       │
-│  └─ 2.4G 射频 (MT7915E, 满额 16 槽位):      #17 ~ #32       │
+│ Pure AP: Luban RE-CP-02 (ImmortalWrt / OpenWrt)              │
+│  ├─ 5G Radio (MT7915E Wi-Fi 6, 16 Slots): #01 ~ #16          │
+│  └─ 2.4G Radio (MT7915E, 16 Slots):      #17 ~ #32          │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📦 安装与编译
+## 📦 Packages & Installation
 
-### 编译进固件 (OpenWrt Buildroot)
+### Package Structure
+* `luci-app-omniclash`: Core application package (default English interface).
+* `luci-i18n-omniclash-zh-cn`: Simplified Chinese language pack (automatically applied when LuCI language is Chinese).
 
-克隆本项目至 OpenWrt 源码的 `package/` 或 `feeds/` 目录下：
+### Manual Installation (OPKG)
+Upload the built `.ipk` packages to your router:
+
+```bash
+# 1. Install base application
+opkg install luci-app-omniclash_0.0.1-1_all.ipk
+
+# 2. Install Chinese language pack (optional)
+opkg install luci-i18n-omniclash-zh-cn_0.0.1-1_all.ipk
+```
+
+### Build from Source (OpenWrt Buildroot)
+Clone this repository into your OpenWrt SDK `package/` or `feeds/` directory:
 
 ```bash
 cd package/
 git clone https://github.com/AkkunYo/luci-app-omniclash.git
 
 make menuconfig
-# 进入 LuCI -> Applications -> 选择 luci-app-omniclash
+# Select LuCI -> Applications -> luci-app-omniclash (and luci-i18n-omniclash-zh-cn)
 make package/luci-app-omniclash/compile V=s
 ```
 
 ---
 
-## 🛠️ 依赖环境
+## 🛠️ Prerequisites & Dependencies
 
-* `OpenWrt` 24.10+ / `iStoreOS` 24.10+
+* `OpenWrt` 23.05+ / 24.10+ / `iStoreOS`
 * `mihomo` (>= v1.19.0)
-* `ucode` (含 `ucode-mod-fs`, `ucode-mod-uci`, `ucode-mod-ubus`)
+* `ucode` (with `ucode-mod-fs`, `ucode-mod-uci`, `ucode-mod-ubus`)
 * `yq` (v4.x)
 * `ca-bundle` / `curl`
 
 ---
 
-## 📄 开源许可证
+## 📄 License
 
-本项目基于 **GNU General Public License v3.0 (GPL-3.0)** 许可证开源。
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
 
-**作者 / 维护者**: [AkkunYo](https://github.com/AkkunYo) (945395054@qq.com)
+**Author / Maintainer**: [AkkunYo](https://github.com/AkkunYo) (945395054@qq.com)
