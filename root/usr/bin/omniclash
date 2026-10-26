@@ -239,7 +239,9 @@ function compile_config() {
     template = replace(template, /fake-ip-range:\s*[0-9.\/]+/, sprintf("fake-ip-range: %s", fake_ip_range));
 
     // 2. 加载 groups.json / apps.json 与 32-WiFi 槽位出口
-    let groups = json(fs.readfile(GROUPS_FILE) || "[]");
+    let groups = null;
+    try { groups = json(fs.readfile(GROUPS_FILE) || "[]"); } catch(e) { groups = null; }
+    if (type(groups) != "array") groups = [];
     let apps = null;
     try { apps = json(fs.readfile(APPS_FILE) || "[]"); } catch(e) { apps = null; }
     if (type(apps) != "array") apps = [];
@@ -931,7 +933,9 @@ if (action == "compile") {
     if (fs.access(NORMAL_WIFI_DEF_FILE)) {
         fs.writefile(NORMAL_WIFI_FILE, fs.readfile(NORMAL_WIFI_DEF_FILE));
     }
-    let items = json(fs.readfile(NORMAL_WIFI_FILE) || "[]");
+    let items = null;
+    try { items = json(fs.readfile(NORMAL_WIFI_FILE) || "[]"); } catch(e) { items = null; }
+    if (type(items) != "array") items = [];
     for (let item in items) {
         let sec = (item.band == "5g") ? "default_radio1" : "default_radio0";
         wireless_exec(sprintf("
