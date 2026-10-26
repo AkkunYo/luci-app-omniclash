@@ -4,6 +4,12 @@ msgstr "Content-Type: text/plain; charset=UTF-8\n"
 msgid "%d minutes ago"
 msgstr ""
 
+msgid "%d rules"
+msgstr ""
+
+msgid "%d scenario card(s) had no name and were saved as \"Unnamed Scenario\"."
+msgstr ""
+
 msgid "%d seconds ago"
 msgstr ""
 
@@ -23,9 +29,6 @@ msgid "+ Add Provider"
 msgstr ""
 
 msgid "+ Add Proxy Group"
-msgstr ""
-
-msgid "+ Add Rule"
 msgstr ""
 
 msgid "1. Traffic Proxy & System TUN Settings"
@@ -64,7 +67,10 @@ msgstr ""
 msgid "Actions"
 msgstr ""
 
-msgid "All settings, providers, groups, and rules successfully saved and applied!"
+msgid "Add"
+msgstr ""
+
+msgid "All settings, providers, groups, and application cards successfully saved and applied!"
 msgstr ""
 
 msgid "All slots ready"
@@ -82,19 +88,28 @@ msgstr ""
 msgid "App update failed"
 msgstr ""
 
-msgid "Are you sure you want to deploy full 32-WiFi architecture to the child AP?\nThis will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
+msgid "Application Routing Cards"
+msgstr ""
+
+msgid "Application Routing Pipeline"
+msgstr ""
+
+msgid "Application card library was not saved as expected. Please check the log for details."
+msgstr ""
+
+msgid "Are you sure you want to deploy full 32-WiFi architecture to the child AP? This will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
 msgstr ""
 
 msgid "Are you sure you want to reset all 32-WiFi slots to defaults?"
 msgstr ""
 
-msgid "Are you sure you want to reset proxy groups to default template?\nThis will reset all dedicated lines, regions, and application groups."
+msgid "Are you sure you want to reset proxy groups to default template? This will reset all dedicated lines, regions, and application groups."
 msgstr ""
 
 msgid "Are you sure you want to reset standard WiFi to defaults?"
 msgstr ""
 
-msgid "Are you sure you want to reset to default rules?\nThis will reset 69+ rules including AI, YouTube, Google, and DIRECT."
+msgid "Are you sure you want to restore the full default application library? All custom scenarios and custom rules will be discarded."
 msgstr ""
 
 msgid "Assigned VLAN"
@@ -106,12 +121,6 @@ msgstr ""
 msgid "Auto-detect (Recommended)"
 msgstr ""
 
-msgid "Auto-start: Disabled"
-msgstr ""
-
-msgid "Auto-start: Enabled"
-msgstr ""
-
 msgid "Automated Deployment Steps"
 msgstr ""
 
@@ -121,10 +130,22 @@ msgstr ""
 msgid "Band"
 msgstr ""
 
+msgid "Baseline & Final Fallback"
+msgstr ""
+
 msgid "Broadcast Status"
 msgstr ""
 
 msgid "Broadcasting"
+msgstr ""
+
+msgid "Built-in rules"
+msgstr ""
+
+msgid "Built-in scenario cannot be deleted"
+msgstr ""
+
+msgid "Built-in scenarios cannot be deleted. Disable them instead."
 msgstr ""
 
 msgid "Bypass China Mainland IP"
@@ -139,10 +160,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-msgid "Check & Update App"
-msgstr ""
-
-msgid "Check & Update Core"
+msgid "Catch-All Fallback (MATCH)"
 msgstr ""
 
 msgid "Check Update"
@@ -166,10 +184,10 @@ msgstr ""
 msgid "Child AP SSH login password (used for initial pairing; optional after key trust is established)."
 msgstr ""
 
-msgid "Child AP Settings"
+msgid "Child AP: Automatically create 32 802.1Q VLAN bridges (br-vlan101 ~ br-vlan132 on br-lan.101~132)"
 msgstr ""
 
-msgid "Child AP: Automatically create 32 802.1Q VLAN bridges (br-vlan101 ~ br-vlan132 on br-lan.101~132)"
+msgid "China Mainland Direct"
 msgstr ""
 
 msgid "Clear Logs"
@@ -179,6 +197,9 @@ msgid "Clearing Logs"
 msgstr ""
 
 msgid "Clearing core and plugin log files..."
+msgstr ""
+
+msgid "Collapse"
 msgstr ""
 
 msgid "Communication Test"
@@ -220,7 +241,13 @@ msgstr ""
 msgid "Core update failed"
 msgstr ""
 
+msgid "Create"
+msgstr ""
+
 msgid "Cron Expression"
+msgstr ""
+
+msgid "Custom rules"
 msgstr ""
 
 msgid "DNS Mode"
@@ -241,6 +268,9 @@ msgstr ""
 msgid "Default SSID"
 msgstr ""
 
+msgid "Default application library restored successfully!"
+msgstr ""
+
 msgid "Delete"
 msgstr ""
 
@@ -251,9 +281,6 @@ msgid "Deploy full 32-WiFi architecture to newly flashed child AP with a single 
 msgstr ""
 
 msgid "Deploying 32-WiFi Architecture"
-msgstr ""
-
-msgid "Deploying SSH Key Trust"
 msgstr ""
 
 msgid "Deploying SSH public key to child AP for passwordless communication..."
@@ -271,22 +298,34 @@ msgstr ""
 msgid "Dismiss"
 msgstr ""
 
+msgid "Domain or IP (e.g. example.com)"
+msgstr ""
+
 msgid "Dynamically compiled from settings, providers, groups, rules, and 32-WiFi matrix (read-only)."
+msgstr ""
+
+msgid "Egress"
+msgstr ""
+
+msgid "Egress Target"
+msgstr ""
+
+msgid "Emits GEOSITE,cn and GEOIP,cn to this target for all devices not captured above."
 msgstr ""
 
 msgid "Enable"
 msgstr ""
 
-msgid "Enable Service"
+msgid "Enable scheduled task"
 msgstr ""
 
-msgid "Enable scheduled task"
+msgid "Enable this scenario"
 msgstr ""
 
 msgid "Enabled (Bypass CN IP directly)"
 msgstr ""
 
-msgid "Enterprise Mihomo Controller & 32-WiFi AP Matrix"
+msgid "Expand"
 msgstr ""
 
 msgid "Failed to connect to AP"
@@ -334,6 +373,9 @@ msgstr ""
 msgid "General Routing (Default Fallback)"
 msgstr ""
 
+msgid "Global-mode and targeted-mode WiFi devices are matched at the highest physical priority and always egress through their dedicated proxy. They never fall through to any application card below, preventing IP leaks and rule hijacking."
+msgstr ""
+
 msgid "Group Name"
 msgstr ""
 
@@ -347,6 +389,9 @@ msgid "High-Performance Mode (Full Features)"
 msgstr ""
 
 msgid "Info (Detailed, Recommended)"
+msgstr ""
+
+msgid "Initial Domain / IP"
 msgstr ""
 
 msgid "Initializing VLANs, DHCP, AP radios, and routing rules, please wait 5~8 seconds..."
@@ -403,10 +448,25 @@ msgstr ""
 msgid "Mode settings saved and applied successfully!"
 msgstr ""
 
+msgid "Move Down"
+msgstr ""
+
+msgid "Move Up"
+msgstr ""
+
 msgid "Multi-WiFi Matrix Mode (32 Dedicated Slots, Recommended)"
 msgstr ""
 
 msgid "New Group"
+msgstr ""
+
+msgid "New Scenario Card"
+msgstr ""
+
+msgid "No application scenarios configured. Use \"+ New Scenario Card\" or \"Reset to Defaults\"."
+msgstr ""
+
+msgid "No custom rules yet."
 msgstr ""
 
 msgid "No local Wi-Fi module detected on this host. Operating in Remote Child AP mode."
@@ -418,9 +478,6 @@ msgstr ""
 msgid "No proxy groups configured. Click \"+ Add Proxy Group\" or \"Reset to Default Groups\"."
 msgstr ""
 
-msgid "No routing rules configured. Click \"+ Add Rule\" or \"Reset to Default Rules\"."
-msgstr ""
-
 msgid "No running logs available"
 msgstr ""
 
@@ -430,22 +487,13 @@ msgstr ""
 msgid "No subscription providers configured. Click \"+ Add Provider\" below."
 msgstr ""
 
-msgid "No-Resolve"
-msgstr ""
-
 msgid "Node Filter (Regex)"
 msgstr ""
 
 msgid "Node Prefix"
 msgstr ""
 
-msgid "Not found: /usr/bin/mihomo"
-msgstr ""
-
 msgid "Not Running"
-msgstr ""
-
-msgid "Not installed"
 msgstr ""
 
 msgid "OK"
@@ -478,6 +526,9 @@ msgstr ""
 msgid "OmniClash Wireless AP Matrix"
 msgstr ""
 
+msgid "On"
+msgstr ""
+
 msgid "One-Click AP Provisioning & Cloning"
 msgstr ""
 
@@ -499,25 +550,25 @@ msgstr ""
 msgid "Optional if key trust established"
 msgstr ""
 
+msgid "Optional. Leave blank to create a card with only an egress target."
+msgstr ""
+
 msgid "Overview"
 msgstr ""
 
 msgid "Pairing..."
 msgstr ""
 
-msgid "Payload (Domain / IP / GeoTag)"
-msgstr ""
-
-msgid "Payload (e.g. openai, cn, 192.168.1.0/24)"
-msgstr ""
-
 msgid "Performance Profile"
 msgstr ""
 
-msgid "Please enter the AP SSH password first to deploy key trust!"
+msgid "Physical Line Isolation Guarantee"
 msgstr ""
 
-msgid "Preconfigured 69+ rule library. Supports modifying match criteria, target groups, and reordering priority."
+msgid "Please enter a domain or IP first."
+msgstr ""
+
+msgid "Please enter the AP SSH password first to deploy key trust!"
 msgstr ""
 
 msgid "Prefix (e.g. vc_)"
@@ -568,19 +619,19 @@ msgstr ""
 msgid "Remote Child AP Mode (Main Router + AP, Recommended)"
 msgstr ""
 
-msgid "Reset"
+msgid "Remove"
 msgstr ""
 
 msgid "Reset to Default Groups"
+msgstr ""
+
+msgid "Reset to Default Library"
 msgstr ""
 
 msgid "Reset to Default Matrix"
 msgstr ""
 
 msgid "Reset to Default Normal WiFi"
-msgstr ""
-
-msgid "Reset to Default Rules"
 msgstr ""
 
 msgid "Resetting"
@@ -592,22 +643,19 @@ msgstr ""
 msgid "Resetting default proxy groups template..."
 msgstr ""
 
-msgid "Resetting default routing rules..."
+msgid "Resetting standard WiFi to defaults..."
 msgstr ""
 
-msgid "Resetting standard WiFi to defaults..."
+msgid "Restoring default application library..."
 msgstr ""
 
 msgid "Routing Target"
 msgstr ""
 
-msgid "Routing rules successfully restored to default!"
-msgstr ""
-
 msgid "Rule Type"
 msgstr ""
 
-msgid "Rules"
+msgid "Rules are matched top to bottom. Use the arrows to change priority."
 msgstr ""
 
 msgid "Running (PID: %s)"
@@ -661,10 +709,16 @@ msgstr ""
 msgid "Saving operating modes and reloading configuration..."
 msgstr ""
 
-msgid "Saving settings, providers, groups, rules, and compiling configuration..."
+msgid "Saving settings, providers, groups, application cards, and compiling configuration..."
 msgstr ""
 
 msgid "Saving standard WiFi settings and smoothly reloading wireless..."
+msgstr ""
+
+msgid "Scenario Name"
+msgstr ""
+
+msgid "Scenario name cannot be empty."
 msgstr ""
 
 msgid "Scheduled Restart"
@@ -683,9 +737,6 @@ msgid "Standard WiFi reset to defaults successfully!"
 msgstr ""
 
 msgid "Standard WiFi settings saved and applied successfully!"
-msgstr ""
-
-msgid "Stopped"
 msgstr ""
 
 msgid "Structured Proxy Groups"
@@ -736,13 +787,10 @@ msgstr ""
 msgid "Tag (e.g. vpscloud)"
 msgstr ""
 
-msgid "Target (Group / DIRECT / REJECT)"
+msgid "Terminal MATCH rule. Every remaining unmatched connection egresses through this target."
 msgstr ""
 
 msgid "Test Connection"
-msgstr ""
-
-msgid "Testing AP Connection"
 msgstr ""
 
 msgid "Testing SSH connection to %s..."
@@ -751,13 +799,16 @@ msgstr ""
 msgid "Testing..."
 msgstr ""
 
+msgid "These two rules are always emitted after every application card and cannot be reordered."
+msgstr ""
+
 msgid "Toggling wireless broadcast..."
 msgstr ""
 
-msgid "Traffic Routing Rules"
+msgid "UDP Proxy Mode"
 msgstr ""
 
-msgid "UDP Proxy Mode"
+msgid "Unnamed Scenario"
 msgstr ""
 
 msgid "Warning (Lightweight)"
@@ -788,6 +839,15 @@ msgid "Wireless Topology & Operating Mode"
 msgstr ""
 
 msgid "Wireless broadcast status updated!"
+msgstr ""
+
+msgid "You have typed custom rules that were not added yet. Click \"Add\" on each card before saving:"
+msgstr ""
+
+msgid "e.g. Company Office"
+msgstr ""
+
+msgid "e.g. example.com"
 msgstr ""
 
 msgid "gVisor (Userspace Sandbox)"

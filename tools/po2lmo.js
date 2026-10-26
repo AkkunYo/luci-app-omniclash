@@ -17,8 +17,16 @@ function u16(bytes, off) {
 	return ((bytes[off + 1] << 8) + bytes[off]) >>> 0;
 }
 
+function trimws(s) {
+	return String(s).trim().replace(/[ \t\n]+/g, ' ');
+}
+
 function sfh(s) {
 	if (s === null || s.length === 0) return 0;
+	// cbi.js hashes trimws(key); normalizing here keeps lookups in parity even
+	// when a msgid legitimately contains a newline or repeated whitespace.
+	s = trimws(s);
+	if (s.length === 0) return 0;
 	var bytes = [];
 	for (var i = 0; i < s.length; i++) {
 		var ch = s.charCodeAt(i);

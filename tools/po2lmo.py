@@ -47,7 +47,7 @@ def sfh_hash(s):
     elif rem == 2:
         h = (h + u16(off)) & 0xFFFFFFFF
         h = (h ^ (h << 11)) & 0xFFFFFFFF
-        h = (h ^ (h >> 17)) & 0xFFFFFFFF
+        h = (h + (h >> 17)) & 0xFFFFFFFF
     elif rem == 1:
         h = (h + s8(off)) & 0xFFFFFFFF
         h = (h ^ (h << 10)) & 0xFFFFFFFF

@@ -9,6 +9,12 @@ msgstr ""
 msgid "%d minutes ago"
 msgstr "%d 分钟前"
 
+msgid "%d rules"
+msgstr "%d 条规则"
+
+msgid "%d scenario card(s) had no name and were saved as \"Unnamed Scenario\"."
+msgstr "有 %d 张场景卡片未填写名称，已按“未命名场景”保存。"
+
 msgid "%d seconds ago"
 msgstr "%d 秒前"
 
@@ -29,9 +35,6 @@ msgstr "+ 添加新 Provider"
 
 msgid "+ Add Proxy Group"
 msgstr "+ 添加新策略组"
-
-msgid "+ Add Rule"
-msgstr "+ 添加新规则"
 
 msgid "1. Traffic Proxy & System TUN Settings"
 msgstr "1. 流量代理与系统 TUN 设置 (对标 Nikki 核心代理能力)"
@@ -69,8 +72,11 @@ msgstr "子 AP 连接成功！"
 msgid "Actions"
 msgstr "开关与操作"
 
-msgid "All settings, providers, groups, and rules successfully saved and applied!"
-msgstr "全量设置、Provider订阅、策略组与分流规则已全部保存并合流生效！"
+msgid "Add"
+msgstr "添加"
+
+msgid "All settings, providers, groups, and application cards successfully saved and applied!"
+msgstr "全量设置、Provider 订阅、策略组与应用卡片已全部保存并合流生效！"
 
 msgid "All slots ready"
 msgstr "已全部满额就绪"
@@ -87,20 +93,29 @@ msgstr "插件检查/更新完成！当前插件版本: %s"
 msgid "App update failed"
 msgstr "插件更新失败"
 
-msgid "Are you sure you want to deploy full 32-WiFi architecture to the child AP?\nThis will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
+msgid "Application Routing Cards"
+msgstr "应用分流卡片"
+
+msgid "Application Routing Pipeline"
+msgstr "业务应用分流流水线"
+
+msgid "Application card library was not saved as expected. Please check the log for details."
+msgstr "应用卡片库未能按预期写入，请查看日志排查原因。"
+
+msgid "Are you sure you want to deploy full 32-WiFi architecture to the child AP? This will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
 msgstr "确定要向子 AP 部署全套 32-WiFi 架构吗？\n将全自动配置 AP 与主路由网络并重载无线。"
 
 msgid "Are you sure you want to reset all 32-WiFi slots to defaults?"
 msgstr "确定要将全部 32 个 WiFi 槽位恢复为默认配置吗？"
 
-msgid "Are you sure you want to reset proxy groups to default template?\nThis will reset all dedicated lines, regions, and application groups."
+msgid "Are you sure you want to reset proxy groups to default template? This will reset all dedicated lines, regions, and application groups."
 msgstr "确定要将策略组恢复为全套默认模板吗？\n将重置所有专线组、地区组与应用组配置。"
 
 msgid "Are you sure you want to reset standard WiFi to defaults?"
 msgstr "确定要将标准普通 WiFi 恢复为默认配置吗？"
 
-msgid "Are you sure you want to reset to default rules?\nThis will reset 69+ rules including AI, YouTube, Google, and DIRECT."
-msgstr "确定要恢复为系统默认全套分流规则库吗？\n将重置包含 AI、YouTube、Google、私网与国内直连等 69+ 条规则。"
+msgid "Are you sure you want to restore the full default application library? All custom scenarios and custom rules will be discarded."
+msgstr "确定要恢复全套默认应用库吗？\n所有自定义场景与自定义规则都将被丢弃。"
 
 msgid "Assigned VLAN"
 msgstr "分配独立 VLAN"
@@ -111,12 +126,6 @@ msgstr "一键建立免密互信"
 msgid "Auto-detect (Recommended)"
 msgstr "自动检测推荐"
 
-msgid "Auto-start: Disabled"
-msgstr "开机自启: 已禁用"
-
-msgid "Auto-start: Enabled"
-msgstr "开机自启: 已启用"
-
 msgid "Automated Deployment Steps"
 msgstr "全自动部署下发清单"
 
@@ -126,11 +135,23 @@ msgstr "可用: %s MB"
 msgid "Band"
 msgstr "频段"
 
+msgid "Baseline & Final Fallback"
+msgstr "基础保障与兜底收口"
+
 msgid "Broadcast Status"
 msgstr "广播状态"
 
 msgid "Broadcasting"
 msgstr "广播中"
+
+msgid "Built-in rules"
+msgstr "内置规则"
+
+msgid "Built-in scenario cannot be deleted"
+msgstr "内置场景不可删除"
+
+msgid "Built-in scenarios cannot be deleted. Disable them instead."
+msgstr "内置场景不可删除，如需停用请关闭其开关。"
 
 msgid "Bypass China Mainland IP"
 msgstr "绕过中国大陆 IP"
@@ -144,11 +165,8 @@ msgstr "缓存已穿透刷新，已同步 AP 与主路由最新状态！"
 msgid "Cancel"
 msgstr "取消"
 
-msgid "Check & Update App"
-msgstr "检查并更新插件"
-
-msgid "Check & Update Core"
-msgstr "检查并更新核心"
+msgid "Catch-All Fallback (MATCH)"
+msgstr "漏网之鱼兜底 (MATCH)"
 
 msgid "Check Update"
 msgstr "检查更新"
@@ -171,11 +189,11 @@ msgstr "子 AP 连接与认证配置"
 msgid "Child AP SSH login password (used for initial pairing; optional after key trust is established)."
 msgstr "子 AP 登录密码 (用于首次一键建立公钥互信；已免密后可留空)。"
 
-msgid "Child AP Settings"
-msgstr "子 AP 设置"
-
 msgid "Child AP: Automatically create 32 802.1Q VLAN bridges (br-vlan101 ~ br-vlan132 on br-lan.101~132)"
 msgstr "子 AP 侧：自动创建 32 组 802.1Q VLAN 虚拟网桥 (br-vlan101 ~ br-vlan132 绑定 br-lan.101~132)"
+
+msgid "China Mainland Direct"
+msgstr "中国大陆直连"
 
 msgid "Clear Logs"
 msgstr "清空日志"
@@ -185,6 +203,9 @@ msgstr "正在清空日志"
 
 msgid "Clearing core and plugin log files..."
 msgstr "正在清空内核日志与插件日志..."
+
+msgid "Collapse"
+msgstr "收起"
 
 msgid "Communication Test"
 msgstr "通信与互信测试"
@@ -225,8 +246,14 @@ msgstr "核心配置已成功合流热重载！"
 msgid "Core update failed"
 msgstr "核心更新失败"
 
+msgid "Create"
+msgstr "创建"
+
 msgid "Cron Expression"
 msgstr "定时 Cron 表达式"
+
+msgid "Custom rules"
+msgstr "自定义规则"
 
 msgid "DNS Mode"
 msgstr "DNS 运行模式"
@@ -246,6 +273,9 @@ msgstr "预设密码"
 msgid "Default SSID"
 msgstr "预设 WiFi 名称 (SSID)"
 
+msgid "Default application library restored successfully!"
+msgstr "默认应用库已成功恢复！"
+
 msgid "Delete"
 msgstr "删除"
 
@@ -257,9 +287,6 @@ msgstr "专为换新子 AP 或新网络场景打造的一键初始化向导。�
 
 msgid "Deploying 32-WiFi Architecture"
 msgstr "正在部署 32-WiFi 全套架构"
-
-msgid "Deploying SSH Key Trust"
-msgstr "正在建立 SSH 密钥免密互信"
 
 msgid "Deploying SSH public key to child AP for passwordless communication..."
 msgstr "正在向子 AP 下发本地 SSH 公钥以实现免密极速通信..."
@@ -276,23 +303,35 @@ msgstr "关闭 (由 OmniClash 槽位规则决定，推荐)"
 msgid "Dismiss"
 msgstr "关闭"
 
+msgid "Domain or IP (e.g. example.com)"
+msgstr "域名或 IP (如 example.com)"
+
 msgid "Dynamically compiled from settings, providers, groups, rules, and 32-WiFi matrix (read-only)."
 msgstr "由【基础设置 + 节点池 + 策略组 + 分流规则 + 32-WiFi 矩阵】动态合流编译生成，只读展示。"
+
+msgid "Egress"
+msgstr "走向"
+
+msgid "Egress Target"
+msgstr "出口走向"
+
+msgid "Emits GEOSITE,cn and GEOIP,cn to this target for all devices not captured above."
+msgstr "对上方未命中的设备发出 GEOSITE,cn 与 GEOIP,cn 规则并指向该走向。"
 
 msgid "Enable"
 msgstr "开启广播"
 
-msgid "Enable Service"
-msgstr "启用服务"
-
 msgid "Enable scheduled task"
 msgstr "启用定时任务"
+
+msgid "Enable this scenario"
+msgstr "启用该场景"
 
 msgid "Enabled (Bypass CN IP directly)"
 msgstr "开启 (内核直接绕过大陆 IP)"
 
-msgid "Enterprise Mihomo Controller & 32-WiFi AP Matrix"
-msgstr "企业级 Mihomo 内核控制与 32-WiFi AP 矩阵"
+msgid "Expand"
+msgstr "展开"
 
 msgid "Failed to connect to AP"
 msgstr "无法连接到子 AP"
@@ -339,6 +378,9 @@ msgstr "防火墙与规则：自动向 fw4 注入全量子网放行链，并接�
 msgid "General Routing (Default Fallback)"
 msgstr "通用分流 (按序兜底)"
 
+msgid "Global-mode and targeted-mode WiFi devices are matched at the highest physical priority and always egress through their dedicated proxy. They never fall through to any application card below, preventing IP leaks and rule hijacking."
+msgstr "全局模式与定向模式的无线设备享有最高物理匹配优先级，始终经由各自的专属出口发出；它们绝不会落入下方的任何应用卡片，从根本上杜绝 IP 泄漏与规则截胡。"
+
 msgid "Group Name"
 msgstr "策略组名称"
 
@@ -353,6 +395,9 @@ msgstr "极速性能模式 (全功能与策略组)"
 
 msgid "Info (Detailed, Recommended)"
 msgstr "Info (正常详细，推荐)"
+
+msgid "Initial Domain / IP"
+msgstr "初始匹配域名 / IP"
 
 msgid "Initializing VLANs, DHCP, AP radios, and routing rules, please wait 5~8 seconds..."
 msgstr "正在初始化补全全量 VLAN、DHCP、AP 射频与规则链，请稍候约 5~8 秒..."
@@ -408,11 +453,26 @@ msgstr "模式设置"
 msgid "Mode settings saved and applied successfully!"
 msgstr "模式设置已保存并生效！"
 
+msgid "Move Down"
+msgstr "下移"
+
+msgid "Move Up"
+msgstr "上移"
+
 msgid "Multi-WiFi Matrix Mode (32 Dedicated Slots, Recommended)"
 msgstr "多 WiFi 矩阵模式 (32 槽位独立分流，推荐)"
 
 msgid "New Group"
 msgstr "新策略组"
+
+msgid "New Scenario Card"
+msgstr "新建场景卡片"
+
+msgid "No application scenarios configured. Use \"+ New Scenario Card\" or \"Reset to Defaults\"."
+msgstr "尚未配置任何应用场景，可点击【+ 新建场景卡片】或【恢复默认应用库】。"
+
+msgid "No custom rules yet."
+msgstr "暂无自定义规则。"
 
 msgid "No local Wi-Fi module detected on this host. Operating in Remote Child AP mode."
 msgstr "当前主机未检测到板载无线硬件，自动固定为下接子 AP 模式。"
@@ -423,9 +483,6 @@ msgstr "暂无日志"
 msgid "No proxy groups configured. Click \"+ Add Proxy Group\" or \"Reset to Default Groups\"."
 msgstr "暂无策略组，可点击【+ 添加新策略组】或【恢复默认策略组】"
 
-msgid "No routing rules configured. Click \"+ Add Rule\" or \"Reset to Default Rules\"."
-msgstr "暂无分流规则，可点击【+ 添加新规则】或【恢复默认规则库】"
-
 msgid "No running logs available"
 msgstr "暂无运行日志"
 
@@ -435,23 +492,14 @@ msgstr "未检测到标准普通 WiFi 接口。"
 msgid "No subscription providers configured. Click \"+ Add Provider\" below."
 msgstr "暂无子订阅 Provider，点击下方【+ 添加新 Provider】添加"
 
-msgid "No-Resolve"
-msgstr "不解析IP"
-
 msgid "Node Filter (Regex)"
 msgstr "节点筛选正则 (Filter)"
 
 msgid "Node Prefix"
 msgstr "节点前缀"
 
-msgid "Not found: /usr/bin/mihomo"
-msgstr "未检测到 /usr/bin/mihomo"
-
 msgid "Not Running"
 msgstr "未运行"
-
-msgid "Not installed"
-msgstr "未安装"
 
 msgid "OK"
 msgstr "确定"
@@ -483,6 +531,9 @@ msgstr "OmniClash 无线 AP 管理中枢"
 msgid "OmniClash Wireless AP Matrix"
 msgstr "OmniClash 无线 AP 矩阵管理"
 
+msgid "On"
+msgstr "启用"
+
 msgid "One-Click AP Provisioning & Cloning"
 msgstr "子 AP 架构一键复刻与初始化"
 
@@ -504,26 +555,26 @@ msgstr "运行模式: 本机单主机矩阵"
 msgid "Optional if key trust established"
 msgstr "已建立免密互信可留空"
 
+msgid "Optional. Leave blank to create a card with only an egress target."
+msgstr "可选。留空则仅创建一个带出口走向的卡片。"
+
 msgid "Overview"
 msgstr "运行概览"
 
 msgid "Pairing..."
 msgstr "正在配对..."
 
-msgid "Payload (Domain / IP / GeoTag)"
-msgstr "匹配条件 (域名 / IP段 / GeoTag)"
-
-msgid "Payload (e.g. openai, cn, 192.168.1.0/24)"
-msgstr "匹配值 (如 openai, cn, 192.168.1.0/24)"
-
 msgid "Performance Profile"
 msgstr "性能配置预设"
 
+msgid "Physical Line Isolation Guarantee"
+msgstr "物理专线隔离保障"
+
+msgid "Please enter a domain or IP first."
+msgstr "请先填写域名或 IP。"
+
 msgid "Please enter the AP SSH password first to deploy key trust!"
 msgstr "请先输入子 AP 的 SSH 登录密码以部署密钥互信！"
-
-msgid "Preconfigured 69+ rule library. Supports modifying match criteria, target groups, and reordering priority."
-msgstr "预置全套 69+ 规则库。支持直接修改匹配条件与走向策略组，支持上移/下移调整优先级。"
 
 msgid "Prefix (e.g. vc_)"
 msgstr "前缀 (如 vc_)"
@@ -573,20 +624,20 @@ msgstr "已刷新最新运行配置！"
 msgid "Remote Child AP Mode (Main Router + AP, Recommended)"
 msgstr "下接子 AP 模式 (主路由 + 子AP联动，推荐)"
 
-msgid "Reset"
-msgstr "重置"
+msgid "Remove"
+msgstr "移除"
 
 msgid "Reset to Default Groups"
 msgstr "恢复默认策略组"
+
+msgid "Reset to Default Library"
+msgstr "恢复默认应用库"
 
 msgid "Reset to Default Matrix"
 msgstr "恢复默认多 WiFi 矩阵"
 
 msgid "Reset to Default Normal WiFi"
 msgstr "恢复默认标准 WiFi"
-
-msgid "Reset to Default Rules"
-msgstr "恢复默认规则库"
 
 msgid "Resetting"
 msgstr "正在恢复"
@@ -597,23 +648,20 @@ msgstr "正在将 32-WiFi 矩阵恢复为默认配置..."
 msgid "Resetting default proxy groups template..."
 msgstr "正在恢复默认策略组模板..."
 
-msgid "Resetting default routing rules..."
-msgstr "正在恢复默认分流规则库..."
-
 msgid "Resetting standard WiFi to defaults..."
 msgstr "正在恢复默认标准普通 WiFi..."
+
+msgid "Restoring default application library..."
+msgstr "正在恢复默认应用库..."
 
 msgid "Routing Target"
 msgstr "分流走向"
 
-msgid "Routing rules successfully restored to default!"
-msgstr "分流规则已成功恢复为默认规则库！"
-
 msgid "Rule Type"
 msgstr "规则类型"
 
-msgid "Rules"
-msgstr "分流规则 (Rule)"
+msgid "Rules are matched top to bottom. Use the arrows to change priority."
+msgstr "规则自上而下依次匹配，使用箭头调整优先级顺序。"
 
 msgid "Running (PID: %s)"
 msgstr "运行中 (PID: %s)"
@@ -661,16 +709,22 @@ msgid "Saving"
 msgstr "正在保存"
 
 msgid "Saving & Applying"
-msgstr "Saving & Applying"
+msgstr "正在保存并应用"
 
 msgid "Saving operating modes and reloading configuration..."
 msgstr "正在保存运行模式并重载核心配置..."
 
-msgid "Saving settings, providers, groups, rules, and compiling configuration..."
-msgstr "正在写入全量核心设置、Provider、策略组与分流规则并合流生效..."
+msgid "Saving settings, providers, groups, application cards, and compiling configuration..."
+msgstr "正在写入全量核心设置、Provider、策略组与应用卡片并合流生效..."
 
 msgid "Saving standard WiFi settings and smoothly reloading wireless..."
 msgstr "正在保存标准普通 WiFi 配置并平滑重载无线..."
+
+msgid "Scenario Name"
+msgstr "场景名称"
+
+msgid "Scenario name cannot be empty."
+msgstr "场景名称不能为空。"
 
 msgid "Scheduled Restart"
 msgstr "开启定时重启/重载"
@@ -689,9 +743,6 @@ msgstr "标准普通 WiFi 已恢复默认！"
 
 msgid "Standard WiFi settings saved and applied successfully!"
 msgstr "标准普通 WiFi 配置已保存并成功同步！"
-
-msgid "Stopped"
-msgstr "已停止"
 
 msgid "Structured Proxy Groups"
 msgstr "结构化分流策略组全景"
@@ -741,14 +792,11 @@ msgstr "TUN (纯 TUN 模式，零泄漏推荐)"
 msgid "Tag (e.g. vpscloud)"
 msgstr "标识名 (如 vpscloud)"
 
-msgid "Target (Group / DIRECT / REJECT)"
-msgstr "走向 (策略组/直连/拦截)"
+msgid "Terminal MATCH rule. Every remaining unmatched connection egresses through this target."
+msgstr "终结性 MATCH 规则，所有未被匹配的连接均经由此走向发出。"
 
 msgid "Test Connection"
 msgstr "测试连通性"
-
-msgid "Testing AP Connection"
-msgstr "正在测试 AP 连接"
 
 msgid "Testing SSH connection to %s..."
 msgstr "正在测试与子 AP (%s) 的 SSH 连通性..."
@@ -756,14 +804,17 @@ msgstr "正在测试与子 AP (%s) 的 SSH 连通性..."
 msgid "Testing..."
 msgstr "正在连接..."
 
+msgid "These two rules are always emitted after every application card and cannot be reordered."
+msgstr "这两条规则始终排在所有应用卡片之后，不可调整顺序。"
+
 msgid "Toggling wireless broadcast..."
 msgstr "正在切换无线广播状态..."
 
-msgid "Traffic Routing Rules"
-msgstr "全量分流规则表 (Rule)"
-
 msgid "UDP Proxy Mode"
 msgstr "UDP 代理模式"
+
+msgid "Unnamed Scenario"
+msgstr "未命名场景"
 
 msgid "Warning (Lightweight)"
 msgstr "Warning (仅告警，轻量)"
@@ -794,6 +845,15 @@ msgstr "无线拓扑与运作模式"
 
 msgid "Wireless broadcast status updated!"
 msgstr "无线广播状态已更新！"
+
+msgid "You have typed custom rules that were not added yet. Click \"Add\" on each card before saving:"
+msgstr "存在已填写但尚未添加的自定义规则，请先在对应卡片上点击【添加】再保存："
+
+msgid "e.g. Company Office"
+msgstr "如：公司办公"
+
+msgid "e.g. example.com"
+msgstr "如：example.com"
 
 msgid "gVisor (Userspace Sandbox)"
 msgstr "gVisor (用户态沙箱)"
