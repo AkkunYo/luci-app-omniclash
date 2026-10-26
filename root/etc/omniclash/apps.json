@@ -1,0 +1,254 @@
+[
+  {
+    "id": "ai",
+    "name": "🤖 AI 场景服务",
+    "desc": "ChatGPT / Claude / OpenAI / Anthropic 等生成式 AI 接口",
+    "target": "🎯 专线-Tallflix",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "category-ai-chat-!cn"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "openai"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "anthropic"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "youtube",
+    "name": "📹 YouTube 媒体",
+    "desc": "YouTube 视频与分发 CDN 流量",
+    "target": "🇭🇰 香港节点",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "youtube"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "netflix",
+    "name": "🎥 NETFLIX 流媒体",
+    "desc": "Netflix 流媒体与 CDN",
+    "target": "🇸🇬 新加坡",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "netflix"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "telegram",
+    "name": "📲 Telegram 通讯",
+    "desc": "Telegram 客户端与数据中心 IP",
+    "target": "🚀 节点选择",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "telegram"
+      },
+      {
+        "type": "GEOIP",
+        "payload": "telegram"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "google",
+    "name": "🍀 Google 服务",
+    "desc": "Google 搜索、Gmail、Drive 等",
+    "target": "🚀 节点选择",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "google"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "github",
+    "name": "🐙 GitHub 开发者",
+    "desc": "GitHub 代码托管与资源加速",
+    "target": "🇺🇲 美国节点",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "github"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "bilibili",
+    "name": "📹 哔哩哔哩海外",
+    "desc": "哔哩哔哩及港澳台限定番剧",
+    "target": "🇨🇳 台湾节点",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "biliintl"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "spotify",
+    "name": "🎵 Spotify 音乐",
+    "desc": "Spotify 音乐流媒体",
+    "target": "🇸🇬 新加坡",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "spotify"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "bahamut",
+    "name": "📹 巴哈姆特动画",
+    "desc": "巴哈姆特动画疯",
+    "target": "🇨🇳 台湾节点",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "bahamut"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "onedrive",
+    "name": "🐬 OneDrive 云盘",
+    "desc": "Microsoft OneDrive 同步",
+    "target": "🇸🇬 新加坡",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "onedrive"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "microsoft",
+    "name": "🪟 Microsoft 服务",
+    "desc": "Microsoft 与 Office 在线服务",
+    "target": "🚀 节点选择",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "microsoft"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "tiktok",
+    "name": "🎵 TikTok 短视频",
+    "desc": "TikTok 国际版",
+    "target": "🇺🇲 美国节点",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "tiktok"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "notion",
+    "name": "📖 Notion 笔记",
+    "desc": "Notion 协作平台",
+    "target": "🇺🇲 美国节点",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "notion"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "paypal",
+    "name": "💶 PayPal 支付",
+    "desc": "PayPal 支付与风控",
+    "target": "🇺🇲 美国节点",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "paypal"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "twitter",
+    "name": "🐦 Twitter / X",
+    "desc": "X (Twitter) 社交平台",
+    "target": "🇺🇲 美国节点",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "twitter"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "apple",
+    "name": "🍎 Apple 服务",
+    "desc": "Apple 海外服务与 iCloud",
+    "target": "🇺🇲 美国节点",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "apple"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  }
+]

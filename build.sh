@@ -101,6 +101,7 @@ cat << 'POST' > "$BUILD_DIR/control/postinst"
 	# 2. 规则库与策略组初始化 (若用户未自定义则从默认库初始化)
 	[ -f /etc/omniclash/groups.json ] || cp -f /etc/omniclash/groups_default.json /etc/omniclash/groups.json
 	[ -f /etc/omniclash/rules.json ] || cp -f /etc/omniclash/rules_default.json /etc/omniclash/rules.json
+	[ -f /etc/omniclash/apps.json ] || cp -f /etc/omniclash/apps_default.json /etc/omniclash/apps.json
 	[ -f /etc/omniclash/wifi_normal.json ] || cp -f /etc/omniclash/wifi_normal_default.json /etc/omniclash/wifi_normal.json
 
 	# 3. 权限与系统守护进程启动
