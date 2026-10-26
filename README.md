@@ -23,6 +23,13 @@ Following official OpenWrt ecosystem packaging standards, the base package `luci
 * **⚡ One-Click Fill All**: Dynamically evaluates available hardware capacity, previews slot plans in a modal, and provisions remaining slots in batch.
 * **Instant Client-Side Cache**: Employs a 10-minute local cache mechanism for instant zero-latency loading, with a manual bypass-cache refresh button.
 
+### 1b. 🔗 AC + AP Distributed Control (omniclash-agent)
+* **Structured RPC, Not SSH Scripts**: The child AP runs a tiny JSON endpoint (`/cgi-bin/omniclash-agent`); the controller sends structured requests instead of concatenated shell strings.
+* **No SSH Password Needed**: Access is authenticated with a per-AP bearer token, so joining a brand-new AP no longer requires knowing its root password.
+* **Automatic Fallback**: If the agent is not installed, the controller transparently falls back to SSH — behaviour is byte-identical to the previous release.
+* **~3× Faster Refresh**: Full 32-slot status refresh drops from ~2.0s to ~0.6s.
+* **Provably Safe to Install**: The agent only ever writes `wireless` UCI. It never touches `network`, `dhcp` or `firewall`, and never calls `network reload` or `reboot`, so installing it cannot drop the link.
+
 ### 2. 🚀 100% Standalone System Daemon
 * **Independent Procd Service**: Managed via `/etc/init.d/omniclash` procd instance with native PID monitoring and automatic respawn.
 * **Pure TUN Kernel Takeover**: Native Mihomo `device: omniclash` driver, Fake-IP (`198.18.0.0/15`) DNS hijacking, and self-managed route table 2022.
@@ -80,19 +87,29 @@ Following official OpenWrt ecosystem packaging standards, the base package `luci
 ## 📦 Packages & Installation
 
 ### Package Structure
-* `luci-app-omniclash`: Core application package (default English interface).
+* `luci-app-omniclash`: Core application package (default English interface). Install on the **main router / AC**.
 * `luci-i18n-omniclash-zh-cn`: Simplified Chinese language pack (automatically applied when LuCI language is Chinese).
+* `omniclash-agent`: Lightweight control endpoint for a **child AP**. Optional, but recommended — install once on the AP and the controller stops needing SSH.
 
 ### Manual Installation (OPKG)
 Upload the built `.ipk` packages to your router:
 
 ```bash
-# 1. Install base application
+# 1. Install base application (on the main router)
 opkg install luci-app-omniclash_0.0.1-1_all.ipk
 
 # 2. Install Chinese language pack (optional)
 opkg install luci-i18n-omniclash-zh-cn_0.0.1-1_all.ipk
+
+# 3. Install the agent on the CHILD AP (optional, recommended)
+#    Copy omniclash-agent_0.1.0-1_all.ipk to the AP first.
+opkg install omniclash-agent_0.1.0-1_all.ipk
+cat /etc/omniclash-agent/token     # paste this into the controller UI
 ```
+
+Installing the agent does **not** restart any network service and does not modify
+`wireless`, `network`, `dhcp` or `firewall`. Uninstalling it likewise leaves all
+already-pushed Wi-Fi interfaces in place.
 
 ### Build from Source (OpenWrt Buildroot)
 Clone this repository into your OpenWrt SDK `package/` or `feeds/` directory:

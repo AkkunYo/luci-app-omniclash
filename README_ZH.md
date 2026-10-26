@@ -23,6 +23,13 @@
 * **⚡ 一键补全**：动态计算 AP 网卡剩余容量，一键弹窗清单预览并批量补齐空缺槽位。
 * **瞬时秒开缓存**：前端采用 10 分钟本地缓存机制，进入页面零白屏秒开，支持右上角穿透缓存手动刷新。
 
+### 1b. 🔗 AC + AP 分布式控制 (omniclash-agent)
+* **结构化 RPC，不再拼 shell**：子 AP 上运行一个极小的 JSON 端点（`/cgi-bin/omniclash-agent`），主控发送结构化请求，而不是拼接命令行。
+* **无需 SSH 密码**：使用每台 AP 独立的 Bearer 令牌鉴权，接入全新 AP 不再需要知道它的 root 密码。
+* **自动回退**：子 AP 未装 Agent 时自动回退 SSH，行为与改造前逐字节一致。
+* **刷新快约 3 倍**：32 槽位全量状态刷新从约 2.0 秒降到约 0.6 秒。
+* **可证安全**：Agent 只写 `wireless` 段的 UCI，绝不触碰 `network` / `dhcp` / `firewall`，也绝不执行 `network reload` 或 `reboot`，因此安装过程不可能断网。
+
 ### 2. 🚀 100% 独立自主守护 (告别外部依赖)
 * **独立守护进程**：基于 `/etc/init.d/omniclash` procd 进程守护，原生持有真实 PID 监控与自动 respawn 复活。
 * **纯 TUN 系统接管**：Mihomo 原生 `device: omniclash` 驱动，Fake-IP (`198.18.0.0/15`) DNS 劫持，全网路由自管理。
@@ -80,19 +87,28 @@
 ## 📦 安装与语言包
 
 ### 软件包说明
-* `luci-app-omniclash`: 主体插件包（默认纯英文标准界面）
+* `luci-app-omniclash`: 主体插件包（默认纯英文标准界面），装在**主路由 / AC** 上
 * `luci-i18n-omniclash-zh-cn`: 简体中文语言包（安装后 LuCI 中文界面自动切换为中文）
+* `omniclash-agent`: **子 AP** 侧的轻量控制端点，可选但推荐；装一次之后主控就不再需要 SSH
 
 ### 手动安装 (OPKG)
 将编译产出的 IPK 上传到路由器执行：
 
 ```bash
-# 1. 安装主体插件
+# 1. 安装主体插件（主路由）
 opkg install luci-app-omniclash_0.0.1-1_all.ipk
 
 # 2. 安装中文语言包 (可选)
 opkg install luci-i18n-omniclash-zh-cn_0.0.1-1_all.ipk
+
+# 3. 在【子 AP】上安装代理（可选，推荐）
+#    先把 omniclash-agent_0.1.0-1_all.ipk 传到 AP
+opkg install omniclash-agent_0.1.0-1_all.ipk
+cat /etc/omniclash-agent/token     # 复制该令牌填入主控界面
 ```
+
+安装 Agent **不会**重启任何网络服务，也不会修改 `wireless` / `network` / `dhcp` / `firewall`
+中的既有配置；卸载后已下发的无线接口同样保持原样。
 
 ### 源码编译进固件 (OpenWrt Buildroot)
 克隆本项目至 OpenWrt 源码的 `package/` 或 `feeds/` 目录下：
