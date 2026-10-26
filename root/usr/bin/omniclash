@@ -339,8 +339,9 @@ function compile_config() {
     // 卡片数据可能被 UI 直接写入畸形 JSON，逐字段校验类型并跳过非法项，避免污染规则
     for (let app in apps) {
         if (!app || type(app) != "object") continue;
-        if (app.enabled == false || app.enabled == "false" || app.enabled == "0") continue;
-        let tgt = app.target || "🚀 节点选择";
+        if (app.enabled == false || app.enabled == 0 || app.enabled == "false" || app.enabled == "0") continue;
+        let tgt = app.target;
+        if (type(tgt) != "string" || !tgt) tgt = "🚀 节点选择";
         let app_rules = [];
         for (let r in app.builtin_rules) push(app_rules, r);
         for (let r in app.custom_rules) push(app_rules, r);
@@ -497,18 +498,20 @@ if (action == "compile") {
     }
 } else if (action == "get_apps") {
     ensure_defaults();
-    let a = json(fs.readfile(APPS_FILE) || "[]");
+    let a = null;
+    try { a = json(fs.readfile(APPS_FILE) || "[]"); } catch(e) { a = null; }
     if (type(a) != "array") a = [];
     print(sprintf("%.J\n", { success: true, apps: a }));
 } else if (action == "save_apps") {
     let input_raw = fs.readfile("/dev/stdin") || "";
-    let p = {};
-    try { p = json(input_raw) || {}; } catch(e) {}
-    let list = p.apps || [];
-    if (type(list) != "array") {
+    let p = null;
+    let parsed_ok = false;
+    try { p = json(input_raw); parsed_ok = true; } catch(e) {}
+    if (!parsed_ok || type(p) != "object" || type(p.apps) != "array") {
         print("{\"success\":false,\"error\":\"应用卡片数据格式非法，必须为数组\"}\n");
         return;
     }
+    let list = p.apps;
     fs.writefile(APPS_FILE, sprintf("%.J\n", list));
     compile_config();
     shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
