@@ -16,13 +16,6 @@
 
 import { stdin, stdout, readfile, writefile, access, popen, lsdir, mkdir, unlink } from 'fs';
 
-/* 单引号安全转义：watchdog 的脚本里会拼进路径与秒数，
- * 虽然当前都是内部生成的值，仍统一转义以防日后改动引入注入。 */
-function shq(v) {
-	let s = sprintf('%s', v == null ? '' : v);
-	return replace(s, "'", "'\\''");
-}
-
 function shell_exec(cmd) {
 	let p = popen(cmd);
 	if (!p) return { code: -1, out: '' };
