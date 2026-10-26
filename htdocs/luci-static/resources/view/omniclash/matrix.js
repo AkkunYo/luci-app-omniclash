@@ -60,6 +60,11 @@ var callSyncMatrix = rpc.declare({
 	method: 'sync_matrix'
 });
 
+var callApplyApNetwork = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'apply_ap_network'
+});
+
 var callPairAp = rpc.declare({
 	object: 'luci.omniclash',
 	method: 'pair_ap',
@@ -119,6 +124,29 @@ function fetchFreshData() {
 		return res;
 	});
 }
+
+window.applyApNetwork = function() {
+	if (!confirm(_('Reload the child AP network configuration now?\nThe AP will briefly drop off the network. If it does not come back within the grace period, it restores the previous configuration by itself.'))) return;
+
+	ui.showModal(_('Reloading AP Network'), [ E('p', { 'class': 'spinning' }, _('Applying network configuration on the child AP and waiting for it to come back...')) ]);
+
+	callApplyApNetwork().then(function(res) {
+		ui.hideModal();
+		if (res && res.success) {
+			ui.addNotification(null, E('p', {},
+				'✅ ' + _('Child AP network applied (back in %d s).').replace('%d', res.waited_sec || 0)
+			), 'success');
+		} else {
+			ui.addNotification(null, E('p', {},
+				'⚠️ ' + (res && res.error ? res.error : _('Child AP did not come back; it will self-restore.'))
+			), 'warning');
+		}
+		setTimeout(function() { window.location.reload(); }, 1500);
+	}).catch(function(err) {
+		ui.hideModal();
+		ui.addNotification(null, E('p', {}, err.message), 'error');
+	});
+};
 
 window.syncMatrixToAp = function() {
 	if (!confirm(_('Push the 32-slot wireless configuration to the child AP?\nOnly wireless interfaces are touched; AP networks and firewall stay unchanged.'))) return;
@@ -362,6 +390,27 @@ window.openApConfigModal = function() {	var curHost = uci.get('omniclash', 'conf
 				'class': 'cbi-button',
 				'click': ui.hideModal
 			}, _('Cancel')),
+			E('button', {
+				'type': 'button',
+				'class': 'cbi-button cbi-button-apply',
+				'id': 'modal_btn_apply_network',
+				'click': function() {
+					/* 先把弹窗里的值存好，再让 AP 重载网络 */
+					var host = document.getElementById('modal_ap_host');
+					var token = document.getElementById('modal_ap_token');
+					var transport = document.getElementById('modal_ap_transport');
+					if (host && host.value.trim()) uci.set('omniclash', 'config', 'ap_host', host.value.trim());
+					if (token) uci.set('omniclash', 'config', 'ap_token', token.value.trim());
+					if (transport) uci.set('omniclash', 'config', 'ap_transport', transport.value);
+
+					uci.save().then(function() { return uci.apply(); }).then(function() {
+						ui.hideModal();
+						window.applyApNetwork();
+					}).catch(function(err) {
+						ui.addNotification(null, E('p', {}, err.message), 'error');
+					});
+				}
+			}, '⚠️ ' + _('Apply Network on AP')),
 			E('button', {
 				'type': 'button',
 				'class': 'cbi-button cbi-button-apply',
@@ -854,8 +903,7 @@ return view.extend({
 								}).catch(function(err) {
 									ui.hideModal();
 									ui.addNotification(null, E('p', {}, err.message), 'error');
-								});
-							}
+								});							}
 						}, '🔄 ' + _('Reset to Default Matrix'))
 					])
 				]),

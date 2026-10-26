@@ -112,6 +112,12 @@ msgstr ""
 msgid "Application card library was not saved as expected. Please check the log for details."
 msgstr ""
 
+msgid "Apply Network on AP"
+msgstr ""
+
+msgid "Applying network configuration on the child AP and waiting for it to come back..."
+msgstr ""
+
 msgid "Are you sure you want to deploy full 32-WiFi architecture to the child AP? This will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
 msgstr ""
 
@@ -203,6 +209,12 @@ msgid "Child AP Configuration & Authentication"
 msgstr ""
 
 msgid "Child AP SSH login password (used for initial pairing; optional after key trust is established)."
+msgstr ""
+
+msgid "Child AP did not come back; it will self-restore."
+msgstr ""
+
+msgid "Child AP network applied (back in %d s)."
 msgstr ""
 
 msgid "Child AP synced: %d wireless interface(s) applied via %s."
@@ -707,6 +719,12 @@ msgid "Refresh Config"
 msgstr ""
 
 msgid "Refreshed latest running configuration!"
+msgstr ""
+
+msgid "Reload the child AP network configuration now? The AP will briefly drop off the network. If it does not come back within the grace period, it restores the previous configuration by itself."
+msgstr ""
+
+msgid "Reloading AP Network"
 msgstr ""
 
 msgid "Remote Child AP Mode (Main Router + AP, Recommended)"

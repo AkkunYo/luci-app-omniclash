@@ -326,7 +326,12 @@ function ap_provision_wifi(items) {
  * agent 报告的实际段列表分流：
  *   已存在 -> bulk_set_wifi（只改值，不动 network/device）
  *   不存在 -> provision_wifi（新建段，network 指向该槽位的 vlan）
- * 这样不会出现"因为缺一个段就整批失败"的半可用状态。 */
+ *
+ * VLAN 桥接段的处理是本次安全设计的核心：
+ *   - 缺失的 vlan 只做"写配置 + commit"，绝不触发 network reload，
+ *     因此运行态完全不变，管理通道零风险；
+ *   - 如果无法补配置（例如通道不支持），该段回落到 network=lan，
+ *     宁可牺牲隔离也不能让 SSID 指向不存在的接口。 */
 function ap_sync_matrix(slots) {
     let r = ap_get_wifi();
     if (!r.ok) return { ok: false, error: r.error || "无法读取子 AP 无线状态" };
@@ -339,8 +344,42 @@ function ap_sync_matrix(slots) {
         for (let sec in keys(parsed.interfaces)) existing[sec] = true;
     }
 
+    /* 1. 先补齐 VLAN 配置（只 commit，不 reload） */
+    let have_vlan = {};
+    let can_provision_vlan = false;
+
+    if (r.via == "agent") {
+        let vs = agent_call("vlan_status", {}, 12);
+        if (vs.ok && vs.data && type(vs.data.present) == "array") {
+            for (let v in vs.data.present) have_vlan[int(v)] = true;
+            can_provision_vlan = true;
+        }
+    }
+
+    let need_vlan = [];
+    for (let s in slots) {
+        if (!s.vlan) continue;
+        let n = int(s.vlan);
+        if (n <= 0) continue;
+        if (!have_vlan[n]) push(need_vlan, n);
+    }
+
+    let vlan_created = [];
+    let vlan_pending = false;
+
+    if (length(need_vlan) > 0 && can_provision_vlan) {
+        let pv = agent_call("provision_vlan_config", { vlans: need_vlan }, 25);
+        if (pv.ok) {
+            vlan_created = (pv.data && pv.data.created) ? pv.data.created : [];
+            vlan_pending = (pv.data && pv.data.pending_apply) ? true : false;
+            for (let n in vlan_created) have_vlan[int(n)] = true;
+        }
+    }
+
+    /* 2. 拆分为"更新已有段"与"新建段" */
     let updates = [];
     let creates = [];
+    let fallback_lan = [];
 
     for (let s in slots) {
         if (!s.ap_section) continue;
@@ -350,18 +389,24 @@ function ap_sync_matrix(slots) {
             key: s.key,
             disabled: s.disabled ? true : false
         };
+
         if (existing[s.ap_section]) {
             push(updates, item);
-        } else {
-            push(creates, {
-                section: s.ap_section,
-                device: (s.band == "5g") ? "radio1" : "radio0",
-                network: sprintf("vlan%s", s.vlan),
-                ssid: s.ssid,
-                key: s.key,
-                disabled: s.disabled ? true : false
-            });
+            continue;
         }
+
+        let n = int(s.vlan || 0);
+        let net = (n > 0 && have_vlan[n]) ? sprintf("vlan%d", n) : "lan";
+        if (net == "lan") push(fallback_lan, s.ap_section);
+
+        push(creates, {
+            section: s.ap_section,
+            device: (s.band == "5g") ? "radio1" : "radio0",
+            network: net,
+            ssid: s.ssid,
+            key: s.key,
+            disabled: s.disabled ? true : false
+        });
     }
 
     let total = 0;
@@ -376,7 +421,14 @@ function ap_sync_matrix(slots) {
         total += c.applied || 0;
     }
 
-    return { ok: true, via: (length(creates) > 0) ? "mixed" : r.via, applied: total };
+    return {
+        ok: true,
+        via: (length(creates) > 0) ? "mixed" : r.via,
+        applied: total,
+        vlan_created: vlan_created,
+        vlan_pending_reload: vlan_pending,
+        fallback_lan: fallback_lan
+    };
 }
 
 /* 解析 SSH 回退通道的文本输出（agent 通道直接返回结构化 JSON） */
@@ -769,7 +821,74 @@ if (action == "compile") {
         success: true,
         via: r.via,
         applied: r.applied,
+        vlan_created: r.vlan_created || [],
+        vlan_pending_reload: r.vlan_pending_reload || false,
+        fallback_lan: r.fallback_lan || [],
         msg: sprintf("已向子 AP 同步 %d 个无线段", r.applied)
+    }));
+} else if (action == "apply_ap_network") {
+    /* 让子 AP 的 network 配置生效。
+     *
+     * 这是全流程里唯一可能打断管理通道的动作，因此设计成三段式自愈：
+     *   1. 子 AP 先拍快照、再延迟 reload，并启动看门狗
+     *   2. 本机轮询 agent，一旦重新连上就立刻发 confirm_network 保住新配置
+     *   3. 若一直连不上，子 AP 在 grace 秒后自行回滚到快照
+     * 因此最坏情况是"这次改动没生效"，绝不会是不可恢复的断网。 */
+    if (is_local_mode()) {
+        print("{\"success\":false,\"error\":\"本机模式下无需执行\"}\n");
+        return;
+    }
+    if (!agent_available()) {
+        print("{\"success\":false,\"error\":\"需要 Agent 通道才能安全执行；请先在子 AP 安装 omniclash-agent\"}\n");
+        return;
+    }
+
+    let grace = int(ARGV[1] || 90);
+    if (grace < 30) grace = 30;
+    if (grace > 600) grace = 600;
+
+    let r = agent_call("apply_network", { confirm: "APPLY_NETWORK", grace_sec: grace }, 25);
+    if (!r.ok) {
+        print(sprintf("%.J\n", { success: false, error: r.error || "network reload 调度失败" }));
+        return;
+    }
+
+    /* 轮询等待子 AP 回来。每 2 秒一次，最多 grace-10 秒，
+     * 留出余量确保自愈逻辑先不触发。 */
+    let deadline = time() + (grace - 10);
+    let back = false;
+    let waited = 0;
+
+    while (time() < deadline) {
+        shell_exec("sleep 2");
+        waited += 2;
+
+        _agent_state = null;
+        let ping = agent_call("ping", {}, 4);
+        if (ping.ok && ping.data && ping.data.token_ok == true) {
+            back = true;
+            break;
+        }
+    }
+
+    if (!back) {
+        print(sprintf("%.J\n", {
+            success: false,
+            applied: false,
+            waited_sec: waited,
+            error: sprintf("子 AP 在 %d 秒内未恢复连接，已交由其本地看门狗自动回滚（最多再等 %d 秒）", waited, 10)
+        }));
+        return;
+    }
+
+    /* 回来了就立刻确认，让看门狗别再回滚 */
+    let c = agent_call("confirm_network", {}, 8);
+    print(sprintf("%.J\n", {
+        success: true,
+        applied: true,
+        confirmed: c.ok,
+        waited_sec: waited,
+        msg: sprintf("子 AP 网络配置已生效（恢复耗时 %d 秒）", waited)
     }));
 } else if (action == "agent_status") {
     /* 主动刷新探测，然后把通道状态汇报给前端 */
@@ -786,18 +905,15 @@ if (action == "compile") {
         error: st.error || ""
     }));
 } else if (action == "get_ap_token") {
-    /* 供 UI 显示 token，便于用户复制到子 AP；仅本机 root 可读。
-     * 未配置时现场生成一个，保证"安装即有可用令牌"。 */
+    /* 令牌由子 AP 在安装 agent 时随机生成，主控只负责保存用户粘贴过来的值，
+     * 因此这里绝不自动生成——否则会得到一个永远对不上的令牌。 */
     let tok = ap_token();
-    if (!tok) {
-        let r = shell_exec("head -c 32 /dev/urandom | hexdump -v -e '/1 \"%02x\"'");
-        tok = trim(r.out || "");
-        if (tok) {
-            uci.set("omniclash", "config", "ap_token", tok);
-            uci.commit("omniclash");
-        }
-    }
-    print(sprintf("%.J\n", { success: true, token: tok }));
+    print(sprintf("%.J\n", {
+        success: true,
+        token: tok,
+        configured: (tok != "") ? true : false,
+        hint: (tok != "") ? "" : "在子 AP 上执行 cat /etc/omniclash-agent/token 获取令牌后填入"
+    }));
 } else if (action == "clear_logs") {
     fs.writefile("/var/log/omniclash/core.log", "");
     fs.writefile("/var/log/omniclash/app.log", "");

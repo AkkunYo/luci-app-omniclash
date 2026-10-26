@@ -308,6 +308,11 @@ const methods = {
 			return engine_call('sync_matrix');
 		}
 	},
+	apply_ap_network: {
+		call: function() {
+			return engine_call('apply_ap_network');
+		}
+	},
 	get_ap_token: {
 		call: function() {
 			return engine_call('get_ap_token');

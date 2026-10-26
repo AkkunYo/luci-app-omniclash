@@ -117,6 +117,12 @@ msgstr "业务应用分流流水线"
 msgid "Application card library was not saved as expected. Please check the log for details."
 msgstr "应用卡片库未能按预期写入，请查看日志排查原因。"
 
+msgid "Apply Network on AP"
+msgstr "在子 AP 上重载网络"
+
+msgid "Applying network configuration on the child AP and waiting for it to come back..."
+msgstr "正在子 AP 上应用网络配置，并等待其恢复连接..."
+
 msgid "Are you sure you want to deploy full 32-WiFi architecture to the child AP? This will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
 msgstr "Are you sure you want to deploy full 32-WiFi architecture to the child AP?\nThis will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
 
@@ -209,6 +215,12 @@ msgstr "子 AP 连接与认证配置"
 
 msgid "Child AP SSH login password (used for initial pairing; optional after key trust is established)."
 msgstr "子 AP 登录密码 (用于首次一键建立公钥互信；已免密后可留空)。"
+
+msgid "Child AP did not come back; it will self-restore."
+msgstr "子 AP 未能恢复连接，将自行回滚配置。"
+
+msgid "Child AP network applied (back in %d s)."
+msgstr "子 AP 网络已生效（%d 秒后恢复连接）。"
 
 msgid "Child AP synced: %d wireless interface(s) applied via %s."
 msgstr "子 AP 同步完成：通过 %s 应用了 %d 个无线接口。"
@@ -713,6 +725,12 @@ msgstr "刷新配置"
 
 msgid "Refreshed latest running configuration!"
 msgstr "已刷新最新运行配置！"
+
+msgid "Reload the child AP network configuration now? The AP will briefly drop off the network. If it does not come back within the grace period, it restores the previous configuration by itself."
+msgstr "确定现在重载子 AP 的网络配置吗？\n子 AP 会短暂掉线；若在宽限期内未恢复，它会自行恢复到变更前的配置。"
+
+msgid "Reloading AP Network"
+msgstr "正在重载子 AP 网络"
 
 msgid "Remote Child AP Mode (Main Router + AP, Recommended)"
 msgstr "下接子 AP 模式 (主路由 + 子AP联动，推荐)"

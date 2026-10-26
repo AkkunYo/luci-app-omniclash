@@ -14,7 +14,22 @@
  *   - 每次写盘前把 wireless 备份到 /etc/omniclash-agent/wireless.bak
  */
 
-import { stdin, stdout, readfile, writefile, access, popen } from 'fs';
+import { stdin, stdout, readfile, writefile, access, popen, lsdir, mkdir, unlink } from 'fs';
+
+/* 单引号安全转义：watchdog 的脚本里会拼进路径与秒数，
+ * 虽然当前都是内部生成的值，仍统一转义以防日后改动引入注入。 */
+function shq(v) {
+	let s = sprintf('%s', v == null ? '' : v);
+	return replace(s, "'", "'\\''");
+}
+
+function shell_exec(cmd) {
+	let p = popen(cmd);
+	if (!p) return { code: -1, out: '' };
+	let out = p.read('all') || '';
+	let code = p.close();
+	return { code: code, out: out };
+}
 
 const VERSION = '0.1.0';
 const STATE_DIR = '/etc/omniclash-agent';
@@ -438,7 +453,310 @@ function m_restore_wifi(p) {
 	return out({ ok: true });
 }
 
-/* ---------------- 分发 ---------------- */
+/* ---------------- 网络配置快照 / 回滚 ----------------
+ *
+ * 全量 32 槽位架构需要在 AP 上建 VLAN（属于 network 段），这一步天然比
+ * 只改 wireless 危险。因此提供显式快照与回滚：调用方必须先 backup，
+ * 一旦 reload 把管理通道打断，可以在 AP 本地或串口上 restore 回来。 */
+
+const SNAP_DIR = STATE_DIR + '/snapshots';
+
+/* ucode 的 mkdir 只建一层，逐级创建 */
+function ensure_dir(path) {
+	let parts = split(path, '/');
+	let cur = '';
+	for (let p in parts) {
+		if (p == '') { cur = '/'; continue; }
+		cur = (cur == '/') ? ('/' + p) : (cur ? cur + '/' + p : p);
+		if (!access(cur)) mkdir(cur);
+	}
+}
+
+function snap_name(tag) {
+	let safe = trim(sprintf('%s', tag || 'manual'));
+	safe = replace(safe, /[^a-zA-Z0-9_-]/g, '_');
+	return sprintf('%s/%s-%d', SNAP_DIR, safe, time());
+}
+
+function m_backup_config(p) {
+	let dir = snap_name(p.tag || 'manual');
+	ensure_dir(SNAP_DIR);
+	ensure_dir(dir);
+
+	for (let sec in ['network', 'dhcp', 'firewall', 'wireless']) {
+		let q = popen(sprintf('uci export %s > %s/%s.uci 2>/dev/null', sec, dir, sec));
+		if (q) q.close();
+	}
+
+	/* 记录当前管理地址，便于判断 reload 后是否还能回来 */
+	let ip = popen("ip -4 addr show br-lan 2>/dev/null | awk '/inet /{print $2}'");
+	if (ip) {
+		let v = trim(ip.read('all') || '');
+		ip.close();
+		writefile(dir + '/mgmt.txt', v);
+	}
+
+	return out({ ok: true, dir: dir });
+}
+
+function m_restore_config(p) {
+	let dir = p.dir;
+	if (type(dir) != 'string' || !match(dir, /^\/etc\/omniclash-agent\/snapshots\/[a-zA-Z0-9_-]+$/))
+		fail('invalid snapshot dir');
+
+	for (let sec in ['wireless', 'network', 'dhcp', 'firewall']) {
+		let f = sprintf('%s/%s.uci', dir, sec);
+		if (!access(f)) continue;
+		let q = popen(sprintf('uci import %s < %s', sec, f));
+		if (q) q.close();
+		let c = popen(sprintf('uci commit %s', sec));
+		if (c) c.close();
+	}
+
+	return out({ ok: true, restored: dir });
+}
+
+function m_list_snapshots(p) {
+	let arr = [];
+	let d = lsdir(SNAP_DIR);
+	for (let name in (d || [])) {
+		if (match(name, /\./)) continue;
+		push(arr, name);
+	}
+	sort(arr);
+	return out({ ok: true, snapshots: arr });
+}
+
+/* ---------------- VLAN 桥接配置（只写不生效） ----------------
+ *
+ * 纯 AP 场景下每个 SSID 需要一个 `br-lan.<vid>` 桥接设备并挂到
+ * `proto='none'` 的接口上，AP 自身不做三层。这属于 network 段，
+ * 是整套方案里唯一可能影响管理通道的部分，因此严格分两步：
+ *
+ *   provision_vlan_config  只写 UCI + commit，绝不 reload —— 运行态不变，
+ *                          管理链接 100% 不受影响。
+ *   apply_network          显式二次确认后才 reload。调用方必须告知用户
+ *                          "网络会短暂中断"，并优先在本地/串口执行。
+ *
+ * 缺失的 VLAN 不会被自动补齐到运行态，就是刻意设计：宁可某个 SSID 暂时
+ * 不通，也不能让管理通道消失。 */
+
+function existing_vlan_ids() {
+	let ids = {};
+	uci.foreach('network', 'interface', function (s) {
+		let m = match(s['.name'] || '', /^vlan([0-9]+)$/);
+		if (m) ids[int(m[1])] = true;
+	});
+	return ids;
+}
+
+/* 记录"变更前"快照的指针。
+ *
+ * 关键顺序：快照必须在写入之前拍。若在 apply_network 里才拍，拍到的就是
+ * 已经改过的状态，回滚等于什么都没做。因此 provision_vlan_config 在动
+ * UCI 之前先拍快照并写下指针，apply_network 只消费这个指针。 */
+const PRECHG_FILE = STATE_DIR + '/pre-change-snapshot';
+
+function take_prechange_snapshot(tag) {
+	let dir = snap_name(tag || 'pre-change');
+	ensure_dir(SNAP_DIR);
+	ensure_dir(dir);
+
+	for (let sec in ['network', 'dhcp', 'firewall', 'wireless']) {
+		let q = popen(sprintf('uci export %s > %s/%s.uci 2>/dev/null', sec, dir, sec));
+		if (q) q.close();
+	}
+	let cp = popen(sprintf('cp -f /etc/config/network %s/network.bak 2>/dev/null', dir));
+	if (cp) cp.close();
+
+	writefile(PRECHG_FILE, dir);
+	return dir;
+}
+
+function latest_prechange() {
+	/* 指针只在"有未确认变更"时才有意义：
+	 *   - confirm_network 成功后会被删除（状态已更新，旧快照作废）
+	 *   - 回滚执行后状态回到快照，指针仍可安全复用（它记录的正是当前值） */
+	if (access(PRECHG_FILE)) {
+		let d = trim(readfile(PRECHG_FILE) || '');
+		if (match(d, /^\/etc\/omniclash-agent\/snapshots\/[a-zA-Z0-9_-]+$/) && access(d + '/network.uci'))
+			return d;
+	}
+	return null;
+}
+
+function m_vlan_status(p) {
+	let have = existing_vlan_ids();
+
+	/* 哪些 wifi-iface 指向了不存在的 network 段 */
+	let snap = snapshot_wireless();
+	let dangling = [];
+	for (let sec in keys(snap)) {
+		let net = snap[sec].network;
+		if (!net || net == 'lan') continue;
+		let parts = split(net, ' ');
+		for (let n in parts) {
+			if (!uci.get('network', n))
+				push(dangling, { section: sec, network: n });
+		}
+	}
+
+	let present = [];
+	for (let i = 101; i <= 132; i++)
+		if (have[i]) push(present, i);
+
+	return out({ ok: true, present: present, dangling: dangling });
+}
+
+function m_provision_vlan_config(p) {
+	if (type(p.vlans) != 'array')
+		fail('vlans must be an array');
+
+	let want = [];
+	for (let v in p.vlans) {
+		let n = int(v);
+		if (n < 1 || n > 4094) fail('vlan id out of range: ' + sprintf('%J', v));
+		push(want, n);
+	}
+
+	let have = existing_vlan_ids();
+	let created = [];
+
+	/* 真正要写之前才拍快照，且只拍一次（指针存在就复用） */
+	let snap = null;
+	for (let n in want)
+		if (!have[n]) { snap = latest_prechange() || take_prechange_snapshot('pre-vlan'); break; }
+
+	for (let n in want) {
+		if (have[n]) continue;
+
+		let dev = sprintf('br_vlan%d', n);
+		let ifc = sprintf('vlan%d', n);
+
+		uci.set('network', dev, 'device');
+		uci.set('network', dev, 'name', sprintf('br-vlan%d', n));
+		uci.set('network', dev, 'type', 'bridge');
+		uci.set('network', dev, 'ports', sprintf('br-lan.%d', n));
+
+		uci.set('network', ifc, 'interface');
+		uci.set('network', ifc, 'proto', 'none');
+		uci.set('network', ifc, 'device', sprintf('br-vlan%d', n));
+
+		push(created, n);
+	}
+
+	/* commit 只落盘，不影响运行态；真正生效必须显式 apply_network */
+	if (length(created) > 0)
+		uci.commit('network');
+
+	return out({
+		ok: true,
+		created: created,
+		pending_apply: length(created) > 0,
+		rollback_dir: snap
+	});
+}
+
+function m_apply_network(p) {
+	/* 二次确认，防止误触发把管理通道打断 */
+	if (p.confirm != 'APPLY_NETWORK') {
+		fail('refusing to reload network without confirm="APPLY_NETWORK"; management link may drop');
+	}
+
+	if (p.dry_run == true)
+		return out({ ok: true, dry_run: true });
+
+	let grace = int(p.grace_sec || 90);
+	if (grace < 30) grace = 30;
+	if (grace > 600) grace = 600;
+
+	/* 变更前快照必须已经存在（由 provision_vlan_config 或显式 backup 拍下）。
+	 * 若没有，退化为"现在拍"，但那已经包含待生效的改动，回滚价值有限，
+	 * 因此显式告知调用方。 */
+	let snap = latest_prechange();
+	let snap_source = 'pre-change';
+	if (!snap) {
+		snap = take_prechange_snapshot('pre-apply');
+		snap_source = 'taken-at-apply (may already include pending changes)';
+	}
+
+	let confirm_file = '/tmp/omniclash_agent_net_ok';
+	unlink(confirm_file);
+
+	/* 整个看门狗是自包含脚本：先 reload，再等 grace，再判定。
+	 * 用 start-stop-daemon -b 脱离 CGI 生命周期（OpenWrt 无 nohup），
+	 * 这样 AC 断开、甚至 AC 关机都不影响它跑完。 */
+	let script = sprintf(
+		"sleep 1; /etc/init.d/network reload >/dev/null 2>&1; "
+		+ "sleep %d; "
+		+ "if [ ! -f %s ]; then "
+		+ "  uci import network < %s/network.uci >/dev/null 2>&1 || cp -f %s/network.bak /etc/config/network; "
+		+ "  uci commit network >/dev/null 2>&1; "
+		+ "  logger -t omniclash-agent 'network change was not confirmed; rolled back'; "
+		+ "  /etc/init.d/network reload >/dev/null 2>&1; "
+		+ "fi",
+		grace, confirm_file, snap, snap);
+
+	/* 把脚本写文件再执行，避免超长单行引号嵌套。
+	 *
+	 * 注意：OpenWrt 默认不带 nohup，早先用 nohup 起看门狗时进程根本没起来，
+	 * 回滚形同虚设。这里改用 start-stop-daemon -b（procd 自带），
+	 * 再退回 setsid，两者都能真正脱离 CGI 的生命周期。 */
+	let wd_file = '/tmp/omniclash_agent_watchdog.sh';
+	writefile(wd_file, "#!/bin/sh\n" + script + "\n");
+	shell_exec(sprintf('chmod 755 %s', wd_file));
+
+	let w = popen(sprintf(
+		'start-stop-daemon -S -b -x %s 2>/dev/null || (setsid %s >/dev/null 2>&1 &)',
+		wd_file, wd_file));
+	if (w) w.close();
+
+	return out({
+		ok: true,
+		applied: true,
+		rollback_dir: snap,
+		rollback_source: snap_source,
+		grace_sec: grace,
+		note: 'network reload scheduled; call confirm_network within the grace period or the AP self-restores'
+	});
+}
+
+function m_confirm_network(p) {
+	let q = popen('echo confirmed > /tmp/omniclash_agent_net_ok');
+	if (q) q.close();
+
+	/* 本次变更已被接受，清掉"变更前快照"指针，
+	 * 避免下一次 apply 误用到这一轮已经过期的快照 */
+	unlink(PRECHG_FILE);
+
+	return out({ ok: true, confirmed: true });
+}
+
+function m_rollback_network(p) {
+	let dir = p.dir;
+	if (type(dir) != 'string' || !match(dir, /^\/etc\/omniclash-agent\/snapshots\/[a-zA-Z0-9_-]+$/))
+		fail('invalid snapshot dir');
+
+	let f = dir + '/network.uci';
+	if (!access(f)) fail('snapshot has no network.uci');
+
+	let q = popen(sprintf('uci import network < %s', f));
+	if (q) q.close();
+
+	/* 若 import 失败，退回原始文件副本（更硬的兜底） */
+	if (p.hard == true && access(dir + '/network.bak')) {
+		let c = popen(sprintf('cp -f %s/network.bak /etc/config/network', dir));
+		if (c) c.close();
+	}
+
+	let cm = popen('uci commit network');
+	if (cm) cm.close();
+
+	let rl = popen('/etc/init.d/network reload >/dev/null 2>&1');
+	if (rl) rl.close();
+
+	return out({ ok: true, rolled_back: dir });
+}
 
 let body = stdin.read('all') || '';
 let req = null;
@@ -486,6 +804,14 @@ case 'bulk_set_wifi':   m_bulk_set_wifi(params); break;
 case 'provision_wifi':  m_provision_wifi(params); break;
 case 'reload_wifi':     m_reload_wifi(params); break;
 case 'restore_wifi':    m_restore_wifi(params); break;
+case 'backup_config':   m_backup_config(params); break;
+case 'restore_config':  m_restore_config(params); break;
+case 'list_snapshots':  m_list_snapshots(params); break;
+case 'vlan_status':     m_vlan_status(params); break;
+case 'provision_vlan_config': m_provision_vlan_config(params); break;
+case 'apply_network':   m_apply_network(params); break;
+case 'confirm_network': m_confirm_network(params); break;
+case 'rollback_network': m_rollback_network(params); break;
 default:
 	fail('unknown method: ' + method);
 }
