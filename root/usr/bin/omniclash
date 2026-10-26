@@ -5,7 +5,7 @@
  *   - 基础设置 (UCI omniclash.config)
  *   - Provider 节点提供商 (/etc/omniclash/template.yaml 中的 proxy-providers)
  *   - 分流节点组 (/etc/omniclash/groups.json，默认预置 42 组)
- *   - 分流规则表 (/etc/omniclash/rules.json，默认预置 69 规则)
+ *   - 应用场景卡片 (/etc/omniclash/apps.json，默认预置 16 组应用场景)
  *   - 32-WiFi 矩阵 (/etc/config/omniclash slot_01~32)
  *   -> 动态合流编译硬校验写入 /etc/omniclash/run/config.yaml 并热重载
  */
@@ -18,8 +18,8 @@ let TARGET_FILE = "/etc/omniclash/run/config.yaml";
 let TMP_FILE = "/tmp/omniclash_compiled.yaml";
 let GROUPS_FILE = "/etc/omniclash/groups.json";
 let GROUPS_DEF_FILE = "/etc/omniclash/groups_default.json";
-let RULES_FILE = "/etc/omniclash/rules.json";
-let RULES_DEF_FILE = "/etc/omniclash/rules_default.json";
+let APPS_FILE = "/etc/omniclash/apps.json";
+let APPS_DEF_FILE = "/etc/omniclash/apps_default.json";
 let NORMAL_WIFI_FILE = "/etc/omniclash/wifi_normal.json";
 let NORMAL_WIFI_DEF_FILE = "/etc/omniclash/wifi_normal_default.json";
 
@@ -100,8 +100,8 @@ function ensure_defaults() {
     if (!fs.access(GROUPS_FILE) && fs.access(GROUPS_DEF_FILE)) {
         fs.writefile(GROUPS_FILE, fs.readfile(GROUPS_DEF_FILE));
     }
-    if (!fs.access(RULES_FILE) && fs.access(RULES_DEF_FILE)) {
-        fs.writefile(RULES_FILE, fs.readfile(RULES_DEF_FILE));
+    if (!fs.access(APPS_FILE) && fs.access(APPS_DEF_FILE)) {
+        fs.writefile(APPS_FILE, fs.readfile(APPS_DEF_FILE));
     }
     if (!fs.access(NORMAL_WIFI_FILE) && fs.access(NORMAL_WIFI_DEF_FILE)) {
         fs.writefile(NORMAL_WIFI_FILE, fs.readfile(NORMAL_WIFI_DEF_FILE));
@@ -219,6 +219,8 @@ function compile_config() {
     let tun_stack = uci.get("omniclash", "config", "tun_stack") || "system";
     let dns_mode = uci.get("omniclash", "config", "dns_mode") || "fake-ip";
     let fake_ip_range = uci.get("omniclash", "config", "fake_ip_range") || "198.18.0.1/16";
+    let cn_target = uci.get("omniclash", "config", "cn_target") || "DIRECT";
+    let final_target = uci.get("omniclash", "config", "final_target") || "🚀 节点选择";
 
     let profile = get_effective_profile();
     if (profile == "compact") {
@@ -236,9 +238,9 @@ function compile_config() {
     template = replace(template, /enhanced-mode:\s*[a-zA-Z-]+/, sprintf("enhanced-mode: %s", dns_mode));
     template = replace(template, /fake-ip-range:\s*[0-9.\/]+/, sprintf("fake-ip-range: %s", fake_ip_range));
 
-    // 2. 加载 groups.json 与 32-WiFi 槽位出口
+    // 2. 加载 groups.json / apps.json 与 32-WiFi 槽位出口
     let groups = json(fs.readfile(GROUPS_FILE) || "[]");
-    let rules = json(fs.readfile(RULES_FILE) || "[]");
+    let apps = json(fs.readfile(APPS_FILE) || "[]");
     let slots = get_all_slots();
 
     let candidate_names = [
@@ -334,19 +336,23 @@ function compile_config() {
         }
     }
 
-    for (let r in rules) {
-        if (r.target == "REJECT") {
-            if (r.no_resolve) push(tier4_ad, sprintf("  - %s,%s,REJECT,no-resolve", r.type, r.payload));
-            else push(tier4_ad, sprintf("  - %s,%s,REJECT", r.type, r.payload));
-        } else if (r.type == "MATCH") {
-            push(tier7_match, sprintf("  - MATCH,%s", r.target));
-        } else if (r.payload == "private") {
-            continue;
-        } else {
-            if (r.no_resolve) push(tier5_app, sprintf("  - %s,%s,%s,no-resolve", r.type, r.payload, r.target));
-            else push(tier5_app, sprintf("  - %s,%s,%s", r.type, r.payload, r.target));
+    for (let app in apps) {
+        if (app.enabled == false) continue;
+        let tgt = app.target || "🚀 节点选择";
+        let app_rules = [];
+        for (let r in app.builtin_rules) push(app_rules, r);
+        for (let r in app.custom_rules) push(app_rules, r);
+        for (let r in app_rules) {
+            if (!r || !r.type || !r.payload) continue;
+            let line = sprintf("  - %s,%s,%s", r.type, r.payload, tgt);
+            if (r.type == "GEOIP") line += ",no-resolve";
+            push(tier5_app, line);
         }
     }
+
+    push(tier7_match, sprintf("  - GEOSITE,cn,%s", cn_target));
+    push(tier7_match, sprintf("  - GEOIP,cn,%s,no-resolve", cn_target));
+    push(tier7_match, sprintf("  - MATCH,%s", final_target));
 
     let compiled_rules = [
         "  # === 层级 1: 私网直连与防劫持 ===",
@@ -357,7 +363,7 @@ function compile_config() {
         join("\n", tier3_split),
         "\n  # === 层级 4: 广告拦截 (通用分流专享) ===",
         join("\n", tier4_ad),
-        "\n  # === 层级 5: 多应用精细分流规则 (/etc/omniclash/rules.json) ===",
+        "\n  # === 层级 5: 应用场景卡片分流 (/etc/omniclash/apps.json) ===",
         join("\n", tier5_app),
         "\n  # === 层级 6: 通用分流 WiFi 专属出口兜底 ===",
         join("\n", tier6_app_pool),
@@ -481,27 +487,27 @@ if (action == "compile") {
     } else {
         print("{\"success\":false,\"error\":\"未找到默认策略组定义\"}\n");
     }
-} else if (action == "get_rules") {
+} else if (action == "get_apps") {
     ensure_defaults();
-    let r = json(fs.readfile(RULES_FILE) || "[]");
-    print(sprintf("%.J\n", { success: true, rules: r }));
-} else if (action == "save_rules") {
+    let a = json(fs.readfile(APPS_FILE) || "[]");
+    print(sprintf("%.J\n", { success: true, apps: a }));
+} else if (action == "save_apps") {
     let input_raw = fs.readfile("/dev/stdin") || "";
     let p = {};
     try { p = json(input_raw) || {}; } catch(e) {}
-    let list = p.rules || [];
-    fs.writefile(RULES_FILE, sprintf("%.J\n", list));
+    let list = p.apps || [];
+    fs.writefile(APPS_FILE, sprintf("%.J\n", list));
     compile_config();
     shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
-    print("{\"success\":true,\"msg\":\"规则表保存并生效\"}\n");
-} else if (action == "reset_rules") {
-    if (fs.access(RULES_DEF_FILE)) {
-        fs.writefile(RULES_FILE, fs.readfile(RULES_DEF_FILE));
+    print("{\"success\":true,\"msg\":\"应用卡片库保存并生效\"}\n");
+} else if (action == "reset_apps") {
+    if (fs.access(APPS_DEF_FILE)) {
+        fs.writefile(APPS_FILE, fs.readfile(APPS_DEF_FILE));
         compile_config();
         shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
-        print("{\"success\":true,\"msg\":\"分流规则已恢复为默认模板\"}\n");
+        print("{\"success\":true,\"msg\":\"应用卡片库已恢复为默认模板\"}\n");
     } else {
-        print("{\"success\":false,\"error\":\"未找到默认规则定义\"}\n");
+        print("{\"success\":false,\"error\":\"未找到默认应用卡片定义\"}\n");
     }
 } else if (action == "get_matrix") {
     ensure_defaults();

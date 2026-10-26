@@ -21,6 +21,8 @@ config omniclash 'config'
 	option mixed_port '7890'
 	option socks_port '1080'
 	option log_level 'info'
+	option cn_target 'DIRECT'
+	option final_target '🚀 节点选择'
 	option scheduled_restart '0'
 	option scheduled_restart_cron '0 3 * * *'
 
