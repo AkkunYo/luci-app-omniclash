@@ -336,14 +336,22 @@ function compile_config() {
         }
     }
 
+    // 卡片数据可能被 UI 直接写入畸形 JSON，逐字段校验类型并跳过非法项，避免污染规则
     for (let app in apps) {
-        if (app.enabled == false) continue;
+        if (!app || type(app) != "object") continue;
+        if (app.enabled == false || app.enabled == "false" || app.enabled == "0") continue;
         let tgt = app.target || "🚀 节点选择";
         let app_rules = [];
         for (let r in app.builtin_rules) push(app_rules, r);
         for (let r in app.custom_rules) push(app_rules, r);
         for (let r in app_rules) {
-            if (!r || !r.type || !r.payload) continue;
+            if (!r || type(r) != "object") continue;
+            if (type(r.type) != "string" || type(r.payload) != "string") continue;
+            if (!r.type || !r.payload) continue;
+            if (r.type == "MATCH") {
+                push(tier7_match, sprintf("  - MATCH,%s", tgt));
+                continue;
+            }
             let line = sprintf("  - %s,%s,%s", r.type, r.payload, tgt);
             if (r.type == "GEOIP") line += ",no-resolve";
             push(tier5_app, line);
@@ -490,12 +498,17 @@ if (action == "compile") {
 } else if (action == "get_apps") {
     ensure_defaults();
     let a = json(fs.readfile(APPS_FILE) || "[]");
+    if (type(a) != "array") a = [];
     print(sprintf("%.J\n", { success: true, apps: a }));
 } else if (action == "save_apps") {
     let input_raw = fs.readfile("/dev/stdin") || "";
     let p = {};
     try { p = json(input_raw) || {}; } catch(e) {}
     let list = p.apps || [];
+    if (type(list) != "array") {
+        print("{\"success\":false,\"error\":\"应用卡片数据格式非法，必须为数组\"}\n");
+        return;
+    }
     fs.writefile(APPS_FILE, sprintf("%.J\n", list));
     compile_config();
     shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
