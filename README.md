@@ -36,7 +36,7 @@ Following official OpenWrt ecosystem packaging standards, the base package `luci
   2. `Layer 2`: **Global Mode WiFi Slots** (`01~08`, etc.): Top-tier interception strictly locked to dedicated proxies; zero leaks, zero disturbance.
   3. `Layer 3`: **Targeted Mode WiFi Slots** (`09~16`, etc.): Domestic traffic direct, foreign traffic strictly sent to dedicated egress, preventing subsequent rule interference.
   4. `Layer 4`: **Ad Blocking** (`RULE-SET, reject_ad` / `category-ads-all`): Exclusively active for general devices; never interferes with dedicated development machines.
-  5. `Layer 5`: **Application Rule Streams**: Custom rules + standard presets (AI, YouTube, Netflix, Telegram, domestic direct).
+  5. `Layer 5`: **Application Card Pipeline**: One card per scenario (AI, YouTube, Netflix, Telegram, Google, GitHub, Bilibili, Spotify, Bahamut, OneDrive, Microsoft, TikTok, Notion, PayPal, Twitter, Apple), each binding its own egress target plus user-added domains/IPs. Rules are emitted in card order, so priority is reordered by moving cards.
   6. `Layer 6`: **General Routing WiFi Fallback**: Unmatched foreign traffic routed via respective assigned proxy nodes.
   7. `Layer 7`: Final `MATCH` fallback.
 
@@ -47,7 +47,7 @@ Following official OpenWrt ecosystem packaging standards, the base package `luci
   * `⚙️ Core Settings`: TUN mode/stack, port customization (7890/1080), DNS mode, core log level, cron scheduled restart.
   * `📦 Provider Subscriptions`: Editable inline table for provider URLs, tags, and prefixes.
   * `🎯 Proxy Groups`: High-contrast overview of all 42 structured proxy groups.
-  * `🔀 Rules`: Editable table for 69+ routing rules with up/down priority ordering.
+  * `🔀 Application Routing Cards`: Three-tier card stream — a read-only physical-line isolation banner, the reorderable scenario cards (egress dropdown, enable toggle, expandable built-in + custom rules, new-card modal, one-click restore), and a baseline zone for the CN-direct and terminal MATCH targets.
   * `📄 Running Config (Read-only)`: Real-time viewer and one-click copy of the compiled `/etc/omniclash/run/config.yaml`.
 * **Live Logs**: Dedicated log viewer with 3-second auto-scroll polling and one-click log clearing.
 
