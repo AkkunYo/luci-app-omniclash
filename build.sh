@@ -45,6 +45,11 @@ mkdir -p "$BUILD_DIR/data/etc/omniclash"
 cp -f "$BUILD_DIR/data/etc/config/omniclash" "$BUILD_DIR/data/etc/omniclash/config.default"
 rm -f "$BUILD_DIR/data/etc/config/omniclash"
 
+# 2b. 只打包 *_default.json 模板；可写文件由 postinst 首次播种，避免升级覆盖用户数据
+for f in groups apps rules wifi_normal; do
+    rm -f "$BUILD_DIR/data/etc/omniclash/$f.json"
+done
+
 # 3. 构建期私有覆盖 (动态注入实际配置，绝不改动源码仓库)
 if [ "$MODE" = "local" ] && [ -f "$PRIVATE_TPL" ]; then
     echo "   [私有覆盖] 动态注入本地真实订阅配置: $PRIVATE_TPL"
@@ -98,9 +103,8 @@ cat << 'POST' > "$BUILD_DIR/control/postinst"
 	fi
 	rm -f /etc/config/omniclash-opkg
 
-	# 2. 规则库与策略组初始化 (若用户未自定义则从默认库初始化)
+	# 2. 规则库与策略组初始化 (仅播种默认库；用户可写文件不随包升级覆盖)
 	[ -f /etc/omniclash/groups.json ] || cp -f /etc/omniclash/groups_default.json /etc/omniclash/groups.json
-	[ -f /etc/omniclash/rules.json ] || cp -f /etc/omniclash/rules_default.json /etc/omniclash/rules.json
 	[ -f /etc/omniclash/apps.json ] || cp -f /etc/omniclash/apps_default.json /etc/omniclash/apps.json
 	[ -f /etc/omniclash/wifi_normal.json ] || cp -f /etc/omniclash/wifi_normal_default.json /etc/omniclash/wifi_normal.json
 
