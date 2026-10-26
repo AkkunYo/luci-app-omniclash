@@ -95,6 +95,14 @@ return view.extend({
 			return targets;
 		}
 
+		// 若已存储的走向在当前策略组中已不存在，仍将其注入选项首位，
+		// 避免下拉框静默回落到首个选项、进而在保存时改写掉用户原有配置
+		function targetOptionsWith(cur) {
+			var targets = getTargetOptions();
+			if (cur && targets.indexOf(cur) < 0) targets.unshift(cur);
+			return targets;
+		}
+
 		window.switchRoutingSubTab = function(tabName) {
 			var tabBtns = document.querySelectorAll('.subtab-btn');
 			var tabPanes = document.querySelectorAll('.subtab-pane');
@@ -276,8 +284,6 @@ return view.extend({
 				return;
 			}
 
-			var targets = getTargetOptions();
-
 			appsList.forEach(function(app, idx) {
 				var expanded = !!appExpanded[app.id];
 				var enabled = (app.enabled === false || app.enabled === 'false' || app.enabled === '0' || app.enabled === 0) ? false : true;
@@ -290,7 +296,7 @@ return view.extend({
 					'change': function() {
 						appsList[idx].target = this.value;
 					}
-				}, targets.map(function(t) {
+				}, targetOptionsWith(app.target).map(function(t) {
 					return E('option', { 'value': t, 'selected': (app.target === t) ? 'selected' : null }, t);
 				}));
 
@@ -305,7 +311,7 @@ return view.extend({
 				});
 
 				var rowHeader = E('div', {
-					'style': 'display: flex; align-items: center; gap: 10px; padding: 10px 12px;' + (enabled ? '' : ' opacity: 0.55;')
+					'style': 'display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 12px;' + (enabled ? '' : ' opacity: 0.55;')
 				}, [
 					E('button', {
 						'type': 'button',
@@ -317,11 +323,11 @@ return view.extend({
 							renderAppCards();
 						}
 					}, expanded ? '▾' : '▸'),
-					E('span', { 'style': 'font-weight: 600; font-size: 13px; min-width: 150px;' }, app.name || app.id),
+					E('span', { 'style': 'font-weight: 600; font-size: 13px; min-width: 120px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;' }, app.name || app.id),
 					E('span', {
 						'class': 'badge',
 						'style': 'padding: 1px 7px; border-radius: 10px; font-size: 10px; background: rgba(148,163,184,0.18); color: #64748b;'
-					}, _('%d rules').replace('%d', count)),
+					}, _('%d rules').format(count)),
 					E('span', { 'style': 'flex: 1;' }),
 					E('span', { 'style': 'font-size: 12px; color: #64748b;' }, _('Egress')),
 					targetSel,
@@ -569,11 +575,26 @@ return view.extend({
 			});
 		};
 
-
 		// ---------------- 4. 终极全量保存处理函数 ----------------
 		window.saveAllRoutingSettings = function() {
 			syncProvidersFromDom();
 			syncGroupsFromDom();
+
+			// 展开卡片中已输入但未点击“添加”的规则不允许被静默丢弃
+			var pendingRules = [];
+			appsList.forEach(function(app, idx) {
+				if (!appExpanded[app.id]) return;
+				var payloadEl = document.getElementById('app_newpayload_' + idx);
+				if (!payloadEl) return;
+				var pendingPayload = (payloadEl.value || '').trim();
+				if (pendingPayload) pendingRules.push((app.name || app.id) + ': ' + pendingPayload);
+			});
+			if (pendingRules.length) {
+				ui.addNotification(null, E('p', {},
+					_('You have typed custom rules that were not added yet. Click "Add" on each card before saving:') + ' ' + pendingRules.join('; ')
+				), 'warning');
+				return;
+			}
 
 			var newTcp = document.getElementById('tab_tcp_mode').value;
 			var newUdp = document.getElementById('tab_udp_mode').value;
@@ -592,7 +613,21 @@ return view.extend({
 
 			var validProviders = providersList.filter(p => p.name && p.url);
 			var validGroups = groupsList.filter(g => g.name);
-			var validApps = appsList.filter(a => a && a.name);
+
+			// 无名卡片不静默丢弃：补齐占位名后保存，并提示用户
+			var namelessCount = 0;
+			var validApps = appsList.filter(a => a).map(function(a) {
+				if (!a.name) {
+					namelessCount++;
+					a.name = _('Unnamed Scenario');
+				}
+				return a;
+			});
+			if (namelessCount) {
+				ui.addNotification(null, E('p', {},
+					_('%d scenario card(s) had no name and were saved as "Unnamed Scenario".').format(namelessCount)
+				), 'warning');
+			}
 
 			ui.showModal(_('Saving & Applying'), [ E('p', { 'class': 'spinning' }, _('Saving settings, providers, groups, application cards, and compiling configuration...')) ]);
 
@@ -610,10 +645,23 @@ return view.extend({
 			if (cnTargetEl) uci.set('omniclash', 'config', 'cn_target', cnTargetEl.value);
 			if (finalTargetEl) uci.set('omniclash', 'config', 'final_target', finalTargetEl.value);
 
-			var sentCardCount = validApps.length;
-			var sentCustomRules = validApps.reduce(function(acc, a) {
-				return acc + ((a.custom_rules && a.custom_rules.length) ? a.custom_rules.length : 0);
-			}, 0);
+			// 将卡片归一化为可比对的投影，避免依赖字段顺序以外的无关差异
+			function appProjection(app) {
+				return {
+					id: app.id || '',
+					name: app.name || '',
+					target: app.target || '',
+					enabled: (app.enabled === false || app.enabled === 'false' || app.enabled === '0' || app.enabled === 0) ? false : true,
+					builtin_rules: (app.builtin_rules || []).map(function(r) {
+						return (r && r.type ? r.type : '') + '|' + (r && r.payload ? r.payload : '');
+					}),
+					custom_rules: (app.custom_rules || []).map(function(r) {
+						return (r && r.type ? r.type : '') + '|' + (r && r.payload ? r.payload : '');
+					})
+				};
+			}
+
+			var sentProjection = JSON.stringify(validApps.map(appProjection));
 
 			Promise.all([
 				uci.save(),
@@ -626,11 +674,12 @@ return view.extend({
 			}).then(function() {
 				// save_apps 在引擎拒绝非法载荷时仍返回成功，必须回读校验实际落库结果
 				return callGetApps().then(function(res) {
-					var stored = (res && res.apps) ? res.apps : [];
-					var storedCustom = stored.reduce(function(acc, a) {
-						return acc + ((a.custom_rules && a.custom_rules.length) ? a.custom_rules.length : 0);
-					}, 0);
-					if (!res || res.success === false || stored.length !== sentCardCount || storedCustom !== sentCustomRules) {
+					if (!res || res.success === false) {
+						throw new Error(_('Application card library was not saved as expected. Please check the log for details.'));
+					}
+					var stored = (res.apps && res.apps.length >= 0) ? res.apps : [];
+					var storedProjection = JSON.stringify(stored.map(appProjection));
+					if (storedProjection !== sentProjection) {
 						throw new Error(_('Application card library was not saved as expected. Please check the log for details.'));
 					}
 					return true;
@@ -910,7 +959,7 @@ return view.extend({
 						E('label', { 'class': 'cbi-value-title' }, _('China Mainland Direct')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('select', { 'id': 'tab_cn_target', 'class': 'cbi-input-select', 'style': 'width: 240px;' },
-								getTargetOptions().map(function(t) {
+								targetOptionsWith(uci.get('omniclash', 'config', 'cn_target') || 'DIRECT').map(function(t) {
 									var cur = uci.get('omniclash', 'config', 'cn_target') || 'DIRECT';
 									return E('option', { 'value': t, 'selected': cur === t ? 'selected' : null }, t);
 								})
@@ -923,7 +972,7 @@ return view.extend({
 						E('label', { 'class': 'cbi-value-title' }, _('Catch-All Fallback (MATCH)')),
 						E('div', { 'class': 'cbi-value-field' }, [
 							E('select', { 'id': 'tab_final_target', 'class': 'cbi-input-select', 'style': 'width: 240px;' },
-								getTargetOptions().map(function(t) {
+								targetOptionsWith(uci.get('omniclash', 'config', 'final_target') || '🚀 节点选择').map(function(t) {
 									var cur = uci.get('omniclash', 'config', 'final_target') || '🚀 节点选择';
 									return E('option', { 'value': t, 'selected': cur === t ? 'selected' : null }, t);
 								})
