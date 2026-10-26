@@ -93,6 +93,9 @@ msgstr "插件检查/更新完成！当前插件版本: %s"
 msgid "App update failed"
 msgstr "插件更新失败"
 
+msgid "Application Cards"
+msgstr "应用卡片"
+
 msgid "Application Routing Cards"
 msgstr "应用分流卡片"
 
@@ -103,13 +106,13 @@ msgid "Application card library was not saved as expected. Please check the log 
 msgstr "应用卡片库未能按预期写入，请查看日志排查原因。"
 
 msgid "Are you sure you want to deploy full 32-WiFi architecture to the child AP? This will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
-msgstr "确定要向子 AP 部署全套 32-WiFi 架构吗？\n将全自动配置 AP 与主路由网络并重载无线。"
+msgstr "Are you sure you want to deploy full 32-WiFi architecture to the child AP?\nThis will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
 
 msgid "Are you sure you want to reset all 32-WiFi slots to defaults?"
 msgstr "确定要将全部 32 个 WiFi 槽位恢复为默认配置吗？"
 
 msgid "Are you sure you want to reset proxy groups to default template? This will reset all dedicated lines, regions, and application groups."
-msgstr "确定要将策略组恢复为全套默认模板吗？\n将重置所有专线组、地区组与应用组配置。"
+msgstr "Are you sure you want to reset proxy groups to default template?\nThis will reset all dedicated lines, regions, and application groups."
 
 msgid "Are you sure you want to reset standard WiFi to defaults?"
 msgstr "确定要将标准普通 WiFi 恢复为默认配置吗？"
@@ -219,6 +222,9 @@ msgstr "正在合流编译"
 msgid "Compiling template and provider node pool with seamless reload..."
 msgstr "正在执行模板+节点池合流并平滑热重载..."
 
+msgid "Configuration compilation failed. Please check the log for details."
+msgstr "配置编译失败，请查看日志排查原因。"
+
 msgid "Configure Child AP"
 msgstr "配置子 AP"
 
@@ -239,6 +245,9 @@ msgstr "核心版本"
 
 msgid "Core check/update completed! Current core version: %s"
 msgstr "核心检查/更新完成！当前核心版本: %s"
+
+msgid "Core configuration compilation failed!"
+msgstr "核心配置编译失败！"
 
 msgid "Core configuration successfully compiled and reloaded!"
 msgstr "核心配置已成功合流热重载！"
@@ -333,6 +342,12 @@ msgstr "开启 (内核直接绕过大陆 IP)"
 msgid "Expand"
 msgstr "展开"
 
+msgid "Failed to change service state"
+msgstr "服务状态切换失败"
+
+msgid "Failed to clear logs"
+msgstr "清空日志失败"
+
 msgid "Failed to connect to AP"
 msgstr "无法连接到子 AP"
 
@@ -341,6 +356,33 @@ msgstr "建立 SSH 密钥免密互信失败"
 
 msgid "Failed to fetch update from repository."
 msgstr "无法从软件源获取更新。"
+
+msgid "Failed to reset 32-WiFi matrix"
+msgstr "重置 32-WiFi 矩阵失败"
+
+msgid "Failed to reset proxy groups"
+msgstr "重置策略组失败"
+
+msgid "Failed to reset standard WiFi"
+msgstr "重置标准 WiFi 失败"
+
+msgid "Failed to restore default application library"
+msgstr "恢复默认应用库失败"
+
+msgid "Failed to save WiFi slot"
+msgstr "保存 WiFi 槽位失败"
+
+msgid "Failed to save standard WiFi settings"
+msgstr "保存标准 WiFi 设置失败"
+
+msgid "Failed to save: %s"
+msgstr "保存失败：%s"
+
+msgid "Failed to switch WiFi broadcast status"
+msgstr "切换 WiFi 广播状态失败"
+
+msgid "Failed to update WiFi broadcast status"
+msgstr "更新 WiFi 广播状态失败"
 
 msgid "Fake-IP (Recommended)"
 msgstr "Fake-IP (虚拟 IP，秒开推荐)"
@@ -551,6 +593,9 @@ msgstr "运行模式: 下接子 AP 矩阵 (%s)"
 
 msgid "Operating Mode: Local Host Matrix"
 msgstr "运行模式: 本机单主机矩阵"
+
+msgid "Operation failed"
+msgstr "操作失败"
 
 msgid "Optional if key trust established"
 msgstr "已建立免密互信可留空"

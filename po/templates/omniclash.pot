@@ -88,6 +88,9 @@ msgstr ""
 msgid "App update failed"
 msgstr ""
 
+msgid "Application Cards"
+msgstr ""
+
 msgid "Application Routing Cards"
 msgstr ""
 
@@ -214,6 +217,9 @@ msgstr ""
 msgid "Compiling template and provider node pool with seamless reload..."
 msgstr ""
 
+msgid "Configuration compilation failed. Please check the log for details."
+msgstr ""
+
 msgid "Configure Child AP"
 msgstr ""
 
@@ -233,6 +239,9 @@ msgid "Core Version"
 msgstr ""
 
 msgid "Core check/update completed! Current core version: %s"
+msgstr ""
+
+msgid "Core configuration compilation failed!"
 msgstr ""
 
 msgid "Core configuration successfully compiled and reloaded!"
@@ -328,6 +337,12 @@ msgstr ""
 msgid "Expand"
 msgstr ""
 
+msgid "Failed to change service state"
+msgstr ""
+
+msgid "Failed to clear logs"
+msgstr ""
+
 msgid "Failed to connect to AP"
 msgstr ""
 
@@ -335,6 +350,33 @@ msgid "Failed to deploy SSH key trust"
 msgstr ""
 
 msgid "Failed to fetch update from repository."
+msgstr ""
+
+msgid "Failed to reset 32-WiFi matrix"
+msgstr ""
+
+msgid "Failed to reset proxy groups"
+msgstr ""
+
+msgid "Failed to reset standard WiFi"
+msgstr ""
+
+msgid "Failed to restore default application library"
+msgstr ""
+
+msgid "Failed to save WiFi slot"
+msgstr ""
+
+msgid "Failed to save standard WiFi settings"
+msgstr ""
+
+msgid "Failed to save: %s"
+msgstr ""
+
+msgid "Failed to switch WiFi broadcast status"
+msgstr ""
+
+msgid "Failed to update WiFi broadcast status"
 msgstr ""
 
 msgid "Fake-IP (Recommended)"
@@ -545,6 +587,9 @@ msgid "Operating Mode: Child AP Matrix (%s)"
 msgstr ""
 
 msgid "Operating Mode: Local Host Matrix"
+msgstr ""
+
+msgid "Operation failed"
 msgstr ""
 
 msgid "Optional if key trust established"

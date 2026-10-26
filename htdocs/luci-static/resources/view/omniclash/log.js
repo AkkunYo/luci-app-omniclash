@@ -24,7 +24,9 @@ return view.extend({
 
 		window.clearOmniLogs = function() {
 			ui.showModal(_('Clearing Logs'), [ E('p', { 'class': 'spinning' }, _('Clearing core and plugin log files...')) ]);
-			callClearLogs().then(function() {
+			callClearLogs().then(function(res) {
+				if (res && res.success === false)
+					throw new Error(res.error || _('Failed to clear logs'));
 				ui.hideModal();
 				var area = document.getElementById('omniclash_log_area');
 				if (area) area.value = _('Logs cleared, waiting for new entries...');

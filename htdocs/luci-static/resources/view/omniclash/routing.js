@@ -234,7 +234,9 @@ return view.extend({
 		window.resetDefaultGroups = function() {
 			if (!confirm(_('Are you sure you want to reset proxy groups to default template?\nThis will reset all dedicated lines, regions, and application groups.'))) return;
 			ui.showModal(_('Resetting'), [ E('p', { 'class': 'spinning' }, _('Resetting default proxy groups template...')) ]);
-			callResetGroups().then(function() {
+			callResetGroups().then(function(res) {
+				if (res && res.success === false)
+					throw new Error(res.error || _('Failed to reset proxy groups'));
 				return callGetGroups();
 			}).then(function(res) {
 				groupsList = (res && res.groups) ? res.groups : [];
@@ -561,7 +563,9 @@ return view.extend({
 		window.resetDefaultApps = function() {
 			if (!confirm(_('Are you sure you want to restore the full default application library?\nAll custom scenarios and custom rules will be discarded.'))) return;
 			ui.showModal(_('Resetting'), [ E('p', { 'class': 'spinning' }, _('Restoring default application library...')) ]);
-			callResetApps().then(function() {
+			callResetApps().then(function(res) {
+				if (res && res.success === false)
+					throw new Error(res.error || _('Failed to restore default application library'));
 				return callGetApps();
 			}).then(function(res) {
 				appsList = (res && res.apps) ? res.apps : [];
@@ -669,10 +673,28 @@ return view.extend({
 				callSaveProviders(validProviders),
 				callSaveGroups(validGroups),
 				callSaveApps(validApps)
-			]).then(function() {
+			]).then(function(results) {
+				// 三个保存接口现在都会回传引擎真实结果，任一被拒绝都必须中止，
+				// 否则会出现「界面提示成功、实际只保存了一部分」的半成功状态
+				var failed = [
+					{ name: _('Provider Subscriptions'), res: results[2] },
+					{ name: _('Proxy Groups'), res: results[3] },
+					{ name: _('Application Cards'), res: results[4] }
+				].filter(function(x) { return !x.res || x.res.success === false; });
+
+				if (failed.length) {
+					var detail = failed.map(function(x) {
+						return x.name + (x.res && x.res.error ? ' (' + x.res.error + ')' : '');
+					}).join('; ');
+					throw new Error(_('Failed to save: %s').replace('%s', detail));
+				}
+
 				return callCompileReload();
-			}).then(function() {
-				// save_apps 在引擎拒绝非法载荷时仍返回成功，必须回读校验实际落库结果
+			}).then(function(comp) {
+				if (!comp || comp.success === false) {
+					throw new Error(comp && comp.error ? comp.error : _('Configuration compilation failed. Please check the log for details.'));
+				}
+				// 保存接口可能返回成功但落库结果与提交内容不一致，必须回读校验
 				return callGetApps().then(function(res) {
 					if (!res || res.success === false) {
 						throw new Error(_('Application card library was not saved as expected. Please check the log for details.'));

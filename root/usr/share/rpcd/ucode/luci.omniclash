@@ -2,7 +2,67 @@
 
 'use strict';
 
-import { popen, readfile, access, glob } from 'fs';
+import { popen, readfile, writefile, unlink, access, glob } from 'fs';
+
+const TMP_DIR = '/tmp';
+
+/* 通过临时文件向引擎传递 JSON 载荷，并回收其真实回显。
+ *
+ * 不能使用 popen(cmd, 'w')：该模式只能写入子进程 stdin，无法读取 stdout，
+ * 于是引擎返回的 {"success":false,...} 会被整体丢弃，前端永远收到假成功。
+ * 临时文件路径带 PID、时间戳与递增序号，避免并发请求互相覆盖。 */
+let tmp_seq = 0;
+
+function self_pid() {
+	let s = readfile('/proc/self/stat') || '';
+	let m = match(s, /^([0-9]+)/);
+	return m ? m[1] : '0';
+}
+
+function write_payload(payload) {
+	let pid = self_pid();
+	let ts = time();
+	let path = null;
+
+	for (let i = 0; i < 100; i++) {
+		let cand = sprintf('%s/omniclash-rpc-%s-%d-%d.json', TMP_DIR, pid, ts, tmp_seq++);
+		if (!access(cand)) { path = cand; break; }
+	}
+
+	if (!path)
+		return null;
+
+	writefile(path, sprintf('%J', payload));
+	return path;
+}
+
+function engine_call(action, payload) {
+	let cmd = '/usr/bin/omniclash ' + action;
+	let tmp = null;
+
+	if (payload != null) {
+		tmp = write_payload(payload);
+		if (!tmp)
+			return { success: false, error: 'Cannot allocate temporary file' };
+		cmd = sprintf('/usr/bin/omniclash %s < %s', action, tmp);
+	}
+
+	let p = popen(cmd);
+	let out = p ? trim(p.read('all') || '') : '';
+	if (p) p.close();
+	if (tmp) unlink(tmp);
+
+	if (!out)
+		return { success: false, error: 'Execution failed' };
+
+	let res = null;
+	try { res = json(out); } catch(e) { res = null; }
+
+	if (type(res) != 'object')
+		return { success: false, error: out };
+
+	return res;
+}
 
 const methods = {
 	get_status: {
@@ -93,10 +153,35 @@ const methods = {
 				let p = popen('/etc/init.d/omniclash enable; /etc/init.d/omniclash restart >/dev/null 2>&1');
 				if (p) p.close();
 			} else if (act == 'reload') {
-				let p = popen('/usr/bin/omniclash compile >/dev/null 2>&1; /usr/bin/omniclash reload >/dev/null 2>&1');
-				if (p) p.close();
+				let c = engine_call('compile');
+				if (c.success === false) return c;
+				return engine_call('reload');
+			} else {
+				return { success: false, error: 'Unknown service action: ' + act };
 			}
-			return { success: true, action: act };
+
+			/* procd 启停是异步的：启动后立即 pidof 常常还读不到，
+			 * 停止后进程也可能尚未退出。这里做有界轮询，既要避免误报失败，
+			 * 也要避免 init 脚本静默失败时前端仍显示"已启动"。 */
+			let wait_for = (act == 'stop') ? 'gone' : 'alive';
+			let poll_cmd = (wait_for == 'alive')
+				? 'for i in $(seq 1 25); do pidof mihomo >/dev/null 2>&1 && break; sleep 0.2; done; pidof mihomo 2>/dev/null | awk \'{print $1}\''
+				: 'for i in $(seq 1 25); do pidof mihomo >/dev/null 2>&1 || break; sleep 0.2; done; pidof mihomo 2>/dev/null | awk \'{print $1}\'';
+
+			let pid = '';
+			let pp = popen(poll_cmd);
+			if (pp) {
+				pid = trim(pp.read('all') || '');
+				pp.close();
+			}
+
+			if (wait_for == 'alive' && !pid)
+				return { success: false, error: 'Service failed to start (mihomo is not running)' };
+
+			if (wait_for == 'gone' && pid)
+				return { success: false, error: 'Service failed to stop (mihomo still alive, PID: ' + pid + ')' };
+
+			return { success: true, action: act, pid: pid };
 		}
 	},
 	test_ap: {
@@ -104,13 +189,7 @@ const methods = {
 		call: function(req) {
 			let a = req.args || {};
 			if (type(a.host) == 'object') a = a.host;
-			let json_str = sprintf('%J', a);
-			let escaped = replace(json_str, "'", "'\\''");
-			let p = popen(sprintf("echo '%s' | /usr/bin/omniclash test_ap", escaped));
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: out }; }
+			return engine_call('test_ap', a);
 		}
 	},
 	pair_ap: {
@@ -118,199 +197,122 @@ const methods = {
 		call: function(req) {
 			let a = req.args || {};
 			if (type(a.host) == 'object') a = a.host;
-			let json_str = sprintf('%J', a);
-			let escaped = replace(json_str, "'", "'\\''");
-			let p = popen(sprintf("echo '%s' | /usr/bin/omniclash pair_ap", escaped));
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: out }; }
+			return engine_call('pair_ap', a);
 		}
 	},
 	save_wifi_normal: {
 		args: { items: [] },
 		call: function(req) {
-			let json_str = sprintf('%J', req.args || {});
-			let escaped = replace(json_str, "'", "'\\''");
-			let p = popen(sprintf("echo '%s' | /usr/bin/omniclash save_wifi_normal", escaped));
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: out }; }
+			return engine_call('save_wifi_normal', req.args || {});
 		}
 	},
 	reset_wifi_normal: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash reset_wifi_normal');
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: out }; }
+			return engine_call('reset_wifi_normal');
 		}
 	},
 	reset_matrix_32: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash reset_matrix_32');
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: out }; }
+			return engine_call('reset_matrix_32');
 		}
 	},
 	update_app: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash update_app');
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: out }; }
+			return engine_call('update_app');
 		}
 	},
 	update_core: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash update_core');
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: out }; }
+			return engine_call('update_core');
 		}
 	},
 	get_logs: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash get_logs');
-			if (!p) return { success: false, log: 'Failed to read logs' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, log: out }; }
+			let r = engine_call('get_logs');
+			if (r.success === false && !r.log) r.log = r.error || 'Failed to read logs';
+			return r;
 		}
 	},
 	clear_logs: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash clear_logs');
-			if (!p) return { success: false };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: true }; }
+			return engine_call('clear_logs');
 		}
 	},
 	get_matrix: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash get_matrix');
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: 'Parse error' }; }
+			return engine_call('get_matrix');
 		}
 	},
 	toggle_wifi: {
 		args: { sid: 'sid', disabled: false },
 		call: function(req) {
-			let p = popen('/usr/bin/omniclash toggle_wifi', 'w');
-			if (!p) return { success: false, error: 'Pipe error' };
-			p.write(sprintf('%J', req.args));
-			p.close();
-			return { success: true };
+			return engine_call('toggle_wifi', req.args || {});
 		}
 	},
 	save_slot: {
 		args: { slot: {} },
 		call: function(req) {
-			let p = popen('/usr/bin/omniclash save_slot', 'w');
-			if (!p) return { success: false, error: 'Pipe error' };
-			p.write(sprintf('%J', req.args.slot));
-			p.close();
-			return { success: true };
+			return engine_call('save_slot', req.args.slot || {});
 		}
 	},
 	get_providers: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash get_providers');
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: 'Parse error' }; }
+			return engine_call('get_providers');
 		}
 	},
 	save_providers: {
 		args: { providers: [] },
 		call: function(req) {
-			let p = popen('/usr/bin/omniclash save_providers', 'w');
-			if (!p) return { success: false, error: 'Pipe error' };
-			p.write(sprintf('%J', req.args));
-			p.close();
-			return { success: true };
+			return engine_call('save_providers', req.args || {});
 		}
 	},
 	get_groups: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash get_groups');
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: 'Parse error' }; }
+			return engine_call('get_groups');
 		}
 	},
 	save_groups: {
 		args: { groups: [] },
 		call: function(req) {
-			let p = popen('/usr/bin/omniclash save_groups', 'w');
-			if (!p) return { success: false, error: 'Pipe error' };
-			p.write(sprintf('%J', req.args));
-			p.close();
-			return { success: true };
+			return engine_call('save_groups', req.args || {});
 		}
 	},
 	reset_groups: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash reset_groups');
-			if (!p) return { success: false };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: true }; }
+			return engine_call('reset_groups');
 		}
 	},
 	get_apps: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash get_apps');
-			if (!p) return { success: false, error: 'Execution failed' };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: false, error: 'Parse error' }; }
+			return engine_call('get_apps');
 		}
 	},
 	save_apps: {
 		args: { apps: [] },
 		call: function(req) {
-			let p = popen('/usr/bin/omniclash save_apps', 'w');
-			if (!p) return { success: false, error: 'Pipe error' };
-			p.write(sprintf('%J', req.args));
-			p.close();
-			return { success: true };
+			return engine_call('save_apps', req.args || {});
 		}
 	},
 	reset_apps: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash reset_apps');
-			if (!p) return { success: false };
-			let out = p.read('all');
-			p.close();
-			try { return json(out); } catch(e) { return { success: true }; }
+			return engine_call('reset_apps');
 		}
 	},
 	compile_reload: {
 		call: function() {
-			let p1 = popen('/usr/bin/omniclash compile');
-			let out1 = p1 ? p1.read('all') : '';
-			if (p1) p1.close();
+			let comp = engine_call('compile');
+			let cron = engine_call('apply_cron');
+			let rel = engine_call('reload');
 
-			let p2 = popen('/usr/bin/omniclash apply_cron');
-			if (p2) p2.close();
+			let ok = (comp.success !== false) && (rel.success !== false);
 
-			let p3 = popen('/usr/bin/omniclash reload');
-			let out3 = p3 ? p3.read('all') : '';
-			if (p3) p3.close();
-
-			return { success: true, compile: out1, reload: out3 };
+			return {
+				success: ok,
+				compile: comp,
+				cron: cron,
+				reload: rel,
+				error: ok ? null : (comp.error || rel.error || 'Compile or reload failed')
+			};
 		}
 	}
 };

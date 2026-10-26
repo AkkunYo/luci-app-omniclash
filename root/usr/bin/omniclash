@@ -69,6 +69,14 @@ function shell_exec(cmd) {
     return { code: rc, out: out };
 }
 
+/* 把任意字符串安全地嵌入单引号 shell 字符串。
+ * WiFi 密码/SSID 完全由用户输入，直接拼进 uci set ...='%s' 时，
+ * 一个单引号就能截断引号并注入额外命令，因此必须统一转义。 */
+function shq(v) {
+    if (v == null) return "";
+    return replace(sprintf("%s", v), "'", "'\\''");
+}
+
 function get_ap_cmd(remote_cmd) {
     let host = uci.get("omniclash", "config", "ap_host") || AP_HOST;
     let port = uci.get("omniclash", "config", "ap_port") || "22";
@@ -79,10 +87,9 @@ function get_ap_cmd(remote_cmd) {
     let escaped = replace(remote_cmd, "'", "'\\''");
 
     if (pass) {
-        let escaped_pass = replace(pass, "'", "'\\''");
-        return sprintf("sshpass -p '%s' dbclient -y -y -p '%s' '%s@%s' '%s' 2>/dev/null", escaped_pass, port, user, host, escaped);
+        return sprintf("sshpass -p '%s' dbclient -y -y -p '%s' '%s@%s' '%s' 2>/dev/null", shq(pass), shq(port), shq(user), shq(host), escaped);
     }
-    return sprintf("dbclient -y -y -p '%s' -i '%s' '%s@%s' '%s' 2>/dev/null", port, key, user, host, escaped);
+    return sprintf("dbclient -y -y -p '%s' -i '%s' '%s@%s' '%s' 2>/dev/null", shq(port), shq(key), shq(user), shq(host), escaped);
 }
 
 function wireless_exec(cmd) {
@@ -467,9 +474,14 @@ if (action == "compile") {
     print(sprintf("%.J\n", { success: true, providers: get_template_providers() }));
 } else if (action == "save_providers") {
     let input_raw = fs.readfile("/dev/stdin") || "";
-    let p = {};
-    try { p = json(input_raw) || {}; } catch(e) {}
-    let list = p.providers || [];
+    let p = null;
+    let parsed_ok = false;
+    try { p = json(input_raw); parsed_ok = true; } catch(e) {}
+    if (!parsed_ok || type(p) != "object" || type(p.providers) != "array") {
+        print("{\"success\":false,\"error\":\"订阅 Provider 数据格式非法，必须为数组\"}\n");
+        return;
+    }
+    let list = p.providers;
     let ok = save_template_providers(list);
     if (ok) {
         compile_config();
@@ -484,9 +496,14 @@ if (action == "compile") {
     print(sprintf("%.J\n", { success: true, groups: g }));
 } else if (action == "save_groups") {
     let input_raw = fs.readfile("/dev/stdin") || "";
-    let p = {};
-    try { p = json(input_raw) || {}; } catch(e) {}
-    let list = p.groups || [];
+    let p = null;
+    let parsed_ok = false;
+    try { p = json(input_raw); parsed_ok = true; } catch(e) {}
+    if (!parsed_ok || type(p) != "object" || type(p.groups) != "array") {
+        print("{\"success\":false,\"error\":\"策略组数据格式非法，必须为数组\"}\n");
+        return;
+    }
+    let list = p.groups;
     fs.writefile(GROUPS_FILE, sprintf("%.J\n", list));
     compile_config();
     shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
@@ -678,8 +695,13 @@ if (action == "compile") {
     }));
 } else if (action == "toggle_wifi") {
     let input_raw = fs.readfile("/dev/stdin") || "";
-    let p = {};
-    try { p = json(input_raw) || {}; } catch(e) {}
+    let p = null;
+    let parsed_ok = false;
+    try { p = json(input_raw); parsed_ok = true; } catch(e) {}
+    if (!parsed_ok || type(p) != "object" || type(p.sid) != "string" || !p.sid) {
+        print("{\"success\":false,\"error\":\"WiFi 切换参数非法，缺少 sid\"}\n");
+        return;
+    }
 
     let sid = p.sid;
     let disabled = (p.disabled == true || p.disabled == "1" || p.disabled == 1) ? "1" : "0";
@@ -702,8 +724,19 @@ if (action == "compile") {
     print(sprintf("{\"success\":true,\"msg\":\"WiFi %s 状态已切换为: %s\"}\n", num, disabled == "1" ? "已禁用" : "已启用"));
 } else if (action == "save_slot") {
     let input_raw = fs.readfile("/dev/stdin") || "";
-    let p = {};
-    try { p = json(input_raw) || {}; } catch(e) {}
+    let p = null;
+    let parsed_ok = false;
+    try { p = json(input_raw); parsed_ok = true; } catch(e) {}
+    if (!parsed_ok || type(p) != "object" || type(p.sid) != "string" || !p.sid) {
+        print("{\"success\":false,\"error\":\"WiFi 槽位数据格式非法，缺少 sid\"}\n");
+        return;
+    }
+    if (type(p.ssid) != "string" || !p.ssid) {
+        print("{\"success\":false,\"error\":\"SSID 不能为空\"}\n");
+        return;
+    }
+    // 缺省或非法 key 会以 null 写进 uci，生成无密码 SSID，必须归一为空串
+    if (type(p.key) != "string") p.key = "";
 
     let sid = p.sid;
     let old_ssid = uci.get("omniclash", sid, "ssid");
@@ -722,7 +755,7 @@ if (action == "compile") {
             uci set wireless.%s.key='%s'
             uci commit wireless
             wifi reload
-        ", ap_section, p.ssid, p.key));
+        ", shq(ap_section), shq(p.ssid), shq(ap_section), shq(p.key)));
     }
 
     print("{\"success\":true,\"msg\":\"WiFi 保存成功\"}\n");
@@ -739,13 +772,12 @@ if (action == "compile") {
 
     let res = null;
     if (pass) {
-        let escaped_pass = replace(pass, "'", "'\\''");
-        res = shell_exec(sprintf("sshpass -p '%s' dbclient -y -y -p '%s' '%s@%s' 'echo OK' 2>&1", escaped_pass, port, user, host));
+        res = shell_exec(sprintf("sshpass -p '%s' dbclient -y -y -p '%s' '%s@%s' 'echo OK' 2>&1", shq(pass), shq(port), shq(user), shq(host)));
     }
 
     if (!res || !match(res.out, /OK/)) {
         if (fs.access(key)) {
-            let key_res = shell_exec(sprintf("dbclient -y -y -p '%s' -i '%s' '%s@%s' 'echo OK' 2>&1", port, key, user, host));
+            let key_res = shell_exec(sprintf("dbclient -y -y -p '%s' -i '%s' '%s@%s' 'echo OK' 2>&1", shq(port), shq(key), shq(user), shq(host)));
             if (match(key_res.out, /OK/)) {
                 res = key_res;
             }
@@ -784,14 +816,13 @@ if (action == "compile") {
         if (!pubkey) {
             print("{\"success\":false,\"error\":\"无法提取本地 SSH 公钥\"}\n");
         } else {
-            let escaped_pass = replace(pass, "'", "'\\''");
             let escaped_pub = replace(pubkey, "'", "'\\''");
             let deploy_cmd = sprintf("mkdir -p /etc/dropbear && grep -q -F '%s' /etc/dropbear/authorized_keys 2>/dev/null || echo '%s' >> /etc/dropbear/authorized_keys", escaped_pub, escaped_pub);
             let escaped_deploy = replace(deploy_cmd, "'", "'\\''");
 
-            let dep_res = shell_exec(sprintf("sshpass -p '%s' dbclient -y -y -p '%s' '%s@%s' '%s' 2>&1", escaped_pass, port, user, host, escaped_deploy));
+            let dep_res = shell_exec(sprintf("sshpass -p '%s' dbclient -y -y -p '%s' '%s@%s' '%s' 2>&1", shq(pass), shq(port), shq(user), shq(host), escaped_deploy));
 
-            let test_res = shell_exec(sprintf("dbclient -y -y -p '%s' -i '%s' '%s@%s' 'echo OK' 2>&1", port, key, user, host));
+            let test_res = shell_exec(sprintf("dbclient -y -y -p '%s' -i '%s' '%s@%s' 'echo OK' 2>&1", shq(port), shq(key), shq(user), shq(host)));
             if (match(test_res.out, /OK/)) {
                 uci.set("omniclash", "config", "ap_host", host);
                 uci.set("omniclash", "config", "ap_port", port);
@@ -897,7 +928,10 @@ if (action == "compile") {
             uci set wireless.%s.key='%s'
             uci set wireless.%s.disabled='%s'
             uci set wireless.%s.wmm='1'
-        ", vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, ap_section, ap_section, radio, ap_section, vlan, ap_section, default_ssid, ap_section, ap_section, default_key, ap_section, disabled, ap_section));
+        ", vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan,
+           shq(ap_section), shq(ap_section), shq(radio), shq(ap_section), vlan,
+           shq(ap_section), shq(default_ssid), shq(ap_section), shq(default_key),
+           shq(ap_section), disabled, shq(ap_section)));
     }
 
     uci.commit("omniclash");
@@ -917,6 +951,21 @@ if (action == "compile") {
         return;
     }
     let items = p.items;
+
+    // 先整体校验再落盘：任何一条缺字段都会写成无效 SSID/密码，
+    // 校验失败时保持原文件不动，避免半损坏状态
+    for (let item in items) {
+        if (type(item) != "object") {
+            print("{\"success\":false,\"error\":\"标准 WiFi 数据项必须为对象\"}\n");
+            return;
+        }
+        if (type(item.ssid) != "string" || !item.ssid) {
+            print("{\"success\":false,\"error\":\"标准 WiFi 的 SSID 不能为空\"}\n");
+            return;
+        }
+        if (type(item.key) != "string") item.key = "";
+    }
+
     fs.writefile(NORMAL_WIFI_FILE, sprintf("%.J\n", items));
 
     for (let item in items) {
@@ -925,7 +974,7 @@ if (action == "compile") {
             uci -q set wireless.%s.ssid='%s'
             uci -q set wireless.%s.key='%s'
             uci -q set wireless.%s.disabled='%s'
-        ", sec, item.ssid, item.key, item.disabled ? "1" : "0"));
+        ", shq(sec), shq(item.ssid), shq(sec), shq(item.key), item.disabled ? "1" : "0"));
     }
     wireless_exec("uci commit wireless; wifi reload");
     print("{\"success\":true,\"msg\":\"标准普通 WiFi 已成功保存并同步！\"}\n");
@@ -937,12 +986,13 @@ if (action == "compile") {
     try { items = json(fs.readfile(NORMAL_WIFI_FILE) || "[]"); } catch(e) { items = null; }
     if (type(items) != "array") items = [];
     for (let item in items) {
+        if (type(item) != "object" || type(item.ssid) != "string" || !item.ssid) continue;
         let sec = (item.band == "5g") ? "default_radio1" : "default_radio0";
         wireless_exec(sprintf("
             uci -q set wireless.%s.ssid='%s'
             uci -q set wireless.%s.key='%s'
             uci -q set wireless.%s.disabled='%s'
-        ", sec, item.ssid, item.key, item.disabled ? "1" : "0"));
+        ", shq(sec), shq(item.ssid), shq(sec), shq(item.key || ""), item.disabled ? "1" : "0"));
     }
     wireless_exec("uci commit wireless; wifi reload");
     print("{\"success\":true,\"msg\":\"标准普通 WiFi 已恢复默认并生效！\"}\n");

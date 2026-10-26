@@ -286,8 +286,12 @@ return view.extend({
 					'class': 'cbi-button',
 					'click': function() {
 						ui.showModal(_('Compiling Configuration'), [ E('p', { 'class': 'spinning' }, _('Compiling template and provider node pool with seamless reload...')) ]);
-						callCompileReload().then(function() {
+						callCompileReload().then(function(res) {
 							ui.hideModal();
+							if (res && res.success === false) {
+								ui.addNotification(null, E('p', {}, '❌ ' + (res.error || _('Core configuration compilation failed!'))), 'error');
+								return;
+							}
 							ui.addNotification(null, E('p', {}, '✅ ' + _('Core configuration successfully compiled and reloaded!')), 'success');
 						}).catch(function(err) {
 							ui.hideModal();
@@ -329,7 +333,12 @@ return view.extend({
 			return ui.changes.apply(mode == '0');
 		}).then(function() {
 			var enabled = uci.get('omniclash', 'config', 'enabled');
-			return callServiceCtl(enabled === '0' ? 'stop' : 'start');
+			return callServiceCtl(enabled === '0' ? 'stop' : 'start').then(function(res) {
+				// 服务真实起停结果必须回显，否则开关与守护进程状态会静默脱节
+				if (res && res.success === false)
+					throw new Error(res.error || _('Failed to change service state'));
+				return res;
+			});
 		});
 	}
 });

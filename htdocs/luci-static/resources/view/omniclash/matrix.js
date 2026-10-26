@@ -58,6 +58,16 @@ var callPairAp = rpc.declare({
 var CACHE_KEY = 'omniclash_matrix_cache_v3';
 var CACHE_TTL = 10 * 60 * 1000;
 
+/**
+ * RPC 现在会把引擎的真实结果透传上来。只有 success !== false 才算成功，
+ * 否则转为 rejection，交给调用方的 catch 统一弹错误提示。
+ */
+function ensureRpcOk(res, fallbackMsg) {
+	if (res && res.success === false)
+		throw new Error(res.error || fallbackMsg || _('Operation failed'));
+	return res;
+}
+
 function readMemoryCache() {
 	try {
 		var raw = window.localStorage ? window.localStorage.getItem(CACHE_KEY) : null;
@@ -369,7 +379,8 @@ return view.extend({
 			ui.showModal(_('Saving'), [ E('p', { 'class': 'spinning' }, _('Synchronizing WiFi #%s and smoothly reloading wireless...').replace('%s', num)) ]);
 			var payload = { sid: sid, ssid: ssid, key: key };
 
-			callSaveSlotRpc(payload).then(function() {
+			callSaveSlotRpc(payload).then(function(res) {
+				ensureRpcOk(res, _('Failed to save WiFi slot'));
 				var currentSlot = slots.find(function(s) { return s.sid === sid; });
 				if (currentSlot) { currentSlot.ssid = ssid; currentSlot.key = key; }
 				writeMemoryCache(res);
@@ -398,7 +409,8 @@ return view.extend({
 			}
 
 			ui.showModal(_('Saving'), [ E('p', { 'class': 'spinning' }, _('Saving standard WiFi settings and smoothly reloading wireless...')) ]);
-			callSaveWifiNormalRpc(slots).then(function() {
+			callSaveWifiNormalRpc(slots).then(function(res) {
+				ensureRpcOk(res, _('Failed to save standard WiFi settings'));
 				try { if (window.localStorage) window.localStorage.removeItem(CACHE_KEY); } catch(e) {}
 				ui.hideModal();
 				ui.addNotification(null, E('p', {}, '✅ ' + _('Standard WiFi settings saved and applied successfully!')), 'success');
@@ -414,7 +426,8 @@ return view.extend({
 			var actionText = targetDisabled ? _('Disable') : _('Enable');
 			ui.showModal(_('Switching'), [ E('p', { 'class': 'spinning' }, _('Switching WiFi #%s to %s...').replace('%s', num).replace('%s', actionText)) ]);
 
-			callToggleWifiRpc(sid, targetDisabled).then(function() {
+			callToggleWifiRpc(sid, targetDisabled).then(function(res) {
+				ensureRpcOk(res, _('Failed to switch WiFi broadcast status'));
 				try { if (window.localStorage) window.localStorage.removeItem(CACHE_KEY); } catch(e) {}
 				ui.hideModal();
 				ui.addNotification(null, E('p', {}, '✅ ' + _('WiFi #%s %s successfully!').replace('%s', num).replace('%s', actionText)), 'success');
@@ -431,7 +444,8 @@ return view.extend({
 			if (currentItem) currentItem.disabled = targetDisabled;
 
 			ui.showModal(_('Switching'), [ E('p', { 'class': 'spinning' }, _('Toggling wireless broadcast...')) ]);
-			callSaveWifiNormalRpc(slots).then(function() {
+			callSaveWifiNormalRpc(slots).then(function(res) {
+				ensureRpcOk(res, _('Failed to update WiFi broadcast status'));
 				try { if (window.localStorage) window.localStorage.removeItem(CACHE_KEY); } catch(e) {}
 				ui.hideModal();
 				ui.addNotification(null, E('p', {}, '✅ ' + _('Wireless broadcast status updated!')), 'success');
@@ -709,7 +723,8 @@ return view.extend({
 							'click': function() {
 								if (!confirm(_('Are you sure you want to reset all 32-WiFi slots to defaults?'))) return;
 								ui.showModal(_('Resetting'), [ E('p', { 'class': 'spinning' }, _('Resetting 32-WiFi matrix to defaults...')) ]);
-								callResetMatrix32Rpc().then(function() {
+								callResetMatrix32Rpc().then(function(res) {
+									ensureRpcOk(res, _('Failed to reset 32-WiFi matrix'));
 									try { if (window.localStorage) window.localStorage.removeItem(CACHE_KEY); } catch(e) {}
 									ui.hideModal();
 									ui.addNotification(null, E('p', {}, '✅ ' + _('32-WiFi matrix reset to defaults successfully!')), 'success');
@@ -801,7 +816,8 @@ return view.extend({
 							'click': function() {
 								if (!confirm(_('Are you sure you want to reset standard WiFi to defaults?'))) return;
 								ui.showModal(_('Resetting'), [ E('p', { 'class': 'spinning' }, _('Resetting standard WiFi to defaults...')) ]);
-								callResetWifiNormalRpc().then(function() {
+								callResetWifiNormalRpc().then(function(res) {
+									ensureRpcOk(res, _('Failed to reset standard WiFi'));
 									try { if (window.localStorage) window.localStorage.removeItem(CACHE_KEY); } catch(e) {}
 									ui.hideModal();
 									ui.addNotification(null, E('p', {}, '✅ ' + _('Standard WiFi reset to defaults successfully!')), 'success');
