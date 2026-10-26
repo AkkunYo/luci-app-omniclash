@@ -240,7 +240,9 @@ function compile_config() {
 
     // 2. 加载 groups.json / apps.json 与 32-WiFi 槽位出口
     let groups = json(fs.readfile(GROUPS_FILE) || "[]");
-    let apps = json(fs.readfile(APPS_FILE) || "[]");
+    let apps = null;
+    try { apps = json(fs.readfile(APPS_FILE) || "[]"); } catch(e) { apps = null; }
+    if (type(apps) != "array") apps = [];
     let slots = get_all_slots();
 
     let candidate_names = [
@@ -905,9 +907,14 @@ if (action == "compile") {
     print("{\"success\":true,\"msg\":\"32满额WiFi全架构常驻初始化完成！\"}\n");
 } else if (action == "save_wifi_normal") {
     let input_raw = fs.readfile("/dev/stdin") || "";
-    let p = {};
-    try { p = json(input_raw) || {}; } catch(e) {}
-    let items = p.items || [];
+    let p = null;
+    let parsed_ok = false;
+    try { p = json(input_raw); parsed_ok = true; } catch(e) {}
+    if (!parsed_ok || type(p) != "object" || type(p.items) != "array") {
+        print("{\"success\":false,\"error\":\"标准 WiFi 数据格式非法，必须为数组\"}\n");
+        return;
+    }
+    let items = p.items;
     fs.writefile(NORMAL_WIFI_FILE, sprintf("%.J\n", items));
 
     for (let item in items) {

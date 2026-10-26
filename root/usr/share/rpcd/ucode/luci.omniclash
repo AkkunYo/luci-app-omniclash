@@ -269,28 +269,28 @@ const methods = {
 			try { return json(out); } catch(e) { return { success: true }; }
 		}
 	},
-	get_rules: {
+	get_apps: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash get_rules');
+			let p = popen('/usr/bin/omniclash get_apps');
 			if (!p) return { success: false, error: 'Execution failed' };
 			let out = p.read('all');
 			p.close();
 			try { return json(out); } catch(e) { return { success: false, error: 'Parse error' }; }
 		}
 	},
-	save_rules: {
-		args: { rules: [] },
+	save_apps: {
+		args: { apps: [] },
 		call: function(req) {
-			let p = popen('/usr/bin/omniclash save_rules', 'w');
+			let p = popen('/usr/bin/omniclash save_apps', 'w');
 			if (!p) return { success: false, error: 'Pipe error' };
 			p.write(sprintf('%J', req.args));
 			p.close();
 			return { success: true };
 		}
 	},
-	reset_rules: {
+	reset_apps: {
 		call: function() {
-			let p = popen('/usr/bin/omniclash reset_rules');
+			let p = popen('/usr/bin/omniclash reset_apps');
 			if (!p) return { success: false };
 			let out = p.read('all');
 			p.close();
