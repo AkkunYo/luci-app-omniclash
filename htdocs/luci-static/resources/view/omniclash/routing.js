@@ -32,20 +32,20 @@ var callResetGroups = rpc.declare({
 	method: 'reset_groups'
 });
 
-var callGetRules = rpc.declare({
+var callGetApps = rpc.declare({
 	object: 'luci.omniclash',
-	method: 'get_rules'
+	method: 'get_apps'
 });
 
-var callSaveRules = rpc.declare({
+var callSaveApps = rpc.declare({
 	object: 'luci.omniclash',
-	method: 'save_rules',
-	params: [ 'rules' ]
+	method: 'save_apps',
+	params: [ 'apps' ]
 });
 
-var callResetRules = rpc.declare({
+var callResetApps = rpc.declare({
 	object: 'luci.omniclash',
-	method: 'reset_rules'
+	method: 'reset_apps'
 });
 
 var callCompileReload = rpc.declare({
@@ -59,7 +59,7 @@ return view.extend({
 			uci.load('omniclash'),
 			callGetProviders(),
 			callGetGroups(),
-			callGetRules(),
+			callGetApps(),
 			L.resolveDefault(fs.read('/etc/omniclash/run/config.yaml'), '')
 		]);
 	},
@@ -79,11 +79,12 @@ return view.extend({
 
 		var providersList = (data[1] && data[1].providers) ? data[1].providers : [];
 		var groupsList = (data[2] && data[2].groups) ? data[2].groups : [];
-		var rulesList = (data[3] && data[3].rules) ? data[3].rules : [];
+		var appsList = (data[3] && data[3].apps) ? data[3].apps : [];
 		var runConfigContent = data[4] || '';
 
 		var groupTypes = ['select', 'url-test', 'fallback', 'load-balance'];
-		var ruleTypes = ['GEOSITE', 'GEOIP', 'DOMAIN-SUFFIX', 'DOMAIN-KEYWORD', 'DOMAIN', 'IP-CIDR', 'SRC-IP-CIDR', 'RULE-SET', 'MATCH'];
+		var appRuleTypes = ['DOMAIN-SUFFIX', 'DOMAIN-KEYWORD', 'DOMAIN', 'IP-CIDR', 'GEOSITE', 'GEOIP'];
+		var appExpanded = {};
 
 		// 获取当前所有可选走向选项 (DIRECT, REJECT, 以及 groupsList 中的所有策略组名称)
 		function getTargetOptions() {
@@ -249,105 +250,330 @@ return view.extend({
 			});
 		}
 
-		// ---------------- 3. Rules 规则渲染与增删移动 ----------------
-		function renderRuleRows() {
-			var tbody = document.getElementById('omniclash_rules_tbody');
-			if (!tbody) return;
-			tbody.innerHTML = '';
+		// ---------------- 3. 应用分流卡片流 (Application Card Stream) ----------------
+		function appRuleCount(app) {
+			var b = (app.builtin_rules && app.builtin_rules.length) ? app.builtin_rules.length : 0;
+			var c = (app.custom_rules && app.custom_rules.length) ? app.custom_rules.length : 0;
+			return b + c;
+		}
 
-			if (rulesList.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">' + _('No routing rules configured. Click "+ Add Rule" or "Reset to Default Rules".') + '</td></tr>';
+		function appFindIndexById(id) {
+			for (var i = 0; i < appsList.length; i++) {
+				if (appsList[i] && appsList[i].id === id) return i;
+			}
+			return -1;
+		}
+
+		function renderAppCards() {
+			var container = document.getElementById('omniclash_apps_container');
+			if (!container) return;
+			container.innerHTML = '';
+
+			if (appsList.length === 0) {
+				container.appendChild(E('div', {
+					'style': 'text-align: center; padding: 24px; color: #94a3b8; font-size: 13px;'
+				}, _('No application scenarios configured. Use "+ New Scenario Card" or "Reset to Defaults".')));
 				return;
 			}
 
 			var targets = getTargetOptions();
 
-			rulesList.forEach(function(r, idx) {
-				var tr = document.createElement('tr');
-				tr.innerHTML = `
-					<td style="font-weight: bold; width: 40px; text-align: center;">${idx + 1}</td>
-					<td style="width: 140px;">
-						<select id="rule_type_${idx}" class="cbi-input-select" style="width: 100%;">
-							${ruleTypes.map(t => `<option value="${t}" ${t === r.type ? 'selected' : ''}>${t}</option>`).join('')}
-						</select>
-					</td>
-					<td>
-						<input type="text" id="rule_payload_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${r.payload || ''}" placeholder="${_('Payload (e.g. openai, cn, 192.168.1.0/24)')}">
-					</td>
-					<td style="width: 180px;">
-						<select id="rule_target_${idx}" class="cbi-input-select" style="width: 100%;">
-							${targets.map(t => `<option value="${t}" ${t === r.target ? 'selected' : ''}>${t}</option>`).join('')}
-						</select>
-					</td>
-					<td style="width: 80px; text-align: center;">
-						<input type="checkbox" id="rule_nores_${idx}" ${r.no_resolve ? 'checked' : ''}>
-					</td>
-					<td style="width: 120px; text-align: center; white-space: nowrap;">
-						<button type="button" class="cbi-button" style="padding: 2px 6px; margin-right: 2px;" onclick="moveRule(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
-						<button type="button" class="cbi-button" style="padding: 2px 6px; margin-right: 4px;" onclick="moveRule(${idx}, 1)" ${idx === rulesList.length - 1 ? 'disabled' : ''}>↓</button>
-						<button type="button" class="cbi-button cbi-button-remove" style="padding: 2px 6px;" onclick="removeRule(${idx})">${_('Delete')}</button>
-					</td>
-				`;
-				tbody.appendChild(tr);
+			appsList.forEach(function(app, idx) {
+				var expanded = !!appExpanded[app.id];
+				var enabled = (app.enabled === false || app.enabled === 'false' || app.enabled === '0' || app.enabled === 0) ? false : true;
+				var isBuiltin = (app.is_custom !== true);
+				var count = appRuleCount(app);
+
+				var targetSel = E('select', {
+					'class': 'cbi-input-select',
+					'style': 'width: 210px; font-size: 12px;',
+					'change': function() {
+						appsList[idx].target = this.value;
+					}
+				}, targets.map(function(t) {
+					return E('option', { 'value': t, 'selected': (app.target === t) ? 'selected' : null }, t);
+				}));
+
+				var enabledBox = E('input', {
+					'type': 'checkbox',
+					'title': _('Enable this scenario'),
+					'checked': enabled ? 'checked' : null,
+					'style': 'cursor: pointer;',
+					'change': function() {
+						appsList[idx].enabled = this.checked;
+					}
+				});
+
+				var rowHeader = E('div', {
+					'style': 'display: flex; align-items: center; gap: 10px; padding: 10px 12px;' + (enabled ? '' : ' opacity: 0.55;')
+				}, [
+					E('button', {
+						'type': 'button',
+						'class': 'cbi-button',
+						'style': 'padding: 0 6px; min-width: 24px; font-size: 12px;',
+						'title': expanded ? _('Collapse') : _('Expand'),
+						'click': function() {
+							appExpanded[app.id] = !expanded;
+							renderAppCards();
+						}
+					}, expanded ? '▾' : '▸'),
+					E('span', { 'style': 'font-weight: 600; font-size: 13px; min-width: 150px;' }, app.name || app.id),
+					E('span', {
+						'class': 'badge',
+						'style': 'padding: 1px 7px; border-radius: 10px; font-size: 10px; background: rgba(148,163,184,0.18); color: #64748b;'
+					}, _('%d rules').replace('%d', count)),
+					E('span', { 'style': 'flex: 1;' }),
+					E('span', { 'style': 'font-size: 12px; color: #64748b;' }, _('Egress')),
+					targetSel,
+					E('span', { 'style': 'display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #64748b;' }, [ enabledBox, _('On') ]),
+					E('button', {
+						'type': 'button',
+						'class': 'cbi-button',
+						'style': 'padding: 0 6px; min-width: 24px;',
+						'disabled': idx === 0 ? 'disabled' : null,
+						'title': _('Move Up'),
+						'click': function() { window.moveApp(idx, -1); }
+					}, '↑'),
+					E('button', {
+						'type': 'button',
+						'class': 'cbi-button',
+						'style': 'padding: 0 6px; min-width: 24px;',
+						'disabled': idx === appsList.length - 1 ? 'disabled' : null,
+						'title': _('Move Down'),
+						'click': function() { window.moveApp(idx, 1); }
+					}, '↓'),
+					isBuiltin ? E('span', {
+						'style': 'min-width: 28px; text-align: center; color: #cbd5e1; font-size: 12px;',
+						'title': _('Built-in scenario cannot be deleted')
+					}, '🔒') : E('button', {
+						'type': 'button',
+						'class': 'cbi-button cbi-button-remove',
+						'style': 'padding: 0 6px; min-width: 28px;',
+						'title': _('Delete'),
+						'click': function() { window.removeApp(idx); }
+					}, '🗑️')
+				]);
+
+				var cardChildren = [ rowHeader ];
+
+				if (expanded) {
+					var bodyChildren = [];
+
+					if (app.builtin_rules && app.builtin_rules.length) {
+						bodyChildren.push(E('div', { 'style': 'font-size: 11px; color: #94a3b8; margin: 0 0 4px 0;' }, _('Built-in rules')));
+						bodyChildren.push(E('div', { 'style': 'font-family: monospace; font-size: 11px; line-height: 1.7; color: #475569; margin-bottom: 10px;' },
+							app.builtin_rules.map(function(r) {
+								return E('div', {}, (r.type || '?') + ', ' + (r.payload || '?'));
+							})
+						));
+					}
+
+					bodyChildren.push(E('div', { 'style': 'font-size: 11px; color: #94a3b8; margin: 0 0 4px 0;' }, _('Custom rules')));
+
+					if (app.custom_rules && app.custom_rules.length) {
+						bodyChildren.push(E('div', { 'style': 'margin-bottom: 8px;' },
+							app.custom_rules.map(function(r, ridx) {
+								return E('div', { 'style': 'display: flex; align-items: center; gap: 8px; font-family: monospace; font-size: 11px; line-height: 1.9;' }, [
+									E('span', { 'style': 'color: #2563eb;' }, (r.type || '?') + ', ' + (r.payload || '?')),
+									E('button', {
+										'type': 'button',
+										'class': 'cbi-button cbi-button-remove',
+										'style': 'padding: 0 5px; font-size: 10px;',
+										'click': function() { window.removeCustomRule(idx, ridx); }
+									}, _('Remove'))
+								]);
+							})
+						));
+					} else {
+						bodyChildren.push(E('div', { 'style': 'font-size: 11px; color: #cbd5e1; margin-bottom: 8px;' }, _('No custom rules yet.')));
+					}
+
+					bodyChildren.push(E('div', { 'style': 'display: flex; align-items: center; gap: 8px; flex-wrap: wrap;' }, [
+						E('select', {
+							'id': 'app_newtype_' + idx,
+							'class': 'cbi-input-select',
+							'style': 'width: 150px; font-size: 12px;'
+						}, appRuleTypes.map(function(t) {
+							return E('option', { 'value': t }, t);
+						})),
+						E('input', {
+							'type': 'text',
+							'id': 'app_newpayload_' + idx,
+							'class': 'cbi-input-text',
+							'style': 'width: 260px; font-family: monospace; font-size: 12px;',
+							'placeholder': _('Domain or IP (e.g. example.com)')
+						}),
+						E('button', {
+							'type': 'button',
+							'class': 'cbi-button cbi-button-action',
+							'style': 'font-size: 12px;',
+							'click': function() { window.addCustomRule(idx); }
+						}, _('Add'))
+					]));
+
+					cardChildren.push(E('div', {
+						'style': 'padding: 0 12px 12px 46px; border-top: 1px dashed rgba(148,163,184,0.25); padding-top: 10px; margin-top: 2px;'
+					}, bodyChildren));
+				}
+
+				container.appendChild(E('div', {
+					'style': 'border: 1px solid rgba(148,163,184,0.25); border-radius: 6px; margin-bottom: 8px; background: rgba(148,163,184,0.03);'
+				}, cardChildren));
 			});
 		}
 
-		window.moveRule = function(idx, offset) {
-			syncRulesFromDom();
-			var targetIdx = idx + offset;
-			if (targetIdx < 0 || targetIdx >= rulesList.length) return;
-			var temp = rulesList[idx];
-			rulesList[idx] = rulesList[targetIdx];
-			rulesList[targetIdx] = temp;
-			renderRuleRows();
+		window.moveApp = function(idx, offset) {
+			var target = idx + offset;
+			if (target < 0 || target >= appsList.length) return;
+			var tmp = appsList[idx];
+			appsList[idx] = appsList[target];
+			appsList[target] = tmp;
+			renderAppCards();
 		};
 
-		window.removeRule = function(idx) {
-			syncRulesFromDom();
-			rulesList.splice(idx, 1);
-			renderRuleRows();
+		window.removeApp = function(idx) {
+			var app = appsList[idx];
+			if (!app || app.is_custom !== true) {
+				ui.addNotification(null, E('p', {}, _('Built-in scenarios cannot be deleted. Disable them instead.')), 'warning');
+				return;
+			}
+			appsList.splice(idx, 1);
+			delete appExpanded[app.id];
+			renderAppCards();
 		};
 
-		window.addRule = function() {
-			syncRulesFromDom();
-			rulesList.push({ type: 'GEOSITE', payload: '', target: 'DIRECT', no_resolve: false });
-			renderRuleRows();
+		window.addCustomRule = function(idx) {
+			var typeEl = document.getElementById('app_newtype_' + idx);
+			var payloadEl = document.getElementById('app_newpayload_' + idx);
+			if (!typeEl || !payloadEl) return;
+			var payload = (payloadEl.value || '').trim();
+			if (!payload) {
+				ui.addNotification(null, E('p', {}, _('Please enter a domain or IP first.')), 'error');
+				return;
+			}
+			if (!appsList[idx].custom_rules) appsList[idx].custom_rules = [];
+			appsList[idx].custom_rules.push({ type: typeEl.value, payload: payload });
+			renderAppCards();
 		};
 
-		window.resetDefaultRules = function() {
-			if (!confirm(_('Are you sure you want to reset to default rules?\nThis will reset 69+ rules including AI, YouTube, Google, and DIRECT.'))) return;
-			ui.showModal(_('Resetting'), [ E('p', { 'class': 'spinning' }, _('Resetting default routing rules...')) ]);
-			callResetRules().then(function() {
-				return callGetRules();
+		window.removeCustomRule = function(appIdx, ruleIdx) {
+			if (!appsList[appIdx] || !appsList[appIdx].custom_rules) return;
+			appsList[appIdx].custom_rules.splice(ruleIdx, 1);
+			renderAppCards();
+		};
+
+		window.openNewAppModal = function() {
+			var nameInput = E('input', {
+				'type': 'text',
+				'class': 'cbi-input-text',
+				'id': 'new_app_name',
+				'style': 'width: 100%;',
+				'placeholder': _('e.g. Company Office')
+			});
+			var typeSelect = E('select', {
+				'class': 'cbi-input-select',
+				'id': 'new_app_type',
+				'style': 'width: 100%;'
+			}, appRuleTypes.map(function(t) {
+				return E('option', { 'value': t }, t);
+			}));
+			var payloadInput = E('input', {
+				'type': 'text',
+				'class': 'cbi-input-text',
+				'id': 'new_app_payload',
+				'style': 'width: 100%; font-family: monospace;',
+				'placeholder': _('e.g. example.com')
+			});
+			var targetSelect = E('select', {
+				'class': 'cbi-input-select',
+				'id': 'new_app_target',
+				'style': 'width: 100%;'
+			}, getTargetOptions().map(function(t) {
+				return E('option', { 'value': t, 'selected': t === '🚀 节点选择' ? 'selected' : null }, t);
+			}));
+
+			ui.showModal(_('New Scenario Card'), [
+				E('div', { 'class': 'cbi-value' }, [
+					E('label', { 'class': 'cbi-value-title' }, _('Scenario Name')),
+					E('div', { 'class': 'cbi-value-field' }, [ nameInput ])
+				]),
+				E('div', { 'class': 'cbi-value' }, [
+					E('label', { 'class': 'cbi-value-title' }, _('Rule Type')),
+					E('div', { 'class': 'cbi-value-field' }, [ typeSelect ])
+				]),
+				E('div', { 'class': 'cbi-value' }, [
+					E('label', { 'class': 'cbi-value-title' }, _('Initial Domain / IP')),
+					E('div', { 'class': 'cbi-value-field' }, [
+						payloadInput,
+						E('div', { 'class': 'cbi-value-description' }, _('Optional. Leave blank to create a card with only an egress target.'))
+					])
+				]),
+				E('div', { 'class': 'cbi-value' }, [
+					E('label', { 'class': 'cbi-value-title' }, _('Egress Target')),
+					E('div', { 'class': 'cbi-value-field' }, [ targetSelect ])
+				]),
+				E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;' }, [
+					E('button', { 'type': 'button', 'class': 'cbi-button', 'click': ui.hideModal }, _('Cancel')),
+					E('button', {
+						'type': 'button',
+						'class': 'cbi-button cbi-button-apply',
+						'click': function() {
+							var name = (nameInput.value || '').trim();
+							if (!name) {
+								ui.addNotification(null, E('p', {}, _('Scenario name cannot be empty.')), 'error');
+								return;
+							}
+							var payload = (payloadInput.value || '').trim();
+							var baseId = 'custom_' + name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+							if (!baseId || baseId === 'custom_') baseId = 'custom_card';
+							var newId = baseId;
+							var n = 2;
+							while (appFindIndexById(newId) >= 0) {
+								newId = baseId + '_' + n;
+								n++;
+							}
+							var card = {
+								id: newId,
+								name: name,
+								desc: '',
+								target: targetSelect.value,
+								builtin_rules: [],
+								custom_rules: payload ? [ { type: typeSelect.value, payload: payload } ] : [],
+								enabled: true,
+								is_custom: true
+							};
+							appsList.push(card);
+							appExpanded[newId] = true;
+											ui.hideModal();
+							renderAppCards();
+						}
+					}, _('Create'))
+				])
+			]);
+		};
+
+		window.resetDefaultApps = function() {
+			if (!confirm(_('Are you sure you want to restore the full default application library?\nAll custom scenarios and custom rules will be discarded.'))) return;
+			ui.showModal(_('Resetting'), [ E('p', { 'class': 'spinning' }, _('Restoring default application library...')) ]);
+			callResetApps().then(function() {
+				return callGetApps();
 			}).then(function(res) {
-				rulesList = (res && res.rules) ? res.rules : [];
-				renderRuleRows();
+				appsList = (res && res.apps) ? res.apps : [];
+				appExpanded = {};
+				renderAppCards();
 				ui.hideModal();
-				ui.addNotification(null, E('p', {}, '✅ ' + _('Routing rules successfully restored to default!')), 'success');
+				ui.addNotification(null, E('p', {}, '✅ ' + _('Default application library restored successfully!')), 'success');
 			}).catch(function(err) {
 				ui.hideModal();
 				ui.addNotification(null, E('p', {}, err.message), 'error');
 			});
 		};
 
-		function syncRulesFromDom() {
-			rulesList.forEach(function(r, idx) {
-				var typeEl = document.getElementById('rule_type_' + idx);
-				var payloadEl = document.getElementById('rule_payload_' + idx);
-				var targetEl = document.getElementById('rule_target_' + idx);
-				var noResEl = document.getElementById('rule_nores_' + idx);
-				if (typeEl) r.type = typeEl.value;
-				if (payloadEl) r.payload = payloadEl.value.trim();
-				if (targetEl) r.target = targetEl.value;
-				if (noResEl) r.no_resolve = noResEl.checked;
-			});
-		}
 
 		// ---------------- 4. 终极全量保存处理函数 ----------------
 		window.saveAllRoutingSettings = function() {
 			syncProvidersFromDom();
 			syncGroupsFromDom();
-			syncRulesFromDom();
 
 			var newTcp = document.getElementById('tab_tcp_mode').value;
 			var newUdp = document.getElementById('tab_udp_mode').value;
@@ -361,11 +587,14 @@ return view.extend({
 			var newCronEn = document.getElementById('tab_cron_enable').checked ? '1' : '0';
 			var newCronTime = document.getElementById('tab_cron_time').value.trim();
 
+			var cnTargetEl = document.getElementById('tab_cn_target');
+			var finalTargetEl = document.getElementById('tab_final_target');
+
 			var validProviders = providersList.filter(p => p.name && p.url);
 			var validGroups = groupsList.filter(g => g.name);
-			var validRules = rulesList.filter(r => (r.type === 'MATCH' || r.payload));
+			var validApps = appsList.filter(a => a && a.name);
 
-			ui.showModal(_('Saving & Applying'), [ E('p', { 'class': 'spinning' }, _('Saving settings, providers, groups, rules, and compiling configuration...')) ]);
+			ui.showModal(_('Saving & Applying'), [ E('p', { 'class': 'spinning' }, _('Saving settings, providers, groups, application cards, and compiling configuration...')) ]);
 
 			uci.set('omniclash', 'config', 'tcp_mode', newTcp);
 			uci.set('omniclash', 'config', 'udp_mode', newUdp);
@@ -378,18 +607,37 @@ return view.extend({
 			uci.set('omniclash', 'config', 'log_level', newLogLevel);
 			uci.set('omniclash', 'config', 'scheduled_restart', newCronEn);
 			uci.set('omniclash', 'config', 'scheduled_restart_cron', newCronTime);
+			if (cnTargetEl) uci.set('omniclash', 'config', 'cn_target', cnTargetEl.value);
+			if (finalTargetEl) uci.set('omniclash', 'config', 'final_target', finalTargetEl.value);
+
+			var sentCardCount = validApps.length;
+			var sentCustomRules = validApps.reduce(function(acc, a) {
+				return acc + ((a.custom_rules && a.custom_rules.length) ? a.custom_rules.length : 0);
+			}, 0);
 
 			Promise.all([
 				uci.save(),
 				uci.apply(),
 				callSaveProviders(validProviders),
 				callSaveGroups(validGroups),
-				callSaveRules(validRules)
+				callSaveApps(validApps)
 			]).then(function() {
 				return callCompileReload();
 			}).then(function() {
+				// save_apps 在引擎拒绝非法载荷时仍返回成功，必须回读校验实际落库结果
+				return callGetApps().then(function(res) {
+					var stored = (res && res.apps) ? res.apps : [];
+					var storedCustom = stored.reduce(function(acc, a) {
+						return acc + ((a.custom_rules && a.custom_rules.length) ? a.custom_rules.length : 0);
+					}, 0);
+					if (!res || res.success === false || stored.length !== sentCardCount || storedCustom !== sentCustomRules) {
+						throw new Error(_('Application card library was not saved as expected. Please check the log for details.'));
+					}
+					return true;
+				});
+			}).then(function() {
 				ui.hideModal();
-				ui.addNotification(null, E('p', {}, '✅ ' + _('All settings, providers, groups, and rules successfully saved and applied!')), 'success');
+				ui.addNotification(null, E('p', {}, '✅ ' + _('All settings, providers, groups, and application cards successfully saved and applied!')), 'success');
 			}).catch(function(err) {
 				ui.hideModal();
 				ui.addNotification(null, E('p', {}, err.message), 'error');
@@ -430,7 +678,7 @@ return view.extend({
 					'data-tab': 'rules',
 					'style': 'background: none; border: none; padding: 10px 16px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent;',
 					'click': function() { switchRoutingSubTab('rules'); }
-				}, '🔀 ' + _('Rules')),
+				}, '🔀 ' + _('Application Routing Cards')),
 				E('button', {
 					'type': 'button',
 					'class': 'subtab-btn',
@@ -617,42 +865,72 @@ return view.extend({
 				])
 			]),
 
-			// 子 Tab 4: 分流规则 (真实数据绑定 + 增删改查 + 恢复默认)
+			// 子 Tab 4: 业务应用分流卡片流
 			E('div', { 'id': 'pane_rules', 'class': 'subtab-pane', 'style': 'display: none;' }, [
+				// 第一层: 物理专线隔离保障说明 (只读)
+				E('div', {
+					'style': 'background: rgba(16, 185, 129, 0.08); border-left: 4px solid #10b981; padding: 10px 14px; border-radius: 4px; margin-bottom: 16px;'
+				}, [
+					E('div', { 'style': 'font-weight: bold; color: #059669; margin-bottom: 4px; font-size: 13px;' },
+						'🛡️ ' + _('Physical Line Isolation Guarantee')),
+					E('div', { 'style': 'font-size: 12px; color: #64748b; line-height: 1.6;' },
+						_('Global-mode and targeted-mode WiFi devices are matched at the highest physical priority and always egress through their dedicated proxy. They never fall through to any application card below, preventing IP leaks and rule hijacking.'))
+				]),
+
+				// 第二层: 业务应用卡片流
 				E('div', { 'class': 'cbi-section' }, [
-					E('div', { 'style': 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;' }, [
+					E('div', { 'style': 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;' }, [
 						E('div', {}, [
-							E('h3', { 'style': 'margin: 0;' }, _('Traffic Routing Rules')),
-							E('p', { 'style': 'margin: 4px 0 0 0; color: #94a3b8;' },
-								_('Preconfigured 69+ rule library. Supports modifying match criteria, target groups, and reordering priority.')
-							)
+							E('h3', { 'style': 'margin: 0;' }, '🚀 ' + _('Application Routing Pipeline')),
+							E('p', { 'style': 'margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;' },
+								_('Rules are matched top to bottom. Use the arrows to change priority.'))
 						]),
-						E('div', {}, [
+						E('div', { 'style': 'display: flex; gap: 6px;' }, [
 							E('button', {
 								'type': 'button',
 								'class': 'cbi-button cbi-button-action',
-								'style': 'margin-right: 6px;',
-								'click': function() { addRule(); }
-							}, _('+ Add Rule')),
+								'click': function() { window.openNewAppModal(); }
+							}, '+ ' + _('New Scenario Card')),
 							E('button', {
 								'type': 'button',
 								'class': 'cbi-button cbi-button-reset',
-								'click': function() { resetDefaultRules(); }
-							}, '🔄 ' + _('Reset to Default Rules'))
+								'click': function() { window.resetDefaultApps(); }
+							}, '🔄 ' + _('Reset to Default Library'))
 						])
 					]),
-					E('table', { 'class': 'table', 'style': 'width: 100%; border-collapse: collapse; margin-bottom: 12px;' }, [
-						E('thead', {}, [
-							E('tr', {}, [
-								E('th', { 'style': 'width: 40px; text-align: center;' }, '#'),
-								E('th', { 'style': 'width: 140px;' }, _('Rule Type')),
-								E('th', {}, _('Payload (Domain / IP / GeoTag)')),
-								E('th', { 'style': 'width: 180px;' }, _('Target (Group / DIRECT / REJECT)')),
-								E('th', { 'style': 'width: 80px; text-align: center;' }, _('No-Resolve')),
-								E('th', { 'style': 'width: 120px; text-align: center;' }, _('Actions'))
-							])
-						]),
-						E('tbody', { 'id': 'omniclash_rules_tbody' })
+					E('div', { 'id': 'omniclash_apps_container' })
+				]),
+
+				// 第三层: 基础保障与兜底收口
+				E('div', { 'class': 'cbi-section', 'style': 'margin-top: 18px;' }, [
+					E('h3', { 'style': 'margin: 0 0 4px 0;' }, '⚓ ' + _('Baseline & Final Fallback')),
+					E('p', { 'style': 'margin: 0 0 12px 0; color: #94a3b8; font-size: 12px;' },
+						_('These two rules are always emitted after every application card and cannot be reordered.')),
+					E('div', { 'class': 'cbi-value' }, [
+						E('label', { 'class': 'cbi-value-title' }, _('China Mainland Direct')),
+						E('div', { 'class': 'cbi-value-field' }, [
+							E('select', { 'id': 'tab_cn_target', 'class': 'cbi-input-select', 'style': 'width: 240px;' },
+								getTargetOptions().map(function(t) {
+									var cur = uci.get('omniclash', 'config', 'cn_target') || 'DIRECT';
+									return E('option', { 'value': t, 'selected': cur === t ? 'selected' : null }, t);
+								})
+							),
+							E('div', { 'class': 'cbi-value-description' },
+								_('Emits GEOSITE,cn and GEOIP,cn to this target for all devices not captured above.'))
+						])
+					]),
+					E('div', { 'class': 'cbi-value' }, [
+						E('label', { 'class': 'cbi-value-title' }, _('Catch-All Fallback (MATCH)')),
+						E('div', { 'class': 'cbi-value-field' }, [
+							E('select', { 'id': 'tab_final_target', 'class': 'cbi-input-select', 'style': 'width: 240px;' },
+								getTargetOptions().map(function(t) {
+									var cur = uci.get('omniclash', 'config', 'final_target') || '🚀 节点选择';
+									return E('option', { 'value': t, 'selected': cur === t ? 'selected' : null }, t);
+								})
+							),
+							E('div', { 'class': 'cbi-value-description' },
+								_('Terminal MATCH rule. Every remaining unmatched connection egresses through this target.'))
+						])
 					])
 				])
 			]),
@@ -715,7 +993,7 @@ return view.extend({
 		setTimeout(function() {
 			renderProviderRows();
 			renderGroupRows();
-			renderRuleRows();
+			renderAppCards();
 		}, 50);
 
 		return viewEl;
