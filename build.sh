@@ -4,8 +4,9 @@ set -e
 # ==============================================================================
 # OmniClash 本地构建与打包脚本
 # 标准多包支持：
-#   1. luci-app-omniclash (主体插件，标准默认英文)
+#   1. luci-app-omniclash        (主控插件，标准默认英文)
 #   2. luci-i18n-omniclash-zh-cn (标准简体中文语言包)
+#   3. omniclash-agent           (子 AP 侧轻量代理，独立安装/卸载)
 # 用法:
 #   ./build.sh          -> 本地安装包构建 (动态私有覆盖注入真实配置，源码仓库 100% 干净)
 #   ./build.sh --clean  -> 公开发布包构建 (保持通用脱敏模板，零隐私信息)
@@ -13,8 +14,10 @@ set -e
 
 PKG_NAME="luci-app-omniclash"
 I18N_PKG_NAME="luci-i18n-omniclash-zh-cn"
+AGENT_PKG_NAME="omniclash-agent"
 PKG_VERSION="0.0.1"
 PKG_RELEASE="1"
+AGENT_VERSION="0.1.0"
 PKG_ARCH="all"
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -33,7 +36,7 @@ mkdir -p "$BUILD_DIR/data" "$BUILD_DIR/control" "$OUTPUT_DIR"
 # ==============================================================================
 # Part A: 打包主体插件 luci-app-omniclash
 # ==============================================================================
-echo "-> [1/2] 构建主体插件: $PKG_NAME"
+echo "-> [1/3] 构建主体插件: $PKG_NAME"
 
 # 1. 拷贝源码树到临时暂存目录
 cp -r "$SCRIPT_DIR/root/"* "$BUILD_DIR/data/"
@@ -92,7 +95,7 @@ cat << 'POST' > "$BUILD_DIR/control/postinst"
 	if [ ! -f /etc/config/omniclash ]; then
 		cp -f /etc/omniclash/config.default /etc/config/omniclash
 	else
-		for opt in run_mode wireless_mode perf_profile ap_host ap_port ap_user ap_password ap_key tcp_mode udp_mode tun_stack bypass_china_mainland_ip dns_mode fake_ip_range mixed_port socks_port log_level scheduled_restart scheduled_restart_cron; do
+		for opt in run_mode wireless_mode perf_profile ap_host ap_port ap_user ap_password ap_key ap_transport ap_token tcp_mode udp_mode tun_stack bypass_china_mainland_ip dns_mode fake_ip_range mixed_port socks_port log_level scheduled_restart scheduled_restart_cron; do
 			val=$(uci -q get omniclash.config.$opt)
 			if [ -z "$val" ]; then
 				def=$(uci -q -c /etc/omniclash get config.default.config.$opt 2>/dev/null)
@@ -146,7 +149,7 @@ tar -czf "$MAIN_IPK" debian-binary control.tar.gz data.tar.gz
 # ==============================================================================
 # Part B: 打包中文语言包插件 luci-i18n-omniclash-zh-cn
 # ==============================================================================
-echo "-> [2/2] 构建中文语言包: $I18N_PKG_NAME"
+echo "-> [2/3] 构建中文语言包: $I18N_PKG_NAME"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/data/usr/lib/lua/luci/i18n" "$BUILD_DIR/control"
 
@@ -191,6 +194,66 @@ echo "2.0" > "$BUILD_DIR/debian-binary"
 cd "$BUILD_DIR"
 I18N_IPK="$OUTPUT_DIR/${I18N_PKG_NAME}_${PKG_VERSION}-${PKG_RELEASE}_${PKG_ARCH}.ipk"
 tar -czf "$I18N_IPK" debian-binary control.tar.gz data.tar.gz
+
+rm -rf "$BUILD_DIR"
+
+# ==============================================================================
+# Part C: 打包子 AP 代理 omniclash-agent
+#
+# 这是一个"只装一次、装完即忘"的极简包：
+#   - 新增 /www/cgi-bin/omniclash-agent（ucode CGI）
+#   - 新增 /etc/omniclash-agent/token（首次安装随机生成）
+#   - 不改动 wireless / network / firewall 中的任何既有配置
+#   - 不带 init 脚本，无常驻进程，卸载后不残留
+# 依赖只用子 AP 上原本就有的 uhttpd + ucode + uci。
+# ==============================================================================
+echo "-> [3/3] 构建子 AP 代理: $AGENT_PKG_NAME"
+rm -rf "$BUILD_DIR"
+mkdir -p "$BUILD_DIR/data" "$BUILD_DIR/control"
+
+cp -r "$SCRIPT_DIR/agent/root/"* "$BUILD_DIR/data/"
+chmod 755 "$BUILD_DIR/data/www/cgi-bin/omniclash-agent"
+chmod 755 "$BUILD_DIR/data/etc/uci-defaults/99-omniclash-agent"
+
+cat << CTRL_AGENT > "$BUILD_DIR/control/control"
+Package: $AGENT_PKG_NAME
+Version: ${AGENT_VERSION}-${PKG_RELEASE}
+Depends: libc, ucode, uhttpd
+Section: net
+Architecture: $PKG_ARCH
+Maintainer: AkkunYo <945395054@qq.com>
+Description: OmniClash Agent - lightweight wireless control endpoint for a child OpenWrt AP.
+CTRL_AGENT
+
+cat << 'POST_AGENT' > "$BUILD_DIR/control/postinst"
+#!/bin/sh
+[ -n "${IPKG_INSTROOT}" ] || {
+	chmod 755 /www/cgi-bin/omniclash-agent 2>/dev/null || true
+	# uci-defaults 通常由 rc.common 统一执行；这里显式跑一次以防边缘情况
+	[ -x /etc/uci-defaults/99-omniclash-agent ] && /etc/uci-defaults/99-omniclash-agent && rm -f /etc/uci-defaults/99-omniclash-agent
+	exit 0
+}
+POST_AGENT
+
+cat << 'PRERM_AGENT' > "$BUILD_DIR/control/prerm"
+#!/bin/sh
+[ -n "${IPKG_INSTROOT}" ] || {
+	# 卸载只移除端点本身；已下发的无线配置原样保留，网络不受影响
+	rm -f /www/cgi-bin/omniclash-agent 2>/dev/null || true
+	exit 0
+}
+PRERM_AGENT
+chmod +x "$BUILD_DIR/control/postinst" "$BUILD_DIR/control/prerm"
+
+cd "$BUILD_DIR/data"
+tar -czf "$BUILD_DIR/data.tar.gz" *
+cd "$BUILD_DIR/control"
+tar -czf "$BUILD_DIR/control.tar.gz" *
+
+echo "2.0" > "$BUILD_DIR/debian-binary"
+cd "$BUILD_DIR"
+AGENT_IPK="$OUTPUT_DIR/${AGENT_PKG_NAME}_${AGENT_VERSION}-${PKG_RELEASE}_${PKG_ARCH}.ipk"
+tar -czf "$AGENT_IPK" debian-binary control.tar.gz data.tar.gz
 
 rm -rf "$BUILD_DIR"
 

@@ -103,6 +103,322 @@ function ap_exec(cmd) {
     return wireless_exec(cmd);
 }
 
+/* ==========================================================================
+ * 子 AP 双通道
+ *
+ * 通道 1 (agent): 面向语义的 HTTP RPC，子 AP 上装 omniclash-agent 包。
+ *                 每次调用发一个结构化请求，不传 shell 字符串。
+ * 通道 2 (ssh)  : 历史实现，把 shell 脚本送进子 AP 执行，作为兼容回退。
+ *
+ * 选择逻辑由 uci ap_transport 控制:
+ *   auto  (默认) 先探测 agent，可用则用，不可用回落 ssh
+ *   agent        强制 agent，失败即报错（便于排查）
+ *   ssh          强制 ssh（保留给旧 AP）
+ * ========================================================================== */
+
+let AGENT_VERSION_MIN = "0.1.0";
+
+function ap_transport_pref() {
+    let v = uci.get("omniclash", "config", "ap_transport");
+    if (v == "agent" || v == "ssh") return v;
+    return "auto";
+}
+
+function ap_host() {
+    return uci.get("omniclash", "config", "ap_host") || AP_HOST;
+}
+
+function ap_token() {
+    return uci.get("omniclash", "config", "ap_token") || "";
+}
+
+/* 向 agent 发一次请求。返回 { ok:bool, data:obj, error:str, ms:int } */
+function agent_call(method, params, timeout) {
+    let host = ap_host();
+    let token = ap_token();
+    let t = timeout || 8;
+
+    if (!host) return { ok: false, error: "未配置子 AP 地址" };
+    if (!token) return { ok: false, error: "未配置 Agent 令牌" };
+
+    let req = sprintf('%J', { method: method, params: params || {} });
+    let req_file = "/tmp/omniclash_agent_req.json";
+    let out_file = "/tmp/omniclash_agent_out.json";
+    fs.writefile(req_file, req);
+
+    let start = time();
+    let cmd = sprintf(
+        "curl -s -m %d -X POST -H 'Authorization: Bearer %s' -H 'Content-Type: application/json' --data-binary @%s http://%s/cgi-bin/omniclash-agent",
+        t, shq(token), req_file, shq(host));
+    let res = shell_exec(cmd);
+    let elapsed = int((time() - start) * 1000);
+
+    let raw = trim(res.out || "");
+    if (!raw) {
+        return { ok: false, error: sprintf("Agent 无响应 (%s)", host), ms: elapsed };
+    }
+
+    let data = null;
+    try { data = json(raw); } catch(e) { data = null; }
+    if (type(data) != "object") {
+        return { ok: false, error: "Agent 返回内容无法解析: " + substr(raw, 0, 120), ms: elapsed };
+    }
+
+    if (data.ok != true) {
+        return { ok: false, error: data.error || "Agent 拒绝了该操作", data: data, ms: elapsed };
+    }
+
+    return { ok: true, data: data, ms: elapsed };
+}
+
+/* 进程内缓存探测结果，避免每次操作都多打一次 ping */
+let _agent_state = null;
+
+function agent_available(refresh) {
+    let pref = ap_transport_pref();
+    if (pref == "ssh") return false;
+
+    if (_agent_state != null && !refresh)
+        return _agent_state.ok;
+
+    let r = agent_call("ping", {}, 4);
+    _agent_state = {
+        ok: !!(r.ok && r.data && r.data.token_ok),
+        version: (r.ok && r.data) ? (r.data.version || "") : "",
+        host: ap_host(),
+        ms: r.ms || 0,
+        error: r.ok ? (r.data && r.data.token_ok ? "" : "Agent 令牌不匹配") : (r.error || "")
+    };
+
+    /* 强制 agent 模式下，探测失败要显式暴露，而不是静默回落 */
+    return _agent_state.ok;
+}
+
+function agent_state() {
+    if (_agent_state == null) agent_available(true);
+    return _agent_state || { ok: false, version: "", host: ap_host(), ms: 0, error: "未探测" };
+}
+
+/* 语义操作：优先 agent，其次 ssh。两条路径产出同样的结果结构。 */
+
+let AP_WIFI_DUMP_CMD = "
+    for s in $(uci show wireless | grep '=wifi-iface' | cut -d. -f2 | cut -d= -f1); do
+        ssid=$(uci -q get wireless.$s.ssid)
+        key=$(uci -q get wireless.$s.key)
+        net=$(uci -q get wireless.$s.network)
+        dev=$(uci -q get wireless.$s.device)
+        dis=$(uci -q get wireless.$s.disabled || echo 0)
+        echo \"$s|$ssid|$key|$net|$dev|$dis\"
+    done
+    echo '---CLIENTS---'
+    for iface in $(iw dev | awk '$1==\"Interface\"{print $2}'); do
+        ssid=$(iw dev $iface info 2>/dev/null | awk '$1==\"ssid\"{print $2}')
+        cnt=$(iw dev $iface station dump 2>/dev/null | grep -c '^Station' || echo 0)
+        echo \"$ssid=$cnt\"
+    done
+    echo '---LIMITS---'
+    for p in phy0 phy1; do
+        lim=$(iw phy $p info 2>/dev/null | grep -m1 '#{ AP' | grep -o 'AP.*<= [0-9]*' | grep -o '[0-9]*' || echo 16)
+        echo \"$p=$lim\"
+    done
+";
+
+function ap_get_wifi() {
+    if (agent_available()) {
+        let r = agent_call("get_wifi", {}, 12);
+        if (r.ok) return { ok: true, via: "agent", data: r.data, ms: r.ms };
+        if (ap_transport_pref() == "agent") return { ok: false, via: "agent", error: r.error };
+    }
+
+    /* SSH 回退：沿用历史脚本，输出格式保持不变 */
+    let res = ap_exec(AP_WIFI_DUMP_CMD);
+    if (!res || !res.out) return { ok: false, via: "ssh", error: "无法从子 AP 读取无线状态" };
+    return { ok: true, via: "ssh", raw: res.out, ms: 0 };
+}
+
+/* 写入单个无线段。params 语义与 agent set_wifi 一致。 */
+function ap_set_wifi(section, spec) {
+    if (agent_available()) {
+        let p = { section: section };
+        for (let k in keys(spec || {})) p[k] = spec[k];
+        p.guard = false;              /* AC 已在上层做自锁判断 */
+        let r = agent_call("set_wifi", p, 20);
+        if (r.ok) return { ok: true, via: "agent", changed: r.data.changed, ms: r.ms };
+        if (ap_transport_pref() == "agent") return { ok: false, via: "agent", error: r.error };
+    }
+
+    /* SSH 回退：只用显式给出的字段，避免覆盖未提及的值 */
+    let cmds = [];
+    if (spec.ssid != null) push(cmds, sprintf("uci set wireless.%s.ssid='%s'", shq(section), shq(spec.ssid)));
+    if (spec.key != null) push(cmds, sprintf("uci set wireless.%s.key='%s'", shq(section), shq(spec.key)));
+    if (spec.network != null) push(cmds, sprintf("uci set wireless.%s.network='%s'", shq(section), shq(spec.network)));
+    if (spec.encryption != null) push(cmds, sprintf("uci set wireless.%s.encryption='%s'", shq(section), shq(spec.encryption)));
+    if (spec.disabled != null) push(cmds, sprintf("uci set wireless.%s.disabled='%s'", shq(section), (spec.disabled == true || spec.disabled == "1" || spec.disabled == 1) ? "1" : "0"));
+
+    if (length(cmds) == 0) return { ok: true, via: "ssh", changed: false };
+
+    push(cmds, "uci commit wireless");
+    push(cmds, "wifi reload >/dev/null 2>&1");
+    let res = ap_exec(join("\n", cmds));
+    if (res.code != 0) return { ok: false, via: "ssh", error: trim(res.out || "写入失败") };
+    return { ok: true, via: "ssh", changed: true };
+}
+
+/* 批量写入已存在的无线段 */
+function ap_bulk_set_wifi(items) {
+    if (agent_available()) {
+        let r = agent_call("bulk_set_wifi", { items: items }, 30);
+        if (r.ok) return { ok: true, via: "agent", applied: r.data.applied, ms: r.ms };
+        if (ap_transport_pref() == "agent") return { ok: false, via: "agent", error: r.error };
+    }
+
+    let cmds = [];
+    for (let it in items) {
+        let sec = it.section;
+        if (!sec) continue;
+        if (it.ssid != null) push(cmds, sprintf("uci -q set wireless.%s.ssid='%s'", shq(sec), shq(it.ssid)));
+        if (it.key != null) push(cmds, sprintf("uci -q set wireless.%s.key='%s'", shq(sec), shq(it.key)));
+        if (it.disabled != null) push(cmds, sprintf("uci -q set wireless.%s.disabled='%s'", shq(sec), (it.disabled == true || it.disabled == "1" || it.disabled == 1) ? "1" : "0"));
+    }
+    if (length(cmds) == 0) return { ok: true, via: "ssh", applied: 0 };
+
+    push(cmds, "uci commit wireless");
+    push(cmds, "wifi reload >/dev/null 2>&1");
+    let res = ap_exec(join("\n", cmds));
+    if (res.code != 0) return { ok: false, via: "ssh", error: trim(res.out || "批量写入失败") };
+    return { ok: true, via: "ssh", applied: length(items) };
+}
+
+/* 在子 AP 上创建/更新无线段（不建 VLAN） */
+function ap_provision_wifi(items) {
+    if (agent_available()) {
+        let r = agent_call("provision_wifi", { items: items }, 40);
+        if (r.ok) return { ok: true, via: "agent", applied: r.data.applied, ms: r.ms };
+        if (ap_transport_pref() == "agent") return { ok: false, via: "agent", error: r.error };
+    }
+
+    let cmds = [];
+    for (let it in items) {
+        let sec = it.section;
+        if (!sec) continue;
+        push(cmds, sprintf("uci -q set wireless.%s=wifi-iface", shq(sec)));
+        push(cmds, sprintf("uci -q set wireless.%s.mode='ap'", shq(sec)));
+        if (it.device != null) push(cmds, sprintf("uci -q set wireless.%s.device='%s'", shq(sec), shq(it.device)));
+        if (it.network != null) push(cmds, sprintf("uci -q set wireless.%s.network='%s'", shq(sec), shq(it.network)));
+        push(cmds, sprintf("uci -q set wireless.%s.ssid='%s'", shq(sec), shq(it.ssid)));
+        push(cmds, sprintf("uci -q set wireless.%s.key='%s'", shq(sec), shq(it.key || "")));
+        push(cmds, sprintf("uci -q set wireless.%s.encryption='%s'", shq(sec), (it.key && it.key != "") ? "psk2" : "none"));
+        push(cmds, sprintf("uci -q set wireless.%s.disabled='%s'", shq(sec), (it.disabled == true || it.disabled == "1" || it.disabled == 1) ? "1" : "0"));
+        push(cmds, sprintf("uci -q set wireless.%s.wmm='1'", shq(sec)));
+    }
+    if (length(cmds) == 0) return { ok: true, via: "ssh", applied: 0 };
+
+    push(cmds, "uci commit wireless");
+    push(cmds, "wifi reload >/dev/null 2>&1");
+    let res = ap_exec(join("\n", cmds));
+    if (res.code != 0) return { ok: false, via: "ssh", error: trim(res.out || "下发失败") };
+    return { ok: true, via: "ssh", applied: length(items) };
+}
+
+/* 把 32 槽位整体同步到子 AP。
+ *
+ * 子 AP 上可能没有某几个段（例如只部署了部分槽位），因此这里先按
+ * agent 报告的实际段列表分流：
+ *   已存在 -> bulk_set_wifi（只改值，不动 network/device）
+ *   不存在 -> provision_wifi（新建段，network 指向该槽位的 vlan）
+ * 这样不会出现"因为缺一个段就整批失败"的半可用状态。 */
+function ap_sync_matrix(slots) {
+    let r = ap_get_wifi();
+    if (!r.ok) return { ok: false, error: r.error || "无法读取子 AP 无线状态" };
+
+    let existing = {};
+    if (r.via == "agent") {
+        for (let it in (r.data.interfaces || [])) existing[it.section] = true;
+    } else {
+        let parsed = parse_wifi_dump(r.raw || "");
+        for (let sec in keys(parsed.interfaces)) existing[sec] = true;
+    }
+
+    let updates = [];
+    let creates = [];
+
+    for (let s in slots) {
+        if (!s.ap_section) continue;
+        let item = {
+            section: s.ap_section,
+            ssid: s.ssid,
+            key: s.key,
+            disabled: s.disabled ? true : false
+        };
+        if (existing[s.ap_section]) {
+            push(updates, item);
+        } else {
+            push(creates, {
+                section: s.ap_section,
+                device: (s.band == "5g") ? "radio1" : "radio0",
+                network: sprintf("vlan%s", s.vlan),
+                ssid: s.ssid,
+                key: s.key,
+                disabled: s.disabled ? true : false
+            });
+        }
+    }
+
+    let total = 0;
+    if (length(updates) > 0) {
+        let u = ap_bulk_set_wifi(updates);
+        if (!u.ok) return { ok: false, error: u.error || "批量更新失败" };
+        total += u.applied || 0;
+    }
+    if (length(creates) > 0) {
+        let c = ap_provision_wifi(creates);
+        if (!c.ok) return { ok: false, error: c.error || "批量新建失败" };
+        total += c.applied || 0;
+    }
+
+    return { ok: true, via: (length(creates) > 0) ? "mixed" : r.via, applied: total };
+}
+
+/* 解析 SSH 回退通道的文本输出（agent 通道直接返回结构化 JSON） */
+function parse_wifi_dump(raw) {
+    let ap_blocks = split(raw, "---CLIENTS---\n");
+    let iface_lines = split(ap_blocks[0] || "", "\n");
+    let rest_blocks = split(ap_blocks[1] || "", "---LIMITS---\n");
+    let client_lines = split(rest_blocks[0] || "", "\n");
+    let limit_lines = split(rest_blocks[1] || "", "\n");
+
+    let interfaces = {};
+    for (let line in iface_lines) {
+        let parts = split(trim(line), "|");
+        if (length(parts) >= 5) {
+            interfaces[parts[0]] = {
+                ssid: parts[1],
+                key: parts[2],
+                network: parts[3],
+                device: parts[4],
+                disabled: parts[5] == "1"
+            };
+        }
+    }
+
+    let clients = {};
+    for (let line in client_lines) {
+        let parts = split(trim(line), "=");
+        if (length(parts) == 2) clients[parts[0]] = int(parts[1]);
+    }
+
+    let limits = { "2g": 16, "5g": 16 };
+    for (let line in limit_lines) {
+        let parts = split(trim(line), "=");
+        if (length(parts) == 2) {
+            if (parts[0] == "phy0") limits["2g"] = int(parts[1]);
+            else if (parts[0] == "phy1") limits["5g"] = int(parts[1]);
+        }
+    }
+
+    return { interfaces: interfaces, clients: clients, limits: limits };
+}
+
 function ensure_defaults() {
     if (!fs.access(GROUPS_FILE) && fs.access(GROUPS_DEF_FILE)) {
         fs.writefile(GROUPS_FILE, fs.readfile(GROUPS_DEF_FILE));
@@ -426,6 +742,62 @@ if (action == "compile") {
     let out = p ? p.read("all") : "";
     if (p) p.close();
     print(sprintf("%.J\n", { success: true, log: out || "暂无日志或核心运行正常" }));
+} else if (action == "sync_matrix") {
+    /* 把本机 32 槽位配置整体下推到子 AP。
+     * 只做无线段 upsert，不建 VLAN、不 reload network（见 spec §6）。 */
+    ensure_defaults();
+    let slots = get_all_slots();
+    if (length(slots) == 0) {
+        print("{\"success\":false,\"error\":\"本机尚无 32 槽位配置，请先执行 32-WiFi 矩阵重置\"}\n");
+        return;
+    }
+
+    if (is_local_mode()) {
+        print("{\"success\":false,\"error\":\"本机模式下无需同步（配置即生效）\"}\n");
+        return;
+    }
+
+    let r = ap_sync_matrix(slots);
+    if (!r.ok) {
+        print(sprintf("%.J\n", { success: false, error: r.error || "同步失败" }));
+        return;
+    }
+
+    /* 同步只改子 AP 的 wireless，本机 slot 配置与 mihomo 规则均未变动，
+     * 因此不再触发 compile/reload（那要 14 秒），保持操作即时完成。 */
+    print(sprintf("%.J\n", {
+        success: true,
+        via: r.via,
+        applied: r.applied,
+        msg: sprintf("已向子 AP 同步 %d 个无线段", r.applied)
+    }));
+} else if (action == "agent_status") {
+    /* 主动刷新探测，然后把通道状态汇报给前端 */
+    _agent_state = null;
+    let avail = agent_available(true);
+    let st = agent_state();
+    print(sprintf("%.J\n", {
+        success: true,
+        available: avail,
+        pref: ap_transport_pref(),
+        version: st.version || "",
+        host: st.host || "",
+        latency_ms: st.ms || 0,
+        error: st.error || ""
+    }));
+} else if (action == "get_ap_token") {
+    /* 供 UI 显示 token，便于用户复制到子 AP；仅本机 root 可读。
+     * 未配置时现场生成一个，保证"安装即有可用令牌"。 */
+    let tok = ap_token();
+    if (!tok) {
+        let r = shell_exec("head -c 32 /dev/urandom | hexdump -v -e '/1 \"%02x\"'");
+        tok = trim(r.out || "");
+        if (tok) {
+            uci.set("omniclash", "config", "ap_token", tok);
+            uci.commit("omniclash");
+        }
+    }
+    print(sprintf("%.J\n", { success: true, token: tok }));
 } else if (action == "clear_logs") {
     fs.writefile("/var/log/omniclash/core.log", "");
     fs.writefile("/var/log/omniclash/app.log", "");
@@ -550,60 +922,43 @@ if (action == "compile") {
     ensure_defaults();
     let slots = get_all_slots();
 
-    let ap_res = ap_exec("
-        for s in $(uci show wireless | grep '=wifi-iface' | cut -d. -f2 | cut -d= -f1); do
-            ssid=$(uci -q get wireless.$s.ssid)
-            key=$(uci -q get wireless.$s.key)
-            net=$(uci -q get wireless.$s.network)
-            dev=$(uci -q get wireless.$s.device)
-            dis=$(uci -q get wireless.$s.disabled || echo 0)
-            echo \"$s|$ssid|$key|$net|$dev|$dis\"
-        done
-        echo '---CLIENTS---'
-        for iface in $(iw dev | awk '$1==\"Interface\"{print $2}'); do
-            ssid=$(iw dev $iface info 2>/dev/null | awk '$1==\"ssid\"{print $2}')
-            cnt=$(iw dev $iface station dump 2>/dev/null | grep -c '^Station' || echo 0)
-            echo \"$ssid=$cnt\"
-        done
-        echo '---LIMITS---'
-        for p in phy0 phy1; do
-            lim=$(iw phy $p info 2>/dev/null | grep -m1 '#{ AP' | grep -o 'AP.*<= [0-9]*' | grep -o '[0-9]*' || echo 16)
-            echo \"$p=$lim\"
-        done
-    ");
-
-    let ap_blocks = split(ap_res.out, "---CLIENTS---\n");
-    let iface_lines = split(ap_blocks[0] || "", "\n");
-    let rest_blocks = split(ap_blocks[1] || "", "---LIMITS---\n");
-    let client_lines = split(rest_blocks[0] || "", "\n");
-    let limit_lines = split(rest_blocks[1] || "", "\n");
-
     let ap_iface_map = {};
-    for (let line in iface_lines) {
-        let parts = split(trim(line), "|");
-        if (length(parts) >= 5) {
-            ap_iface_map[parts[0]] = {
-                ssid: parts[1],
-                key: parts[2],
-                network: parts[3],
-                device: parts[4],
-                disabled: parts[5] == "1"
-            };
-        }
-    }
-
     let client_map = {};
-    for (let line in client_lines) {
-        let parts = split(trim(line), "=");
-        if (length(parts) == 2) client_map[parts[0]] = int(parts[1]);
-    }
-
     let limits = { "2g": 16, "5g": 16 };
-    for (let line in limit_lines) {
-        let parts = split(trim(line), "=");
-        if (length(parts) == 2) {
-            if (parts[0] == "phy0") limits["2g"] = int(parts[1]);
-            else if (parts[0] == "phy1") limits["5g"] = int(parts[1]);
+    let transport = "local";
+
+    if (is_local_mode()) {
+        /* 本机模式直接读本机 uci + iw，无需远端 */
+        let snap_res = ap_exec(AP_WIFI_DUMP_CMD);
+        let parsed = parse_wifi_dump(snap_res.out || "");
+        ap_iface_map = parsed.interfaces;
+        client_map = parsed.clients;
+        limits = parsed.limits;
+    } else {
+        let r = ap_get_wifi();
+        if (!r.ok) {
+            print(sprintf("%.J\n", { success: false, error: r.error || "无法读取子 AP 无线状态" }));
+            return;
+        }
+        transport = r.via;
+
+        if (r.via == "agent") {
+            for (let it in (r.data.interfaces || [])) {
+                ap_iface_map[it.section] = {
+                    ssid: it.ssid,
+                    key: it.key,
+                    network: it.network,
+                    device: it.device,
+                    disabled: it.disabled
+                };
+                if (it.clients > 0) client_map[it.ssid] = it.clients;
+            }
+            if (r.data.limits) limits = r.data.limits;
+        } else {
+            let parsed = parse_wifi_dump(r.raw || "");
+            ap_iface_map = parsed.interfaces;
+            client_map = parsed.clients;
+            limits = parsed.limits;
         }
     }
 
@@ -659,6 +1014,8 @@ if (action == "compile") {
         success: true,
         run_mode: mode,
         ap_host: uci.get("omniclash", "config", "ap_host") || AP_HOST,
+        transport: transport,
+        agent: (transport == "agent") ? agent_state() : null,
         slots: result_slots,
         candidates: candidate_names,
         limits: limits
@@ -714,11 +1071,11 @@ if (action == "compile") {
     }
 
     if (ap_section) {
-        wireless_exec(sprintf("
-            uci set wireless.%s.disabled='%s'
-            uci commit wireless
-            wifi reload
-        ", ap_section, disabled));
+        let r = ap_set_wifi(ap_section, { disabled: disabled });
+        if (!r.ok) {
+            print(sprintf("%.J\n", { success: false, error: r.error || "无线状态写入失败" }));
+            return;
+        }
     }
 
     print(sprintf("{\"success\":true,\"msg\":\"WiFi %s 状态已切换为: %s\"}\n", num, disabled == "1" ? "已禁用" : "已启用"));
@@ -750,12 +1107,11 @@ if (action == "compile") {
     }
 
     if (ap_section && (p.ssid != old_ssid || p.key != old_key)) {
-        wireless_exec(sprintf("
-            uci set wireless.%s.ssid='%s'
-            uci set wireless.%s.key='%s'
-            uci commit wireless
-            wifi reload
-        ", shq(ap_section), shq(p.ssid), shq(ap_section), shq(p.key)));
+        let r = ap_set_wifi(ap_section, { ssid: p.ssid, key: p.key });
+        if (!r.ok) {
+            print(sprintf("%.J\n", { success: false, error: r.error || "无线参数写入失败" }));
+            return;
+        }
     }
 
     print("{\"success\":true,\"msg\":\"WiFi 保存成功\"}\n");
@@ -768,7 +1124,36 @@ if (action == "compile") {
     let port = p.port || uci.get("omniclash", "config", "ap_port") || "22";
     let user = p.user || uci.get("omniclash", "config", "ap_user") || "root";
     let pass = p.password || uci.get("omniclash", "config", "ap_password") || "";
+    let token = p.token || uci.get("omniclash", "config", "ap_token") || "";
     let key = uci.get("omniclash", "config", "ap_key") || DROPBEAR_KEY;
+
+    /* 优先尝试 agent 通道：只要它能通，就不需要 SSH 凭据 */
+    if (token) {
+        let old_host = uci.get("omniclash", "config", "ap_host");
+        let old_token = uci.get("omniclash", "config", "ap_token");
+        /* probe 使用调用方临时给出的 host/token，不落库 */
+        let saved_state = _agent_state;
+        _agent_state = null;
+
+        let probe_token = token;
+        let probe_host = host;
+        let req = sprintf('%J', { method: "ping", params: {} });
+        fs.writefile("/tmp/omniclash_agent_req.json", req);
+        let cmd = sprintf(
+            "curl -s -m 5 -X POST -H 'Authorization: Bearer %s' -H 'Content-Type: application/json' --data-binary @/tmp/omniclash_agent_req.json http://%s/cgi-bin/omniclash-agent",
+            shq(probe_token), shq(probe_host));
+        let pr = shell_exec(cmd);
+        let pj = null;
+        try { pj = json(trim(pr.out || "")); } catch(e) { pj = null; }
+
+        _agent_state = saved_state;
+
+        if (type(pj) == "object" && pj.ok == true && pj.token_ok == true) {
+            print(sprintf("{\"success\":true,\"via\":\"agent\",\"version\":\"%s\",\"msg\":\"子 AP (%s) Agent 通道连通，版本 %s（无需 SSH 凭据）\"}\n",
+                pj.version || "?", host, pj.version || "?"));
+            return;
+        }
+    }
 
     let res = null;
     if (pass) {
@@ -968,15 +1353,28 @@ if (action == "compile") {
 
     fs.writefile(NORMAL_WIFI_FILE, sprintf("%.J\n", items));
 
+    /* 标准 WiFi 的段可能尚不存在（新 AP 常是纯矩阵配置），
+     * 因此这里用 provision 语义做 upsert，而不是 set_wifi（只改已存在段）。 */
+    let prov = [];
     for (let item in items) {
         let sec = (item.band == "5g") ? "default_radio1" : "default_radio0";
-        wireless_exec(sprintf("
-            uci -q set wireless.%s.ssid='%s'
-            uci -q set wireless.%s.key='%s'
-            uci -q set wireless.%s.disabled='%s'
-        ", shq(sec), shq(item.ssid), shq(sec), shq(item.key), item.disabled ? "1" : "0"));
+        let dev = (item.band == "5g") ? "radio1" : "radio0";
+        push(prov, {
+            section: sec,
+            device: dev,
+            network: "lan",
+            ssid: item.ssid,
+            key: item.key,
+            disabled: item.disabled ? true : false
+        });
     }
-    wireless_exec("uci commit wireless; wifi reload");
+
+    let r = ap_provision_wifi(prov);
+    if (!r.ok) {
+        print(sprintf("%.J\n", { success: false, error: r.error || "标准 WiFi 下发失败" }));
+        return;
+    }
+
     print("{\"success\":true,\"msg\":\"标准普通 WiFi 已成功保存并同步！\"}\n");
 } else if (action == "reset_wifi_normal") {
     if (fs.access(NORMAL_WIFI_DEF_FILE)) {
@@ -985,16 +1383,25 @@ if (action == "compile") {
     let items = null;
     try { items = json(fs.readfile(NORMAL_WIFI_FILE) || "[]"); } catch(e) { items = null; }
     if (type(items) != "array") items = [];
+    let prov = [];
     for (let item in items) {
         if (type(item) != "object" || type(item.ssid) != "string" || !item.ssid) continue;
         let sec = (item.band == "5g") ? "default_radio1" : "default_radio0";
-        wireless_exec(sprintf("
-            uci -q set wireless.%s.ssid='%s'
-            uci -q set wireless.%s.key='%s'
-            uci -q set wireless.%s.disabled='%s'
-        ", shq(sec), shq(item.ssid), shq(sec), shq(item.key || ""), item.disabled ? "1" : "0"));
+        let dev = (item.band == "5g") ? "radio1" : "radio0";
+        push(prov, {
+            section: sec,
+            device: dev,
+            network: "lan",
+            ssid: item.ssid,
+            key: item.key || "",
+            disabled: item.disabled ? true : false
+        });
     }
-    wireless_exec("uci commit wireless; wifi reload");
+    let r = ap_provision_wifi(prov);
+    if (!r.ok) {
+        print(sprintf("%.J\n", { success: false, error: r.error || "标准 WiFi 恢复失败" }));
+        return;
+    }
     print("{\"success\":true,\"msg\":\"标准普通 WiFi 已恢复默认并生效！\"}\n");
 } else if (action == "reset_matrix_32") {
     uci.foreach("omniclash", "slot", function(s) {

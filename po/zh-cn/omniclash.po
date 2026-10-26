@@ -75,6 +75,18 @@ msgstr "开关与操作"
 msgid "Add"
 msgstr "添加"
 
+msgid "Agent Token"
+msgstr "Agent 令牌"
+
+msgid "Agent channel ready (v%s, %d ms)"
+msgstr "🟢 Agent 通道就绪（v%s，%d ms）"
+
+msgid "Agent only"
+msgstr "仅 Agent"
+
+msgid "Agent unavailable: %s"
+msgstr "🔴 Agent 不可用：%s"
+
 msgid "All settings, providers, groups, and application cards successfully saved and applied!"
 msgstr "全量设置、Provider 订阅、策略组与应用卡片已全部保存并合流生效！"
 
@@ -122,6 +134,9 @@ msgstr "确定要恢复全套默认应用库吗？\n所有自定义场景与自�
 
 msgid "Assigned VLAN"
 msgstr "分配独立 VLAN"
+
+msgid "Auto (Agent preferred, SSH fallback)"
+msgstr "自动（优先 Agent，回退 SSH）"
 
 msgid "Auto Pair & Trust"
 msgstr "一键建立免密互信"
@@ -171,6 +186,9 @@ msgstr "取消"
 msgid "Catch-All Fallback (MATCH)"
 msgstr "漏网之鱼兜底 (MATCH)"
 
+msgid "Channel Status"
+msgstr "通道状态"
+
 msgid "Check Update"
 msgstr "检查更新"
 
@@ -191,6 +209,9 @@ msgstr "子 AP 连接与认证配置"
 
 msgid "Child AP SSH login password (used for initial pairing; optional after key trust is established)."
 msgstr "子 AP 登录密码 (用于首次一键建立公钥互信；已免密后可留空)。"
+
+msgid "Child AP synced: %d wireless interface(s) applied via %s."
+msgstr "子 AP 同步完成：通过 %s 应用了 %d 个无线接口。"
 
 msgid "Child AP: Automatically create 32 802.1Q VLAN bridges (br-vlan101 ~ br-vlan132 on br-lan.101~132)"
 msgstr "子 AP 侧：自动创建 32 组 802.1Q VLAN 虚拟网桥 (br-vlan101 ~ br-vlan132 绑定 br-lan.101~132)"
@@ -233,6 +254,9 @@ msgstr "预置全套策略组（专线组、地区组、应用分流组）。各
 
 msgid "Confirm Fill All (%d slots)"
 msgstr "确认一键补全 (%d 个)"
+
+msgid "Control Channel"
+msgstr "控制通道"
 
 msgid "Copy All"
 msgstr "复制全部"
@@ -380,6 +404,9 @@ msgstr "保存失败：%s"
 
 msgid "Failed to switch WiFi broadcast status"
 msgstr "切换 WiFi 广播状态失败"
+
+msgid "Failed to sync to child AP"
+msgstr "同步到子 AP 失败"
 
 msgid "Failed to update WiFi broadcast status"
 msgstr "更新 WiFi 广播状态失败"
@@ -543,6 +570,9 @@ msgstr "节点前缀"
 msgid "Not Running"
 msgstr "未运行"
 
+msgid "Not probed yet"
+msgstr "尚未探测"
+
 msgid "OK"
 msgstr "确定"
 
@@ -609,6 +639,9 @@ msgstr "运行概览"
 msgid "Pairing..."
 msgstr "正在配对..."
 
+msgid "Paste the token generated on the child AP"
+msgstr "粘贴在子 AP 上生成的令牌"
+
 msgid "Performance Profile"
 msgstr "性能配置预设"
 
@@ -623,6 +656,12 @@ msgstr "请先输入子 AP 的 SSH 登录密码以部署密钥互信！"
 
 msgid "Prefix (e.g. vc_)"
 msgstr "前缀 (如 vc_)"
+
+msgid "Probe Channel"
+msgstr "探测通道"
+
+msgid "Probing control channel..."
+msgstr "正在探测控制通道..."
 
 msgid "Provider Subscriptions"
 msgstr "Provider 订阅集"
@@ -639,11 +678,20 @@ msgstr "分流节点组"
 msgid "Proxy groups successfully restored to default template!"
 msgstr "策略组已成功恢复为默认模板！"
 
+msgid "Push the 32-slot wireless configuration to the child AP? Only wireless interfaces are touched; AP networks and firewall stay unchanged."
+msgstr "确定要把 32 槽位无线配置下推到子 AP 吗？\n只会修改无线接口，子 AP 的网络与防火墙配置保持不变。"
+
+msgid "Push to Child AP"
+msgstr "下推到子 AP"
+
 msgid "Quick Actions"
 msgstr "快捷操作"
 
 msgid "Radios: Bind 5G and 2.4G physical radios to 32 BSSID slots (16 5G + 16 2.4G) with 1:1 symmetry"
 msgstr "物理射频：将 5G 与 2.4G 双频无线网卡与 32 个虚拟 BSSID 槽位 1:1 对称绑定"
+
+msgid "Read it on the child AP with: cat /etc/omniclash-agent/token"
+msgstr "可在子 AP 上执行 cat /etc/omniclash-agent/token 查看"
 
 msgid "Recommended to keep disabled; OmniClash slot rules determine direct connection vs proxies."
 msgstr "建议保持关闭，由 OmniClash 槽位规则决定直连还是走专线。"
@@ -738,6 +786,9 @@ msgstr "登录用户名"
 msgid "SSH key trust successfully deployed!"
 msgstr "SSH 密钥免密互信建立成功！"
 
+msgid "SSH only (legacy)"
+msgstr "仅 SSH（兼容模式）"
+
 msgid "SSID cannot be empty and password must be at least 8 characters!"
 msgstr "SSID 不能为空且 WiFi 密码必须至少 8 位！"
 
@@ -813,6 +864,9 @@ msgstr "正在切换 WiFi #%s 为 %s..."
 msgid "Synchronizing WiFi #%s and smoothly reloading wireless..."
 msgstr "正在双向同步 WiFi #%s 并平滑重载无线..."
 
+msgid "Syncing to Child AP"
+msgstr "正在同步到子 AP"
+
 msgid "System (Kernel Native, High Performance)"
 msgstr "System (内核原生，极高性能)"
 
@@ -849,6 +903,9 @@ msgstr "正在测试与子 AP (%s) 的 SSH 连通性..."
 msgid "Testing..."
 msgstr "正在连接..."
 
+msgid "The Agent channel is a structured HTTP endpoint on the child AP and needs no SSH password. SSH is kept as a compatibility fallback."
+msgstr "Agent 通道是子 AP 上的结构化 HTTP 端点，无需 SSH 密码；SSH 作为兼容回退保留。"
+
 msgid "These two rules are always emitted after every application card and cannot be reordered."
 msgstr "这两条规则始终排在所有应用卡片之后，不可调整顺序。"
 
@@ -860,6 +917,9 @@ msgstr "UDP 代理模式"
 
 msgid "Unnamed Scenario"
 msgstr "未命名场景"
+
+msgid "Upserting wireless interfaces on the child AP..."
+msgstr "正在子 AP 上创建/更新无线接口..."
 
 msgid "Warning (Lightweight)"
 msgstr "Warning (仅告警，轻量)"
@@ -902,3 +962,6 @@ msgstr "如：example.com"
 
 msgid "gVisor (Userspace Sandbox)"
 msgstr "gVisor (用户态沙箱)"
+
+msgid "no response"
+msgstr "无响应"

@@ -3,6 +3,7 @@
 'require rpc';
 'require uci';
 'require fs';
+'require dom';
 'require ui';
 
 var callGetStatus = rpc.declare({
@@ -47,6 +48,16 @@ var callTestAp = rpc.declare({
 	object: 'luci.omniclash',
 	method: 'test_ap',
 	params: [ 'host', 'port', 'user', 'password' ]
+});
+
+var callAgentStatus = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'agent_status'
+});
+
+var callSyncMatrix = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'sync_matrix'
 });
 
 var callPairAp = rpc.declare({
@@ -109,11 +120,66 @@ function fetchFreshData() {
 	});
 }
 
-window.openApConfigModal = function() {
-	var curHost = uci.get('omniclash', 'config', 'ap_host') || '192.168.100.2';
+window.syncMatrixToAp = function() {
+	if (!confirm(_('Push the 32-slot wireless configuration to the child AP?\nOnly wireless interfaces are touched; AP networks and firewall stay unchanged.'))) return;
+
+	ui.showModal(_('Syncing to Child AP'), [ E('p', { 'class': 'spinning' }, _('Upserting wireless interfaces on the child AP...')) ]);
+
+	callSyncMatrix().then(function(res) {
+		ensureRpcOk(res, _('Failed to sync to child AP'));
+		try { if (window.localStorage) window.localStorage.removeItem(CACHE_KEY); } catch(e) {}
+		ui.hideModal();
+		ui.addNotification(null, E('p', {},
+			'✅ ' + _('Child AP synced: %d wireless interface(s) applied via %s.')
+				.replace('%d', res.applied || 0)
+				.replace('%s', res.via || 'agent')
+		), 'success');
+		setTimeout(function() { window.location.reload(); }, 900);
+	}).catch(function(err) {
+		ui.hideModal();
+		ui.addNotification(null, E('p', {}, err.message), 'error');
+	});
+};
+
+window.refreshAgentStatus = function() {
+	var fb = document.getElementById('modal_agent_status');
+	var btn = document.getElementById('modal_btn_agent_probe');
+	if (btn) btn.disabled = true;
+	if (fb) dom.content(fb, E('span', { 'class': 'spinning' }, _('Probing control channel...')));
+
+	/* 探测前先把弹窗里的值落到 uci，否则探测用的还是上一次保存的地址/令牌 */
+	var host = document.getElementById('modal_ap_host');
+	var token = document.getElementById('modal_ap_token');
+	var transport = document.getElementById('modal_ap_transport');
+	if (host && host.value.trim()) uci.set('omniclash', 'config', 'ap_host', host.value.trim());
+	if (token && token.value.trim()) uci.set('omniclash', 'config', 'ap_token', token.value.trim());
+	if (transport) uci.set('omniclash', 'config', 'ap_transport', transport.value);
+
+	uci.save().then(function() {
+		return uci.apply();
+	}).then(function() {
+		return callAgentStatus();
+	}).then(function(res) {
+		if (btn) btn.disabled = false;
+		var ok = res && res.available;
+		if (!fb) return;
+		var color = ok ? '#059669' : '#dc2626';
+		var text = ok
+			? ('🟢 ' + _('Agent channel ready (v%s, %d ms)').replace('%s', res.version || '?').replace('%d', res.latency_ms || 0))
+			: ('🔴 ' + _('Agent unavailable: %s').replace('%s', res && res.error ? res.error : _('no response')));
+		dom.content(fb, E('span', { 'style': 'color: ' + color + '; font-weight: 500;' }, text));
+	}).catch(function(err) {
+		if (btn) btn.disabled = false;
+		if (fb) dom.content(fb, E('span', { 'style': 'color: #dc2626; font-weight: 500;' }, '🔴 ' + err.message));
+	});
+};
+
+window.openApConfigModal = function() {	var curHost = uci.get('omniclash', 'config', 'ap_host') || '192.168.100.2';
 	var curPort = uci.get('omniclash', 'config', 'ap_port') || '22';
 	var curUser = uci.get('omniclash', 'config', 'ap_user') || 'root';
 	var curPass = uci.get('omniclash', 'config', 'ap_password') || '';
+	var curToken = uci.get('omniclash', 'config', 'ap_token') || '';
+	var curTransport = uci.get('omniclash', 'config', 'ap_transport') || 'auto';
 
 	var modalContent = E('div', { 'class': 'cbi-map', 'style': 'margin: 0; padding: 6px 0;' }, [
 		E('div', { 'class': 'cbi-section' }, [
@@ -168,6 +234,51 @@ window.openApConfigModal = function() {
 						'placeholder': _('Optional if key trust established')
 					}),
 					E('div', { 'class': 'cbi-value-description', 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' }, _('Child AP SSH login password (used for initial pairing; optional after key trust is established).'))
+				])
+			]),
+			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 8px; gap: 12px;' }, [
+				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 6px;' }, _('Control Channel')),
+				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
+					E('select', {
+						'id': 'modal_ap_transport',
+						'class': 'cbi-input-select',
+						'style': 'width: 100%; max-width: 320px;',
+						'change': function() { window.refreshAgentStatus(); }
+					}, [
+						E('option', { 'value': 'auto', 'selected': curTransport === 'auto' ? 'selected' : null }, _('Auto (Agent preferred, SSH fallback)')),
+						E('option', { 'value': 'agent', 'selected': curTransport === 'agent' ? 'selected' : null }, _('Agent only')),
+						E('option', { 'value': 'ssh', 'selected': curTransport === 'ssh' ? 'selected' : null }, _('SSH only (legacy)'))
+					]),
+					E('div', { 'class': 'cbi-value-description', 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' },
+						_('The Agent channel is a structured HTTP endpoint on the child AP and needs no SSH password. SSH is kept as a compatibility fallback.'))
+				])
+			]),
+			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 8px; gap: 12px;' }, [
+				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 6px;' }, _('Agent Token')),
+				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
+					E('input', {
+						'type': 'text',
+						'id': 'modal_ap_token',
+						'class': 'cbi-input-text',
+						'style': 'width: 100%; max-width: 320px; font-family: monospace; font-size: 12px;',
+						'value': curToken,
+						'placeholder': _('Paste the token generated on the child AP')
+					}),
+					E('div', { 'class': 'cbi-value-description', 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' },
+						_('Read it on the child AP with: cat /etc/omniclash-agent/token'))
+				])
+			]),
+			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 8px; gap: 12px;' }, [
+				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 4px;' }, _('Channel Status')),
+				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
+					E('div', { 'id': 'modal_agent_status', 'style': 'font-size: 13px; min-height: 20px; line-height: 1.5; color: #64748b;' }, _('Not probed yet')),
+					E('button', {
+						'type': 'button',
+						'id': 'modal_btn_agent_probe',
+						'class': 'cbi-button',
+						'style': 'margin-top: 6px;',
+						'click': window.refreshAgentStatus
+					}, '🔍 ' + _('Probe Channel'))
 				])
 			]),
 			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 8px; gap: 12px;' }, [
@@ -259,13 +370,19 @@ window.openApConfigModal = function() {
 					var port = document.getElementById('modal_ap_port').value.trim() || '22';
 					var user = document.getElementById('modal_ap_user').value.trim() || 'root';
 					var pass = document.getElementById('modal_ap_password').value;
+					var token = document.getElementById('modal_ap_token').value.trim();
+					var transport = document.getElementById('modal_ap_transport').value;
 
 					if (host) uci.set('omniclash', 'config', 'ap_host', host);
 					if (port) uci.set('omniclash', 'config', 'ap_port', port);
 					if (user) uci.set('omniclash', 'config', 'ap_user', user);
 					if (pass !== undefined && pass !== '') uci.set('omniclash', 'config', 'ap_password', pass);
+					uci.set('omniclash', 'config', 'ap_token', token || '');
+					uci.set('omniclash', 'config', 'ap_transport', transport || 'auto');
 
 					uci.save().then(function() {
+						return uci.apply();
+					}).then(function() {
 						ui.hideModal();
 						ui.addNotification(null, E('p', {}, '✅ ' + _('AP configuration saved successfully!')), 'success');
 					}).catch(function(err) {
@@ -718,6 +835,11 @@ return view.extend({
 							'class': 'cbi-button cbi-button-action',
 							'click': window.forceRefreshMatrix
 						}, '🔄 ' + _('Refresh (Bypass Cache)')),
+						(curRunMode === 'ap') ? E('button', {
+							'id': 'omni_sync_matrix_btn',
+							'class': 'cbi-button cbi-button-apply',
+							'click': window.syncMatrixToAp
+						}, '📤 ' + _('Push to Child AP')) : '',
 						E('button', {
 							'class': 'cbi-button cbi-button-reset',
 							'click': function() {

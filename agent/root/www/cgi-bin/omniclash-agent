@@ -1,0 +1,493 @@
+#!/usr/bin/ucode
+/*
+ * OmniClash Agent - 子 AP 侧轻量控制端点
+ *
+ * 由 uhttpd 以 CGI 方式调用：
+ *   POST /cgi-bin/omniclash-agent
+ *   Header: Authorization: Bearer <token>
+ *   Body:   {"method":"<name>","params":{...}}
+ *
+ * 安全边界（不可放宽）：
+ *   - 只读写本机 wireless uci，绝不触碰 network / dhcp / firewall
+ *   - 绝不执行 network reload / reboot / wifi down，只用 wifi reload
+ *   - 不提供任何通用命令执行入口，不接受 shell 字符串
+ *   - 每次写盘前把 wireless 备份到 /etc/omniclash-agent/wireless.bak
+ */
+
+import { stdin, stdout, readfile, writefile, access, popen } from 'fs';
+
+const VERSION = '0.1.0';
+const STATE_DIR = '/etc/omniclash-agent';
+const TOKEN_FILE = STATE_DIR + '/token';
+const BACKUP_FILE = STATE_DIR + '/wireless.bak';
+const ALLOWED_ENC = [
+	'none', 'psk', 'psk2', 'psk-mixed', 'sae', 'sae-mixed',
+	'psk2+ccmp', 'psk-mixed+ccmp', 'wpa2', 'wpa3', 'wpa3-mixed'
+];
+
+let uci = require('uci').cursor();
+
+/* ---------------- 输出 ---------------- */
+
+function out(obj) {
+	stdout.write("Content-Type: application/json\r\n");
+	stdout.write("Cache-Control: no-store\r\n\r\n");
+	stdout.write(sprintf('%J', obj));
+}
+
+function fail(msg) {
+	out({ ok: false, error: msg });
+	exit(0);
+}
+
+function ok(extra) {
+	let r = { ok: true };
+	if (type(extra) == 'object') {
+		for (let k in keys(extra))
+			r[k] = extra[k];
+	}
+	return r;
+}
+
+/* ---------------- 工具 ---------------- */
+
+function file_trim(path) {
+	let v = readfile(path);
+	if (v == null) return null;
+	return trim(sprintf('%s', v));
+}
+
+function token_of() {
+	let t = file_trim(TOKEN_FILE);
+	return (t && length(t) >= 8) ? t : null;
+}
+
+/* 恒定时间比较，避免通过响应时间推断 token 前缀 */
+function token_equal(a, b) {
+	if (type(a) != 'string' || type(b) != 'string') return false;
+	let la = length(a), lb = length(b);
+	if (la != lb) return false;
+	let diff = 0;
+	for (let i = 0; i < la; i++)
+		diff = diff | (ord(substr(a, i, 1)) ^ ord(substr(b, i, 1)));
+	return diff == 0;
+}
+
+/* ---------------- 参数校验 ---------------- */
+
+function valid_section(s) {
+	if (type(s) != 'string') return false;
+	return match(s, /^[a-z0-9_]{1,32}$/) ? true : false;
+}
+
+function valid_ssid(s) {
+	if (type(s) != 'string') return false;
+	if (length(s) == 0) return false;
+	/* SSID 上限 32 字节 */
+	return length(s) <= 32;
+}
+
+function valid_psk(s) {
+	if (type(s) != 'string') return false;
+	if (length(s) == 0) return true;       /* 开放网络 */
+	return length(s) <= 63 && length(s) >= 8;
+}
+
+function valid_disabled(v) {
+	return (v == true || v == false || v == 0 || v == 1 ||
+		v == '0' || v == '1' || v == null);
+}
+
+function as_flag(v) {
+	if (v == true || v == 1 || v == '1') return '1';
+	return '0';
+}
+
+/* ---------------- wireless 读写 ---------------- */
+
+/* ucode 的 uci cursor 没有"取整个 section"的方法，只能逐项 get 或通过
+ * foreach 收集。这里统一构造一次 section 快照，避免反复调用 foreach。 */
+function snapshot_wireless() {
+	let map = {};
+	uci.foreach('wireless', 'wifi-iface', function (s) {
+		let name = s['.name'];
+		if (!name) return;
+		let obj = {};
+		for (let k in keys(s))
+			if (k != '.name' && k != '.type')
+				obj[k] = s[k];
+		map[name] = obj;
+	});
+	return map;
+}
+
+function is_ap_iface(snap, sec) {
+	let s = snap[sec];
+	if (type(s) != 'object') return false;
+	if (s.mode == null) return true;
+	return (s.mode == 'ap');
+}
+
+function list_ap_sections() {
+	let arr = [];
+	uci.foreach('wireless', 'wifi-iface', function(s) {
+		if (s['.name']) push(arr, s['.name']);
+	});
+	sort(arr);
+	return arr;
+}
+
+function backup_wireless() {
+	let p = popen('uci export wireless 2>/dev/null');
+	if (!p) return false;
+	let data = p.read('all') || '';
+	p.close();
+	if (!data) return false;
+	writefile(BACKUP_FILE, data);
+	return true;
+}
+
+/* 一次性抓取所有接口的 SSID 与客户端数。
+ * 早期实现每个 section 都 fork 一次 `iw dev ... station dump`，
+ * 25 个接口要 5 秒；这里合并成一次 shell 调用。 */
+function collect_clients() {
+	let map = {};
+
+	let p = popen("iw dev 2>/dev/null | awk '/^phy#/{phy=$0} /^\\tInterface/{print $2}'");
+	let ifaces = [];
+	if (p) {
+		let txt = p.read('all') || '';
+		p.close();
+		for (let line in split(txt, '\n')) {
+			let t = trim(line);
+			if (t) push(ifaces, t);
+		}
+	}
+
+	/* 单次调用：对每个接口输出 "iface<TAB>ssid<TAB>count" */
+	let cmd = "for d in " + join(" ", ifaces) + "; do "
+		+ "s=$(iw dev $d info 2>/dev/null | awk '/^\\tssid/{print $2}'); "
+		+ "c=$(iw dev $d station dump 2>/dev/null | grep -c '^Station'); "
+		+ "echo \"$d|$s|$c\"; "
+		+ "done";
+
+	if (length(ifaces) > 0) {
+		let q = popen(cmd);
+		if (q) {
+			let out = q.read('all') || '';
+			q.close();
+			for (let line in split(out, '\n')) {
+				let parts = split(trim(line), "|");
+				if (length(parts) != 3) continue;
+				let ssid = parts[1];
+				if (!ssid) continue;
+				map[ssid] = (map[ssid] || 0) + int(parts[2]);
+			}
+		}
+	}
+
+	return map;
+}
+
+function phy_limits() {
+	let res = { '2g': 16, '5g': 16 };
+
+	/* 每个 phy 的 AP 上限；解析 "valid interface combinations" 里的
+	 * "#{ AP } <= N" 片段。取不到时保持保守默认 16。 */
+	for (let idx in ['phy0', 'phy1']) {
+		let q = popen(sprintf("iw phy %s info 2>/dev/null | tr '\\n' ' ' | grep -o '#{[^}]*AP[^}]*} *<= *[0-9]*' | head -1", idx));
+		if (!q) continue;
+		let info = q.read('all') || '';
+		q.close();
+		let m = match(info, /<=\s*([0-9]+)/);
+		if (!m) continue;
+		let lim = int(m[1]);
+		if (lim <= 0) continue;
+		if (idx == 'phy0') res['2g'] = lim;
+		else res['5g'] = lim;
+	}
+
+	return res;
+}
+
+/* ---------------- methods ---------------- */
+
+function m_ping(p, authed) {
+	return out({
+		ok: true,
+		version: VERSION,
+		hostname: file_trim('/proc/sys/kernel/hostname') || '',
+		board: file_trim('/tmp/sysinfo/board_name') || file_trim('/tmp/sysinfo/model') || '',
+		token_ok: authed
+	});
+}
+
+function m_get_wifi(p) {
+	let snap = snapshot_wireless();
+	let clients = collect_clients();
+	let ifaces = [];
+	for (let sec in list_ap_sections()) {
+		let s = snap[sec] || {};
+		push(ifaces, {
+			section: sec,
+			ssid: s.ssid || '',
+			key: s.key || '',
+			network: s.network || '',
+			device: s.device || '',
+			disabled: (s.disabled == '1'),
+			mode: s.mode || 'ap',
+			encryption: s.encryption || '',
+			clients: clients[s.ssid || ''] || 0
+		});
+	}
+	return out({
+		ok: true,
+		interfaces: ifaces,
+		limits: phy_limits(),
+		phys: []
+	});
+}
+
+/* 单条写入，返回 changed 布尔；校验失败直接 fail */
+function apply_one(snap, item) {
+	if (type(item) != 'object') fail('item must be an object');
+	if (!valid_section(item.section)) fail('invalid section: ' + sprintf('%J', item.section));
+
+	let sec = item.section;
+	if (type(snap[sec]) != 'object')
+		fail('unknown wireless section: ' + sec);
+	if (!is_ap_iface(snap, sec))
+		fail('section is not an ap interface: ' + sec);
+
+	if (item.ssid != null && !valid_ssid(item.ssid))
+		fail('invalid ssid for ' + sec + ' (must be 1..32 bytes)');
+	if (item.key != null && !valid_psk(item.key))
+		fail('invalid psk for ' + sec + ' (must be empty or 8..63 bytes)');
+	if (item.encryption != null) {
+		if (type(item.encryption) != 'string')
+			fail('invalid encryption for ' + sec);
+		let found = false;
+		for (let e in ALLOWED_ENC)
+			if (e == item.encryption) { found = true; break; }
+		if (!found) fail('unsupported encryption: ' + item.encryption);
+	}
+	if (item.disabled != null && !valid_disabled(item.disabled))
+		fail('invalid disabled flag for ' + sec);
+	if (item.network != null && type(item.network) != 'string')
+		fail('invalid network for ' + sec);
+
+	let cur = snap[sec] || {};
+	let changed = false;
+
+	function put(opt, val) {
+		if (val == null) return;
+		if (cur[opt] == val) return;
+		uci.set('wireless', sec, opt, val);
+		cur[opt] = val;
+		changed = true;
+	}
+
+	put('ssid', item.ssid);
+	put('key', item.key);
+	put('network', item.network);
+	put('encryption', item.encryption);
+	if (item.disabled != null) put('disabled', as_flag(item.disabled));
+
+	return changed;
+}
+
+function m_set_wifi(p) {
+	let guard = (p.guard != false) ? true : false;
+	let snap = snapshot_wireless();
+
+	/* 防自锁：拒绝改动 AC 当前所连的 SSID（除非显式 guard:false） */
+	if (guard && p.current_ssid && p.ssid && p.ssid != p.current_ssid) {
+		let cur = snap[p.section] || {};
+		if (cur.ssid == p.current_ssid)
+			fail('refusing to change the SSID this controller is connected through (pass guard:false to override)');
+	}
+
+	backup_wireless();
+	let changed = apply_one(snap, p);
+	if (changed)
+		uci.commit('wireless');
+
+	if (changed && p.reload != false) {
+		let q = popen('wifi reload >/dev/null 2>&1');
+		if (q) q.close();
+	}
+
+	return out({ ok: true, changed: changed });
+}
+
+function m_bulk_set_wifi(p) {
+	if (type(p.items) != 'array')
+		fail('items must be an array');
+	if (length(p.items) == 0)
+		return out({ ok: true, applied: 0, failed: [] });
+
+	let snap = snapshot_wireless();
+
+	/* 先全量校验：任一项非法则整批拒绝，不写盘 */
+	for (let it in p.items) {
+		if (type(it) != 'object') fail('items must be objects');
+		if (!valid_section(it.section)) fail('invalid section: ' + sprintf('%J', it.section));
+		if (type(snap[it.section]) != 'object')
+			fail('unknown wireless section: ' + sprintf('%J', it.section));
+		if (it.ssid != null && !valid_ssid(it.ssid)) fail('invalid ssid for ' + it.section);
+		if (it.key != null && !valid_psk(it.key)) fail('invalid psk for ' + it.section);
+		if (it.disabled != null && !valid_disabled(it.disabled)) fail('invalid disabled flag for ' + it.section);
+	}
+
+	backup_wireless();
+
+	let applied = 0;
+	for (let it in p.items) {
+		if (apply_one(snap, it)) applied++;
+	}
+
+	if (applied > 0)
+		uci.commit('wireless');
+
+	if (applied > 0 && p.reload != false) {
+		let q = popen('wifi reload >/dev/null 2>&1');
+		if (q) q.close();
+	}
+
+	return out({ ok: true, applied: applied, failed: [] });
+}
+
+function m_reload_wifi(p) {
+	if (p.dry_run == true)
+		return out({ ok: true, dry_run: true });
+	let q = popen('wifi reload >/dev/null 2>&1');
+	if (q) q.close();
+	return out({ ok: true });
+}
+
+/* 在 agent 本机创建/更新 wifi-iface 段。
+ *
+ * 只写 wireless，不建 VLAN（VLAN 属于 network，留在 AC 侧做，
+ * 或者由用户在 AP 上自行管理）。这样即使 agent 出错，AP 的
+ * 三层网络也不会被破坏——最多是某个 SSID 消失，SSH/HTTP 仍在。 */
+function m_provision_wifi(p) {
+	if (type(p.items) != 'array')
+		fail('items must be an array');
+	if (length(p.items) == 0)
+		return out({ ok: true, applied: 0, failed: [] });
+
+	let snap = snapshot_wireless();
+
+	/* 全量校验：section 名合法、射频存在、参数合规 */
+	for (let it in p.items) {
+		if (type(it) != 'object') fail('items must be objects');
+		if (!valid_section(it.section)) fail('invalid section: ' + sprintf('%J', it.section));
+		if (!valid_ssid(it.ssid)) fail('invalid ssid for ' + it.section);
+		if (it.key != null && !valid_psk(it.key)) fail('invalid psk for ' + it.section);
+		if (it.device != null && !valid_section(it.device)) fail('invalid device for ' + it.section);
+
+		/* 已存在的段必须是 ap 模式，避免误改 usteer/中继等特殊段 */
+		if (snap[it.section] && !is_ap_iface(snap, it.section))
+			fail('section exists and is not an ap interface: ' + it.section);
+	}
+
+	backup_wireless();
+
+	let applied = 0;
+	for (let it in p.items) {
+		let sec = it.section;
+		let is_new = (snap[sec] == null);
+
+		if (is_new)
+			uci.set('wireless', sec, 'wifi-iface');
+
+		uci.set('wireless', sec, 'mode', 'ap');
+		if (it.device != null) uci.set('wireless', sec, 'device', it.device);
+		if (it.network != null) uci.set('wireless', sec, 'network', it.network);
+		uci.set('wireless', sec, 'ssid', it.ssid);
+		if (it.key != null) {
+			uci.set('wireless', sec, 'key', it.key);
+			uci.set('wireless', sec, 'encryption', it.key ? 'psk2' : 'none');
+		}
+		uci.set('wireless', sec, 'disabled', as_flag(it.disabled));
+		if (it.wmm != null) uci.set('wireless', sec, 'wmm', as_flag(it.wmm));
+
+		applied++;
+	}
+
+	uci.commit('wireless');
+
+	if (p.reload != false) {
+		let q = popen('wifi reload >/dev/null 2>&1');
+		if (q) q.close();
+	}
+
+	return out({ ok: true, applied: applied, failed: [] });
+}
+
+function m_restore_wifi(p) {
+	if (!access(BACKUP_FILE))
+		fail('no backup available');
+	let data = readfile(BACKUP_FILE) || '';
+	if (!data)
+		fail('backup is empty');
+	let q = popen('uci import wireless < ' + BACKUP_FILE);
+	if (q) q.close();
+	let r = popen('uci commit wireless && wifi reload >/dev/null 2>&1');
+	if (r) r.close();
+	return out({ ok: true });
+}
+
+/* ---------------- 分发 ---------------- */
+
+let body = stdin.read('all') || '';
+let req = null;
+try { req = json(body); } catch (e) { req = null; }
+
+if (type(req) != 'object')
+	fail('malformed request body');
+if (type(req.method) != 'string' || !req.method)
+	fail('missing method');
+
+let params = (type(req.params) == 'object') ? req.params : {};
+let method = req.method;
+
+let expect = token_of();
+
+/* uhttpd 只把 Authorization 等标准头透传给 CGI，自定义 X-* 头会被丢弃，
+ * 因此鉴权统一走 Authorization: Bearer <token>（也接受裸 token 便于调试）。 */
+function given_token() {
+	let h = getenv('HTTP_AUTHORIZATION');
+	if (h == null) return null;
+	h = trim(sprintf('%s', h));
+	let m = match(h, /^[Bb]earer\s+(.+)$/);
+	if (m) return trim(m[1]);
+	return h;
+}
+
+let given = given_token();
+let authed = expect ? token_equal(given, expect) : false;
+
+/* ping 允许匿名，但只返回非敏感信息 */
+if (method == 'ping') {
+	m_ping(params, authed);
+	exit(0);
+}
+
+if (!expect)
+	fail('agent token not initialised');
+if (!authed)
+	fail('invalid or missing token');
+
+switch (method) {
+case 'get_wifi':        m_get_wifi(params); break;
+case 'set_wifi':        m_set_wifi(params); break;
+case 'bulk_set_wifi':   m_bulk_set_wifi(params); break;
+case 'provision_wifi':  m_provision_wifi(params); break;
+case 'reload_wifi':     m_reload_wifi(params); break;
+case 'restore_wifi':    m_restore_wifi(params); break;
+default:
+	fail('unknown method: ' + method);
+}
+
+exit(0);

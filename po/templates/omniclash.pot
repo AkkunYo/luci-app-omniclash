@@ -70,6 +70,18 @@ msgstr ""
 msgid "Add"
 msgstr ""
 
+msgid "Agent Token"
+msgstr ""
+
+msgid "Agent channel ready (v%s, %d ms)"
+msgstr ""
+
+msgid "Agent only"
+msgstr ""
+
+msgid "Agent unavailable: %s"
+msgstr ""
+
 msgid "All settings, providers, groups, and application cards successfully saved and applied!"
 msgstr ""
 
@@ -116,6 +128,9 @@ msgid "Are you sure you want to restore the full default application library? Al
 msgstr ""
 
 msgid "Assigned VLAN"
+msgstr ""
+
+msgid "Auto (Agent preferred, SSH fallback)"
 msgstr ""
 
 msgid "Auto Pair & Trust"
@@ -166,6 +181,9 @@ msgstr ""
 msgid "Catch-All Fallback (MATCH)"
 msgstr ""
 
+msgid "Channel Status"
+msgstr ""
+
 msgid "Check Update"
 msgstr ""
 
@@ -185,6 +203,9 @@ msgid "Child AP Configuration & Authentication"
 msgstr ""
 
 msgid "Child AP SSH login password (used for initial pairing; optional after key trust is established)."
+msgstr ""
+
+msgid "Child AP synced: %d wireless interface(s) applied via %s."
 msgstr ""
 
 msgid "Child AP: Automatically create 32 802.1Q VLAN bridges (br-vlan101 ~ br-vlan132 on br-lan.101~132)"
@@ -227,6 +248,9 @@ msgid "Configured proxy groups (dedicated lines, regions, application groups). A
 msgstr ""
 
 msgid "Confirm Fill All (%d slots)"
+msgstr ""
+
+msgid "Control Channel"
 msgstr ""
 
 msgid "Copy All"
@@ -374,6 +398,9 @@ msgid "Failed to save: %s"
 msgstr ""
 
 msgid "Failed to switch WiFi broadcast status"
+msgstr ""
+
+msgid "Failed to sync to child AP"
 msgstr ""
 
 msgid "Failed to update WiFi broadcast status"
@@ -538,6 +565,9 @@ msgstr ""
 msgid "Not Running"
 msgstr ""
 
+msgid "Not probed yet"
+msgstr ""
+
 msgid "OK"
 msgstr ""
 
@@ -604,6 +634,9 @@ msgstr ""
 msgid "Pairing..."
 msgstr ""
 
+msgid "Paste the token generated on the child AP"
+msgstr ""
+
 msgid "Performance Profile"
 msgstr ""
 
@@ -617,6 +650,12 @@ msgid "Please enter the AP SSH password first to deploy key trust!"
 msgstr ""
 
 msgid "Prefix (e.g. vc_)"
+msgstr ""
+
+msgid "Probe Channel"
+msgstr ""
+
+msgid "Probing control channel..."
 msgstr ""
 
 msgid "Provider Subscriptions"
@@ -634,10 +673,19 @@ msgstr ""
 msgid "Proxy groups successfully restored to default template!"
 msgstr ""
 
+msgid "Push the 32-slot wireless configuration to the child AP? Only wireless interfaces are touched; AP networks and firewall stay unchanged."
+msgstr ""
+
+msgid "Push to Child AP"
+msgstr ""
+
 msgid "Quick Actions"
 msgstr ""
 
 msgid "Radios: Bind 5G and 2.4G physical radios to 32 BSSID slots (16 5G + 16 2.4G) with 1:1 symmetry"
+msgstr ""
+
+msgid "Read it on the child AP with: cat /etc/omniclash-agent/token"
 msgstr ""
 
 msgid "Recommended to keep disabled; OmniClash slot rules determine direct connection vs proxies."
@@ -733,6 +781,9 @@ msgstr ""
 msgid "SSH key trust successfully deployed!"
 msgstr ""
 
+msgid "SSH only (legacy)"
+msgstr ""
+
 msgid "SSID cannot be empty and password must be at least 8 characters!"
 msgstr ""
 
@@ -808,6 +859,9 @@ msgstr ""
 msgid "Synchronizing WiFi #%s and smoothly reloading wireless..."
 msgstr ""
 
+msgid "Syncing to Child AP"
+msgstr ""
+
 msgid "System (Kernel Native, High Performance)"
 msgstr ""
 
@@ -844,6 +898,9 @@ msgstr ""
 msgid "Testing..."
 msgstr ""
 
+msgid "The Agent channel is a structured HTTP endpoint on the child AP and needs no SSH password. SSH is kept as a compatibility fallback."
+msgstr ""
+
 msgid "These two rules are always emitted after every application card and cannot be reordered."
 msgstr ""
 
@@ -854,6 +911,9 @@ msgid "UDP Proxy Mode"
 msgstr ""
 
 msgid "Unnamed Scenario"
+msgstr ""
+
+msgid "Upserting wireless interfaces on the child AP..."
 msgstr ""
 
 msgid "Warning (Lightweight)"
@@ -896,4 +956,7 @@ msgid "e.g. example.com"
 msgstr ""
 
 msgid "gVisor (Userspace Sandbox)"
+msgstr ""
+
+msgid "no response"
 msgstr ""

@@ -1,0 +1,27 @@
+#!/bin/sh
+# OmniClash Agent 首次安装初始化
+#
+# 安全约束：
+#   - 只创建 token 与目录，不触碰 wireless / network / firewall
+#   - 不重启任何网络服务，安装过程对现有连接零影响
+#   - 失败时不阻断安装（脚本返回 0，agent 端点会自行报错）
+
+STATE_DIR="/etc/omniclash-agent"
+TOKEN_FILE="$STATE_DIR/token"
+
+mkdir -p "$STATE_DIR"
+
+# token 只在不存在时生成，升级不覆盖（否则 AC 端配置的令牌会失配）
+if [ ! -s "$TOKEN_FILE" ]; then
+	head -c 32 /dev/urandom | hexdump -v -e '/1 "%02x"' > "$TOKEN_FILE"
+	chmod 600 "$TOKEN_FILE"
+fi
+
+# CGI 端点必须可执行，否则 uhttpd 返回 500
+if [ -f /www/cgi-bin/omniclash-agent ]; then
+	chmod 755 /www/cgi-bin/omniclash-agent
+fi
+
+rm -f /tmp/luci-indexcache /tmp/luci-modulecache 2>/dev/null
+
+exit 0

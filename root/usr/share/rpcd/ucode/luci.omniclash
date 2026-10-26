@@ -298,6 +298,21 @@ const methods = {
 			return engine_call('reset_apps');
 		}
 	},
+	agent_status: {
+		call: function() {
+			return engine_call('agent_status');
+		}
+	},
+	sync_matrix: {
+		call: function() {
+			return engine_call('sync_matrix');
+		}
+	},
+	get_ap_token: {
+		call: function() {
+			return engine_call('get_ap_token');
+		}
+	},
 	compile_reload: {
 		call: function() {
 			let comp = engine_call('compile');
