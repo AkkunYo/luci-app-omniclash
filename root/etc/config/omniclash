@@ -1,7 +1,7 @@
 
 config omniclash 'config'
 	option enabled '1'
-	option run_mode 'ap'
+	option run_mode 'auto'
 	option wireless_mode 'multi'
 	option perf_profile 'auto'
 	option ap_host '192.168.100.2'

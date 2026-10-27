@@ -61,6 +61,34 @@ function is_local_mode() {
     return get_run_mode() == "local";
 }
 
+/* 动态获取指定频段对应的物理射频设备名 (radio0 / radio1)
+ * 适配不同芯片平台（MediaTek / Qualcomm 等）5G 与 2.4G 物理编号颠倒的情况 */
+function get_radio_by_band(band) {
+    let target_radio = null;
+    uci.foreach("wireless", "wifi-device", function(d) {
+        let b = d.band;
+        if (!b) {
+            let ch = int(d.channel || 0);
+            b = (ch > 14) ? "5g" : "2g";
+        }
+        if (b == band && !target_radio) target_radio = d[".name"];
+    });
+    if (target_radio) return target_radio;
+    return (band == "5g") ? "radio1" : "radio0";
+}
+
+/* 动态获取主路由单臂 Trunk 复用物理网卡接口名 */
+function get_trunk_device() {
+    let t = uci.get("omniclash", "config", "trunk_device");
+    if (t) return t;
+    let cur = uci.get("network", "vlan101", "device");
+    if (cur) {
+        let m = match(cur, /^([a-zA-Z0-9_-]+)\.[0-9]+$/);
+        if (m) return m[1];
+    }
+    return "eth1";
+}
+
 function shell_exec(cmd) {
     let p = fs.popen(cmd);
     if (!p) return { code: -1, out: "" };
@@ -175,6 +203,7 @@ function agent_call(method, params, timeout, custom_host, custom_token) {
 let _agent_state = null;
 
 function agent_available(refresh) {
+    if (is_local_mode()) return false;
     let pref = ap_transport_pref();
     if (pref == "ssh") return false;
 
@@ -195,6 +224,7 @@ function agent_available(refresh) {
 }
 
 function agent_state() {
+    if (is_local_mode()) return { ok: false, version: "", host: "", ms: 0, error: "单主机模式无需 Agent" };
     if (_agent_state == null) agent_available(true);
     return _agent_state || { ok: false, version: "", host: ap_host(), ms: 0, error: "未探测" };
 }
@@ -1415,6 +1445,7 @@ if (action == "compile") {
     print("[OmniClash] 开始一键生成 AP 网卡最大能力 32 满额架构...\n");
     let net_cmds = [];
     let ap_cmds = [];
+    let trunk = get_trunk_device();
 
     for (let i = 1; i <= 32; i++) {
         let num = sprintf("%02d", i);
@@ -1422,7 +1453,7 @@ if (action == "compile") {
         if (uci.get("omniclash", sid)) continue;
 
         let band = (i <= 16) ? "5g" : "2g";
-        let radio = (i <= 16) ? "radio1" : "radio0";
+        let radio = get_radio_by_band(band);
         let vlan = sprintf("%d", 100 + i);
         let ap_section = sprintf("wifi_%s_%s", band, num);
         
@@ -1477,7 +1508,7 @@ if (action == "compile") {
         push(net_cmds, sprintf("
             uci set network.vlan%s=interface
             uci set network.vlan%s.proto='static'
-            uci set network.vlan%s.device='eth1.%s'
+            uci set network.vlan%s.device='%s.%s'
             uci set network.vlan%s.ipaddr='192.168.%s.1'
             uci set network.vlan%s.netmask='255.255.255.0'
             uci set dhcp.vlan%s=dhcp
@@ -1486,7 +1517,7 @@ if (action == "compile") {
             uci set dhcp.vlan%s.limit='100'
             uci set dhcp.vlan%s.leasetime='12h'
             uci add_list firewall.@zone[0].network='vlan%s' 2>/dev/null
-        ", vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan));
+        ", vlan, vlan, vlan, trunk, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan, vlan));
 
         push(ap_cmds, sprintf("
             uci set network.br_vlan%s=device
@@ -1549,8 +1580,8 @@ if (action == "compile") {
      * 因此这里用 provision 语义做 upsert，而不是 set_wifi（只改已存在段）。 */
     let prov = [];
     for (let item in items) {
+        let dev = get_radio_by_band(item.band);
         let sec = (item.band == "5g") ? "default_radio1" : "default_radio0";
-        let dev = (item.band == "5g") ? "radio1" : "radio0";
         push(prov, {
             section: sec,
             device: dev,
@@ -1578,8 +1609,8 @@ if (action == "compile") {
     let prov = [];
     for (let item in items) {
         if (type(item) != "object" || type(item.ssid) != "string" || !item.ssid) continue;
+        let dev = get_radio_by_band(item.band);
         let sec = (item.band == "5g") ? "default_radio1" : "default_radio0";
-        let dev = (item.band == "5g") ? "radio1" : "radio0";
         push(prov, {
             section: sec,
             device: dev,
