@@ -61,9 +61,6 @@ msgstr ""
 msgid "AP configuration saved successfully!"
 msgstr ""
 
-msgid "AP connected successfully!"
-msgstr ""
-
 msgid "Actions"
 msgstr ""
 
@@ -74,9 +71,6 @@ msgid "Agent Token"
 msgstr ""
 
 msgid "Agent channel ready (v%s, %d ms)"
-msgstr ""
-
-msgid "Agent only"
 msgstr ""
 
 msgid "Agent unavailable: %s"
@@ -134,12 +128,6 @@ msgid "Are you sure you want to restore the full default application library? Al
 msgstr ""
 
 msgid "Assigned VLAN"
-msgstr ""
-
-msgid "Auto (Agent preferred, SSH fallback)"
-msgstr ""
-
-msgid "Auto Pair & Trust"
 msgstr ""
 
 msgid "Auto-detect (Recommended)"
@@ -208,10 +196,7 @@ msgstr ""
 msgid "Checking for differences before overwriting the child AP..."
 msgstr ""
 
-msgid "Child AP Configuration & Authentication"
-msgstr ""
-
-msgid "Child AP SSH login password (used for initial pairing; optional after key trust is established)."
+msgid "Child AP Agent Settings"
 msgstr ""
 
 msgid "Child AP did not come back; it will self-restore."
@@ -241,9 +226,6 @@ msgstr ""
 msgid "Collapse"
 msgstr ""
 
-msgid "Communication Test"
-msgstr ""
-
 msgid "Compile & Reload"
 msgstr ""
 
@@ -263,9 +245,6 @@ msgid "Configured proxy groups (dedicated lines, regions, application groups). A
 msgstr ""
 
 msgid "Confirm Fill All (%d slots)"
-msgstr ""
-
-msgid "Control Channel"
 msgstr ""
 
 msgid "Copy All"
@@ -331,9 +310,6 @@ msgstr ""
 msgid "Deploying 32-WiFi Architecture"
 msgstr ""
 
-msgid "Deploying SSH public key to child AP for passwordless communication..."
-msgstr ""
-
 msgid "Disable"
 msgstr ""
 
@@ -380,12 +356,6 @@ msgid "Failed to change service state"
 msgstr ""
 
 msgid "Failed to clear logs"
-msgstr ""
-
-msgid "Failed to connect to AP"
-msgstr ""
-
-msgid "Failed to deploy SSH key trust"
 msgstr ""
 
 msgid "Failed to fetch update from repository."
@@ -472,6 +442,9 @@ msgstr ""
 msgid "High-Performance Mode (Full Features)"
 msgstr ""
 
+msgid "IP address of the child AP on the local network (defaults to 192.168.100.2)."
+msgstr ""
+
 msgid "Info (Detailed, Recommended)"
 msgstr ""
 
@@ -490,7 +463,7 @@ msgstr ""
 msgid "Loading 32-slot AP matrix..."
 msgstr ""
 
-msgid "Local Host Mode (Single All-in-One Router)"
+msgid "Local Host Mode (Physical Wi-Fi detected)"
 msgstr ""
 
 msgid "Log Level"
@@ -553,10 +526,10 @@ msgstr ""
 msgid "No custom rules yet."
 msgstr ""
 
-msgid "No local Wi-Fi module detected on this host. Operating in Remote Child AP mode."
+msgid "No logs"
 msgstr ""
 
-msgid "No logs"
+msgid "No physical Wi-Fi hardware on this host. Operating in coordinated Child AP mode via omniclash-agent."
 msgstr ""
 
 msgid "No proxy groups configured. Click \"+ Add Proxy Group\" or \"Reset to Default Groups\"."
@@ -637,9 +610,6 @@ msgstr ""
 msgid "Operation failed"
 msgstr ""
 
-msgid "Optional if key trust established"
-msgstr ""
-
 msgid "Optional. Leave blank to create a card with only an egress target."
 msgstr ""
 
@@ -652,9 +622,6 @@ msgstr ""
 msgid "Overwrite Confirmation"
 msgstr ""
 
-msgid "Pairing..."
-msgstr ""
-
 msgid "Paste the token generated on the child AP"
 msgstr ""
 
@@ -664,16 +631,13 @@ msgstr ""
 msgid "Physical Line Isolation Guarantee"
 msgstr ""
 
+msgid "Physical Wi-Fi hardware detected on this host. Managing local wireless radios directly."
+msgstr ""
+
 msgid "Please enter a domain or IP first."
 msgstr ""
 
-msgid "Please enter the AP SSH password first to deploy key trust!"
-msgstr ""
-
 msgid "Prefix (e.g. vc_)"
-msgstr ""
-
-msgid "Probe Channel"
 msgstr ""
 
 msgid "Probing control channel..."
@@ -736,7 +700,7 @@ msgstr ""
 msgid "Reloading AP Network"
 msgstr ""
 
-msgid "Remote Child AP Mode (Main Router + AP, Recommended)"
+msgid "Remote Child AP Mode (Auto-coordinated with child AP)"
 msgstr ""
 
 msgid "Remove"
@@ -794,21 +758,6 @@ msgid "Running logs cleared successfully!"
 msgstr ""
 
 msgid "SOCKS5 Port"
-msgstr ""
-
-msgid "SSH Password"
-msgstr ""
-
-msgid "SSH Port"
-msgstr ""
-
-msgid "SSH User"
-msgstr ""
-
-msgid "SSH key trust successfully deployed!"
-msgstr ""
-
-msgid "SSH only (legacy)"
 msgstr ""
 
 msgid "SSID cannot be empty and password must be at least 8 characters!"
@@ -919,13 +868,7 @@ msgstr ""
 msgid "Test Connection"
 msgstr ""
 
-msgid "Testing SSH connection to %s..."
-msgstr ""
-
 msgid "Testing..."
-msgstr ""
-
-msgid "The Agent channel is a structured HTTP endpoint on the child AP and needs no SSH password. SSH is kept as a compatibility fallback."
 msgstr ""
 
 msgid "The child AP has Wi-Fi names that differ from this router. Continuing will overwrite them:"

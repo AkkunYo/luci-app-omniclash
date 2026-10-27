@@ -44,12 +44,6 @@ var callResetMatrix32Rpc = rpc.declare({
 	method: 'reset_matrix_32'
 });
 
-var callTestAp = rpc.declare({
-	object: 'luci.omniclash',
-	method: 'test_ap',
-	params: [ 'host', 'port', 'user', 'password' ]
-});
-
 var callAgentStatus = rpc.declare({
 	object: 'luci.omniclash',
 	method: 'agent_status'
@@ -64,12 +58,6 @@ var callSyncMatrix = rpc.declare({
 var callApplyApNetwork = rpc.declare({
 	object: 'luci.omniclash',
 	method: 'apply_ap_network'
-});
-
-var callPairAp = rpc.declare({
-	object: 'luci.omniclash',
-	method: 'pair_ap',
-	params: [ 'host', 'port', 'user', 'password' ]
 });
 
 var CACHE_KEY = 'omniclash_matrix_cache_v3';
@@ -210,23 +198,21 @@ window.doPushMatrix = function() {
 window.refreshAgentStatus = function() {
 	var fb = document.getElementById('modal_agent_status');
 	var btn = document.getElementById('modal_btn_agent_probe');
-	if (btn) btn.disabled = true;
+	if (btn) { btn.disabled = true; btn.innerText = _('Testing...'); }
 	if (fb) dom.content(fb, E('span', { 'class': 'spinning' }, _('Probing control channel...')));
 
 	/* 探测前先把弹窗里的值落到 uci，否则探测用的还是上一次保存的地址/令牌 */
 	var host = document.getElementById('modal_ap_host');
 	var token = document.getElementById('modal_ap_token');
-	var transport = document.getElementById('modal_ap_transport');
 	if (host && host.value.trim()) uci.set('omniclash', 'config', 'ap_host', host.value.trim());
-	if (token && token.value.trim()) uci.set('omniclash', 'config', 'ap_token', token.value.trim());
-	if (transport) uci.set('omniclash', 'config', 'ap_transport', transport.value);
+	if (token) uci.set('omniclash', 'config', 'ap_token', token.value.trim());
 
 	uci.save().then(function() {
 		return uci.apply();
 	}).then(function() {
 		return callAgentStatus();
 	}).then(function(res) {
-		if (btn) btn.disabled = false;
+		if (btn) { btn.disabled = false; btn.innerText = '🔌 ' + _('Test Connection'); }
 		var ok = res && res.available;
 		if (!fb) return;
 		var color = ok ? '#059669' : '#dc2626';
@@ -235,98 +221,40 @@ window.refreshAgentStatus = function() {
 			: ('🔴 ' + _('Agent unavailable: %s').replace('%s', res && res.error ? res.error : _('no response')));
 		dom.content(fb, E('span', { 'style': 'color: ' + color + '; font-weight: 500;' }, text));
 	}).catch(function(err) {
-		if (btn) btn.disabled = false;
+		if (btn) { btn.disabled = false; btn.innerText = '🔌 ' + _('Test Connection'); }
 		if (fb) dom.content(fb, E('span', { 'style': 'color: #dc2626; font-weight: 500;' }, '🔴 ' + err.message));
 	});
 };
 
-window.openApConfigModal = function() {	var curHost = uci.get('omniclash', 'config', 'ap_host') || '192.168.100.2';
-	var curPort = uci.get('omniclash', 'config', 'ap_port') || '22';
-	var curUser = uci.get('omniclash', 'config', 'ap_user') || 'root';
-	var curPass = uci.get('omniclash', 'config', 'ap_password') || '';
+window.openApConfigModal = function() {
+	var curHost = uci.get('omniclash', 'config', 'ap_host') || '192.168.100.2';
 	var curToken = uci.get('omniclash', 'config', 'ap_token') || '';
-	var curTransport = uci.get('omniclash', 'config', 'ap_transport') || 'auto';
 
 	var modalContent = E('div', { 'class': 'cbi-map', 'style': 'margin: 0; padding: 6px 0;' }, [
 		E('div', { 'class': 'cbi-section' }, [
-			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: center; margin-bottom: 14px; gap: 12px;' }, [
-				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px;' }, _('AP Host IP')),
+			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 14px; gap: 12px;' }, [
+				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 6px;' }, _('AP Host IP')),
 				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
 					E('input', {
 						'type': 'text',
 						'id': 'modal_ap_host',
 						'class': 'cbi-input-text',
-						'style': 'width: 100%; max-width: 320px; font-family: monospace;',
+						'style': 'width: 100%; max-width: 340px; font-family: monospace;',
 						'value': curHost,
 						'placeholder': '192.168.100.2'
-					})
-				])
-			]),
-			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: center; margin-bottom: 14px; gap: 12px;' }, [
-				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px;' }, _('SSH Port')),
-				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
-					E('input', {
-						'type': 'text',
-						'id': 'modal_ap_port',
-						'class': 'cbi-input-text',
-						'style': 'width: 100%; max-width: 320px; font-family: monospace;',
-						'value': curPort,
-						'placeholder': '22'
-					})
-				])
-			]),
-			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: center; margin-bottom: 14px; gap: 12px;' }, [
-				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px;' }, _('SSH User')),
-				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
-					E('input', {
-						'type': 'text',
-						'id': 'modal_ap_user',
-						'class': 'cbi-input-text',
-						'style': 'width: 100%; max-width: 320px; font-family: monospace;',
-						'value': curUser,
-						'placeholder': 'root'
-					})
+					}),
+					E('div', { 'class': 'cbi-value-description', 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' },
+						_('IP address of the child AP on the local network (defaults to 192.168.100.2).'))
 				])
 			]),
 			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 14px; gap: 12px;' }, [
-				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 6px;' }, _('SSH Password')),
-				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
-					E('input', {
-						'type': 'password',
-						'id': 'modal_ap_password',
-						'class': 'cbi-input-text',
-						'style': 'width: 100%; max-width: 320px; font-family: monospace;',
-						'value': curPass,
-						'placeholder': _('Optional if key trust established')
-					}),
-					E('div', { 'class': 'cbi-value-description', 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' }, _('Child AP SSH login password (used for initial pairing; optional after key trust is established).'))
-				])
-			]),
-			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 8px; gap: 12px;' }, [
-				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 6px;' }, _('Control Channel')),
-				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
-					E('select', {
-						'id': 'modal_ap_transport',
-						'class': 'cbi-input-select',
-						'style': 'width: 100%; max-width: 320px;',
-						'change': function() { window.refreshAgentStatus(); }
-					}, [
-						E('option', { 'value': 'auto', 'selected': curTransport === 'auto' ? 'selected' : null }, _('Auto (Agent preferred, SSH fallback)')),
-						E('option', { 'value': 'agent', 'selected': curTransport === 'agent' ? 'selected' : null }, _('Agent only')),
-						E('option', { 'value': 'ssh', 'selected': curTransport === 'ssh' ? 'selected' : null }, _('SSH only (legacy)'))
-					]),
-					E('div', { 'class': 'cbi-value-description', 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' },
-						_('The Agent channel is a structured HTTP endpoint on the child AP and needs no SSH password. SSH is kept as a compatibility fallback.'))
-				])
-			]),
-			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 8px; gap: 12px;' }, [
 				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 6px;' }, _('Agent Token')),
 				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
 					E('input', {
 						'type': 'text',
 						'id': 'modal_ap_token',
 						'class': 'cbi-input-text',
-						'style': 'width: 100%; max-width: 320px; font-family: monospace; font-size: 12px;',
+						'style': 'width: 100%; max-width: 340px; font-family: monospace; font-size: 12px;',
 						'value': curToken,
 						'placeholder': _('Paste the token generated on the child AP')
 					}),
@@ -337,88 +265,13 @@ window.openApConfigModal = function() {	var curHost = uci.get('omniclash', 'conf
 			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 8px; gap: 12px;' }, [
 				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 4px;' }, _('Channel Status')),
 				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
-					E('div', { 'id': 'modal_agent_status', 'style': 'font-size: 13px; min-height: 20px; line-height: 1.5; color: #64748b;' }, _('Not probed yet')),
+					E('div', { 'id': 'modal_agent_status', 'style': 'font-size: 13px; min-height: 20px; line-height: 1.5; color: #64748b; margin-bottom: 6px;' }, _('Not probed yet')),
 					E('button', {
 						'type': 'button',
 						'id': 'modal_btn_agent_probe',
 						'class': 'cbi-button',
-						'style': 'margin-top: 6px;',
 						'click': window.refreshAgentStatus
-					}, '🔍 ' + _('Probe Channel'))
-				])
-			]),
-			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 8px; gap: 12px;' }, [
-				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 4px;' }, _('Communication Test')),
-				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
-					E('div', { 'style': 'display: flex; gap: 8px; flex-wrap: wrap;' }, [
-						E('button', {
-							'type': 'button',
-							'id': 'modal_btn_test',
-							'class': 'cbi-button',
-							'click': function() {
-								var host = document.getElementById('modal_ap_host').value.trim() || '192.168.100.2';
-								var port = document.getElementById('modal_ap_port').value.trim() || '22';
-								var user = document.getElementById('modal_ap_user').value.trim() || 'root';
-								var pass = document.getElementById('modal_ap_password').value;
-								var fb = document.getElementById('modal_ap_test_feedback');
-								var btn = document.getElementById('modal_btn_test');
-
-								if (btn) { btn.disabled = true; btn.innerText = _('Testing...'); }
-								if (fb) dom.content(fb, E('span', { 'class': 'spinning', 'style': 'color: #3b82f6;' }, _('Testing SSH connection to %s...').replace('%s', host)));
-
-								callTestAp(host, port, user, pass).then(function(res) {
-									if (btn) { btn.disabled = false; btn.innerText = '🔌 ' + _('Test Connection'); }
-									if (fb) {
-										if (res && res.success) {
-											dom.content(fb, E('span', { 'style': 'color: #059669; font-weight: 500;' }, '🟢 ' + (res.msg || _('AP connected successfully!'))));
-										} else {
-											dom.content(fb, E('span', { 'style': 'color: #dc2626; font-weight: 500;' }, '🔴 ' + (res.error || _('Failed to connect to AP'))));
-										}
-									}
-								}).catch(function(err) {
-									if (btn) { btn.disabled = false; btn.innerText = '🔌 ' + _('Test Connection'); }
-									if (fb) dom.content(fb, E('span', { 'style': 'color: #dc2626; font-weight: 500;' }, '🔴 ' + err.message));
-								});
-							}
-						}, '🔌 ' + _('Test Connection')),
-						E('button', {
-							'type': 'button',
-							'id': 'modal_btn_pair',
-							'class': 'cbi-button cbi-button-action',
-							'click': function() {
-								var host = document.getElementById('modal_ap_host').value.trim() || '192.168.100.2';
-								var port = document.getElementById('modal_ap_port').value.trim() || '22';
-								var user = document.getElementById('modal_ap_user').value.trim() || 'root';
-								var pass = document.getElementById('modal_ap_password').value;
-								var fb = document.getElementById('modal_ap_test_feedback');
-								var btn = document.getElementById('modal_btn_pair');
-
-								if (!pass) {
-									if (fb) dom.content(fb, E('span', { 'style': 'color: #dc2626; font-weight: 500;' }, '⚠️ ' + _('Please enter the AP SSH password first to deploy key trust!')));
-									document.getElementById('modal_ap_password').focus();
-									return;
-								}
-
-								if (btn) { btn.disabled = true; btn.innerText = _('Pairing...'); }
-								if (fb) dom.content(fb, E('span', { 'class': 'spinning', 'style': 'color: #3b82f6;' }, _('Deploying SSH public key to child AP for passwordless communication...')));
-
-								callPairAp(host, port, user, pass).then(function(res) {
-									if (btn) { btn.disabled = false; btn.innerText = '⚡ ' + _('Auto Pair & Trust'); }
-									if (fb) {
-										if (res && res.success) {
-											dom.content(fb, E('span', { 'style': 'color: #059669; font-weight: 500;' }, '🎉 ' + (res.msg || _('SSH key trust successfully deployed!'))));
-										} else {
-											dom.content(fb, E('span', { 'style': 'color: #dc2626; font-weight: 500;' }, '🔴 ' + (res.error || _('Failed to deploy SSH key trust'))));
-										}
-									}
-								}).catch(function(err) {
-									if (btn) { btn.disabled = false; btn.innerText = '⚡ ' + _('Auto Pair & Trust'); }
-									if (fb) dom.content(fb, E('span', { 'style': 'color: #dc2626; font-weight: 500;' }, '🔴 ' + err.message));
-								});
-							}
-						}, '⚡ ' + _('Auto Pair & Trust'))
-					]),
-					E('div', { 'id': 'modal_ap_test_feedback', 'style': 'margin-top: 8px; font-size: 13px; min-height: 20px; line-height: 1.5;' })
+					}, '🔌 ' + _('Test Connection'))
 				])
 			])
 		]),
@@ -433,13 +286,10 @@ window.openApConfigModal = function() {	var curHost = uci.get('omniclash', 'conf
 				'class': 'cbi-button cbi-button-apply',
 				'id': 'modal_btn_apply_network',
 				'click': function() {
-					/* 先把弹窗里的值存好，再让 AP 重载网络 */
 					var host = document.getElementById('modal_ap_host');
 					var token = document.getElementById('modal_ap_token');
-					var transport = document.getElementById('modal_ap_transport');
 					if (host && host.value.trim()) uci.set('omniclash', 'config', 'ap_host', host.value.trim());
 					if (token) uci.set('omniclash', 'config', 'ap_token', token.value.trim());
-					if (transport) uci.set('omniclash', 'config', 'ap_transport', transport.value);
 
 					uci.save().then(function() { return uci.apply(); }).then(function() {
 						ui.hideModal();
@@ -454,18 +304,10 @@ window.openApConfigModal = function() {	var curHost = uci.get('omniclash', 'conf
 				'class': 'cbi-button cbi-button-apply',
 				'click': function() {
 					var host = document.getElementById('modal_ap_host').value.trim();
-					var port = document.getElementById('modal_ap_port').value.trim() || '22';
-					var user = document.getElementById('modal_ap_user').value.trim() || 'root';
-					var pass = document.getElementById('modal_ap_password').value;
 					var token = document.getElementById('modal_ap_token').value.trim();
-					var transport = document.getElementById('modal_ap_transport').value;
 
 					if (host) uci.set('omniclash', 'config', 'ap_host', host);
-					if (port) uci.set('omniclash', 'config', 'ap_port', port);
-					if (user) uci.set('omniclash', 'config', 'ap_user', user);
-					if (pass !== undefined && pass !== '') uci.set('omniclash', 'config', 'ap_password', pass);
 					uci.set('omniclash', 'config', 'ap_token', token || '');
-					uci.set('omniclash', 'config', 'ap_transport', transport || 'auto');
 
 					uci.save().then(function() {
 						return uci.apply();
@@ -481,7 +323,7 @@ window.openApConfigModal = function() {	var curHost = uci.get('omniclash', 'conf
 		])
 	]);
 
-	ui.showModal(_('Child AP Configuration & Authentication'), modalContent);
+	ui.showModal(_('Child AP Agent Settings'), modalContent);
 };
 
 return view.extend({
@@ -768,39 +610,27 @@ return view.extend({
 			E('div', { 'class': 'cbi-section' }, [
 				E('h3', {}, _('Wireless Topology & Operating Mode')),
 
-				E('div', { 'class': 'cbi-value' }, [
+				E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: center; margin-bottom: 14px;' }, [
 					E('label', { 'class': 'cbi-value-title' }, _('Operating Mode')),
-					E('div', { 'class': 'cbi-value-field', 'style': 'display: flex; align-items: center; gap: 10px; flex-wrap: wrap;' }, [
-						E('select', {
-							'id': 'tab_run_mode',
-							'class': 'cbi-input-select',
-							'style': 'width: 320px;',
-							'change': function() {
-								var btn = document.getElementById('tab_ap_config_btn_wrap');
-								if (btn) btn.style.display = (this.value === 'ap') ? 'inline-block' : 'none';
-							}
-						}, (function() {
-							var opts = [
-								E('option', { 'value': 'ap', 'selected': curRunMode === 'ap' ? 'selected' : null }, _('Remote Child AP Mode (Main Router + AP, Recommended)'))
-							];
-							if (hasLocalWifi) {
-								opts.push(
-									E('option', { 'value': 'local', 'selected': curRunMode === 'local' ? 'selected' : null }, _('Local Host Mode (Single All-in-One Router)'))
-								);
-							}
-							return opts;
-						})()),
-						E('span', {
-							'id': 'tab_ap_config_btn_wrap',
-							'style': 'display: ' + (curRunMode === 'ap' ? 'inline-block' : 'none') + ';'
-						}, [
-							E('button', {
-								'type': 'button',
-								'class': 'cbi-button cbi-button-action',
-								'click': window.openApConfigModal
-							}, '⚙️ ' + _('Configure Child AP'))
-						]),
-						(!hasLocalWifi) ? E('div', { 'class': 'cbi-value-description', 'style': 'width: 100%;' }, _('No local Wi-Fi module detected on this host. Operating in Remote Child AP mode.')) : ''
+					E('div', { 'class': 'cbi-value-field', 'style': 'display: flex; align-items: center; gap: 12px; flex-wrap: wrap;' }, [
+						hasLocalWifi ?
+							E('span', { 'style': 'display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #059669;' }, [
+								E('span', { 'style': 'width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;' }),
+								_('Local Host Mode (Physical Wi-Fi detected)')
+							]) :
+							E('span', { 'style': 'display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #2563eb;' }, [
+								E('span', { 'style': 'width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; display: inline-block;' }),
+								_('Remote Child AP Mode (Auto-coordinated with child AP)')
+							]),
+						(!hasLocalWifi) ? E('button', {
+							'type': 'button',
+							'class': 'cbi-button cbi-button-action',
+							'click': window.openApConfigModal
+						}, '⚙️ ' + _('Configure Child AP')) : '',
+						E('div', { 'class': 'cbi-value-description', 'style': 'width: 100%; margin-top: 4px;' },
+							hasLocalWifi ?
+								_('Physical Wi-Fi hardware detected on this host. Managing local wireless radios directly.') :
+								_('No physical Wi-Fi hardware on this host. Operating in coordinated Child AP mode via omniclash-agent.'))
 					])
 				]),
 
@@ -824,10 +654,9 @@ return view.extend({
 						'type': 'button',
 						'class': 'cbi-button cbi-button-apply',
 						'click': function() {
-							var newRunMode = document.getElementById('tab_run_mode').value;
 							var newWirelessMode = document.getElementById('tab_wireless_mode').value;
 							ui.showModal(_('Saving & Applying'), [ E('p', { 'class': 'spinning' }, _('Saving operating modes and reloading configuration...')) ]);
-							uci.set('omniclash', 'config', 'run_mode', newRunMode);
+							uci.set('omniclash', 'config', 'run_mode', hasLocalWifi ? 'local' : 'ap');
 							uci.set('omniclash', 'config', 'wireless_mode', newWirelessMode);
 							Promise.all([
 								uci.save(),

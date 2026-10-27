@@ -50,9 +50,9 @@ function get_effective_profile() {
 
 function get_run_mode() {
     let mode = uci.get("omniclash", "config", "run_mode");
-    if (!mode) {
-        let old = uci.get("omniclash", "config", "topology_mode");
-        mode = (old && match(old, /local/)) ? "local" : "ap";
+    if (!mode || mode == "auto") {
+        let phys = fs.glob("/sys/class/ieee80211/*");
+        mode = (length(phys) > 0) ? "local" : "ap";
     }
     return mode;
 }

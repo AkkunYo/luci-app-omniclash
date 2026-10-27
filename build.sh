@@ -95,7 +95,7 @@ cat << 'POST' > "$BUILD_DIR/control/postinst"
 	if [ ! -f /etc/config/omniclash ]; then
 		cp -f /etc/omniclash/config.default /etc/config/omniclash
 	else
-		for opt in run_mode wireless_mode perf_profile ap_host ap_port ap_user ap_password ap_key ap_transport ap_token tcp_mode udp_mode tun_stack bypass_china_mainland_ip dns_mode fake_ip_range mixed_port socks_port log_level scheduled_restart scheduled_restart_cron; do
+		for opt in run_mode wireless_mode perf_profile ap_host ap_transport ap_token tcp_mode udp_mode tun_stack bypass_china_mainland_ip dns_mode fake_ip_range mixed_port socks_port log_level scheduled_restart scheduled_restart_cron; do
 			val=$(uci -q get omniclash.config.$opt)
 			if [ -z "$val" ]; then
 				def=$(uci -q -c /etc/omniclash get config.default.config.$opt 2>/dev/null)
