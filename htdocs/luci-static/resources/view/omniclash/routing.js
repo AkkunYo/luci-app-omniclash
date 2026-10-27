@@ -669,7 +669,6 @@ return view.extend({
 
 			Promise.all([
 				uci.save(),
-				uci.apply(),
 				callSaveProviders(validProviders),
 				callSaveGroups(validGroups),
 				callSaveApps(validApps)
@@ -677,9 +676,9 @@ return view.extend({
 				// 三个保存接口现在都会回传引擎真实结果，任一被拒绝都必须中止，
 				// 否则会出现「界面提示成功、实际只保存了一部分」的半成功状态
 				var failed = [
-					{ name: _('Provider Subscriptions'), res: results[2] },
-					{ name: _('Proxy Groups'), res: results[3] },
-					{ name: _('Application Cards'), res: results[4] }
+					{ name: _('Provider Subscriptions'), res: results[1] },
+					{ name: _('Proxy Groups'), res: results[2] },
+					{ name: _('Application Cards'), res: results[3] }
 				].filter(function(x) { return !x.res || x.res.success === false; });
 
 				if (failed.length) {

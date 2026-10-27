@@ -469,12 +469,12 @@ window.openApConfigModal = function() {
 				'class': 'cbi-button cbi-button-apply',
 				'id': 'modal_btn_apply_network',
 				'click': function() {
-					var host = document.getElementById('modal_ap_host');
-					var token = document.getElementById('modal_ap_token');
-					if (host && host.value.trim()) uci.set('omniclash', 'config', 'ap_host', host.value.trim());
-					if (token) uci.set('omniclash', 'config', 'ap_token', token.value.trim());
+					var hostEl = document.getElementById('modal_ap_host');
+					var tokenEl = document.getElementById('modal_ap_token');
+					var hostVal = hostEl ? hostEl.value.trim() : '';
+					var tokenVal = tokenEl ? tokenEl.value.trim() : '';
 
-					uci.save().then(function() { return uci.apply(); }).then(function() {
+					callSaveApConfig(hostVal, tokenVal).then(function() {
 						ui.hideModal();
 						window.applyApNetwork();
 					}).catch(function(err) {
@@ -486,17 +486,17 @@ window.openApConfigModal = function() {
 				'type': 'button',
 				'class': 'cbi-button cbi-button-apply',
 				'click': function() {
-					var host = document.getElementById('modal_ap_host').value.trim();
-					var token = document.getElementById('modal_ap_token').value.trim();
+					var hostEl = document.getElementById('modal_ap_host');
+					var tokenEl = document.getElementById('modal_ap_token');
+					var hostVal = hostEl ? hostEl.value.trim() : '';
+					var tokenVal = tokenEl ? tokenEl.value.trim() : '';
 
-					if (host) uci.set('omniclash', 'config', 'ap_host', host);
-					uci.set('omniclash', 'config', 'ap_token', token || '');
-
-					uci.save().then(function() {
-						return uci.apply();
-					}).then(function() {
+					callSaveApConfig(hostVal, tokenVal).then(function(res) {
+						ensureRpcOk(res, _('Failed to save AP configuration'));
+						try { if (window.localStorage) window.localStorage.removeItem(CACHE_KEY); } catch(e) {}
 						ui.hideModal();
 						ui.addNotification(null, E('p', {}, '✅ ' + _('AP configuration saved successfully!')), 'success');
+						setTimeout(function() { window.location.reload(); }, 600);
 					}).catch(function(err) {
 						ui.hideModal();
 						ui.addNotification(null, E('p', {}, err.message), 'error');

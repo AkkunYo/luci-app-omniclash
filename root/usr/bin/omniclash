@@ -636,6 +636,8 @@ function save_template_providers(providers) {
 
 function compile_config() {
     ensure_defaults();
+    shell_exec("uci commit omniclash >/dev/null 2>&1");
+    uci = require("uci").cursor();
     let template = fs.readfile(TEMPLATE_FILE);
     if (!template) {
         print(sprintf("{\"success\":false,\"error\":\"找不到基础模板文件: %s\"}\n", TEMPLATE_FILE));
