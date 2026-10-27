@@ -26,9 +26,12 @@ Following official OpenWrt ecosystem packaging standards, the base package `luci
 ### 1b. 🔗 AC + AP Distributed Control (omniclash-agent)
 * **Structured RPC, Not SSH Scripts**: The child AP runs a tiny JSON endpoint (`/cgi-bin/omniclash-agent`); the controller sends structured requests instead of concatenated shell strings.
 * **No SSH Password Needed**: Access is authenticated with a per-AP bearer token, so joining a brand-new AP no longer requires knowing its root password.
+* **Zero-Touch Direct Installation**: The main router hosts `omniclash-agent.ipk` statically; run a single `wget` command on the child AP to install directly.
+* **LAN Auto-Discovery**: One-click concurrent probe across the primary LAN subnet to discover active child APs by hostname/board and fill the IP address automatically.
+* **Live Client Profiling**: Clicking the active client count on any WiFi slot opens an on-demand modal revealing device hostname, IP, MAC, signal strength (RSSI), physical bitrate (Tx/Rx), and assigned proxy egress.
 * **Automatic Fallback**: If the agent is not installed, the controller transparently falls back to SSH — behaviour is byte-identical to the previous release.
 * **~3× Faster Refresh**: Full 32-slot status refresh drops from ~2.0s to ~0.6s.
-* **Provably Safe to Install**: The agent only ever writes `wireless` UCI. It never touches `network`, `dhcp` or `firewall`, and never calls `network reload` or `reboot`, so installing it cannot drop the link.
+* **Provably Safe with Self-Healing**: The agent only ever writes `wireless` UCI, includes an autonomous watchdog rollback for network reloads, and never causes unrecoverable disconnection.
 
 ### 2. 🚀 100% Standalone System Daemon
 * **Independent Procd Service**: Managed via `/etc/init.d/omniclash` procd instance with native PID monitoring and automatic respawn.

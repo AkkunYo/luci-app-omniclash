@@ -256,6 +256,70 @@ function m_get_wifi(p) {
 	});
 }
 
+function m_get_clients(p) {
+	let sec_filter = p.section || null;
+
+	/* 从 network.wireless 取出当前各 section 与底层 ifname 的映射 */
+	let sec_if_map = {};
+	try {
+		let u = require('ubus').connect();
+		let status = u.call('network.wireless', 'status', {});
+		u.disconnect();
+		for (let rk in keys(status || {})) {
+			let r = status[rk];
+			for (let ifc in (r.interfaces || [])) {
+				if (ifc.section && ifc.ifname) {
+					sec_if_map[ifc.section] = {
+						ifname: ifc.ifname,
+						ssid: (ifc.config ? ifc.config.ssid : '') || ''
+					};
+				}
+			}
+		}
+	} catch (e) {}
+
+	function parse_iface_stations(ifname, sec, ssid) {
+		let p = popen(sprintf('iw dev %s station dump 2>/dev/null', ifname));
+		let out = p ? (p.read('all') || '') : '';
+		if (p) p.close();
+
+		let list = [];
+		let cur = null;
+		for (let line in split(out, '\n')) {
+			let t = trim(line);
+			let m_sta = match(t, /^Station\s+([0-9a-fA-F:]{17})/);
+			if (m_sta) {
+				if (cur) push(list, cur);
+				cur = { mac: lc(m_sta[1]), section: sec, ssid: ssid, ifname: ifname };
+				continue;
+			}
+			if (!cur) continue;
+			let m_sig = match(t, /^signal:\s*(-?[0-9]+)/);
+			if (m_sig) cur.signal = int(m_sig[1]);
+			let m_tx = match(t, /^tx bitrate:\s*(.+)$/);
+			if (m_tx) cur.tx_rate = m_tx[1];
+			let m_rx = match(t, /^rx bitrate:\s*(.+)$/);
+			if (m_rx) cur.rx_rate = m_rx[1];
+			let m_conn = match(t, /^connected time:\s*([0-9]+)/);
+			if (m_conn) cur.connected_sec = int(m_conn[1]);
+			let m_inact = match(t, /^inactive time:\s*([0-9]+)/);
+			if (m_inact) cur.inactive_ms = int(m_inact[1]);
+		}
+		if (cur) push(list, cur);
+		return list;
+	}
+
+	let stations = [];
+	for (let sec in keys(sec_if_map)) {
+		if (sec_filter && sec != sec_filter) continue;
+		let info = sec_if_map[sec];
+		let stas = parse_iface_stations(info.ifname, sec, info.ssid);
+		for (let s in stas) push(stations, s);
+	}
+
+	return out({ ok: true, stations: stations });
+}
+
 /* 单条写入，返回 changed 布尔；校验失败直接 fail */
 function apply_one(snap, item) {
 	if (type(item) != 'object') fail('item must be an object');
@@ -792,6 +856,7 @@ if (!authed)
 
 switch (method) {
 case 'get_wifi':        m_get_wifi(params); break;
+case 'get_clients':     m_get_clients(params); break;
 case 'set_wifi':        m_set_wifi(params); break;
 case 'bulk_set_wifi':   m_bulk_set_wifi(params); break;
 case 'provision_wifi':  m_provision_wifi(params); break;

@@ -26,9 +26,12 @@
 ### 1b. 🔗 AC + AP 分布式控制 (omniclash-agent)
 * **结构化 RPC，不再拼 shell**：子 AP 上运行一个极小的 JSON 端点（`/cgi-bin/omniclash-agent`），主控发送结构化请求，而不是拼接命令行。
 * **无需 SSH 密码**：使用每台 AP 独立的 Bearer 令牌鉴权，接入全新 AP 不再需要知道它的 root 密码。
+* **一键免中转安装**：主路由直接静态托管 `omniclash-agent.ipk`，子 AP 执行单行 `wget` 即可秒装，无需电脑中转。
+* **局域网自动发现**：弹窗一键并发探测局域网内所有在线 AP，自动识别主机名与型号，点击即可快速填入。
+* **在线终端画像透视**：WiFi 矩阵中点击在线客户端数，弹窗实时穿透展示设备的主机名、IP、MAC、无线信号强度 (RSSI)、物理协商速率及当前出海代理走向。
 * **自动回退**：子 AP 未装 Agent 时自动回退 SSH，行为与改造前逐字节一致。
 * **刷新快约 3 倍**：32 槽位全量状态刷新从约 2.0 秒降到约 0.6 秒。
-* **可证安全**：Agent 只写 `wireless` 段的 UCI，绝不触碰 `network` / `dhcp` / `firewall`，也绝不执行 `network reload` 或 `reboot`，因此安装过程不可能断网。
+* **可证安全**：Agent 只写 `wireless` 段的 UCI，绝不触碰 `network` / `dhcp` / `firewall`，自带看门狗超时自动回滚，安装和运行绝对不断网。
 
 ### 2. 🚀 100% 独立自主守护 (告别外部依赖)
 * **独立守护进程**：基于 `/etc/init.d/omniclash` procd 进程守护，原生持有真实 PID 监控与自动 respawn 复活。

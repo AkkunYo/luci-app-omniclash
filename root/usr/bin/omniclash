@@ -1020,6 +1020,195 @@ if (action == "compile") {
         configured: (tok != "") ? true : false,
         hint: (tok != "") ? "" : "在子 AP 上执行 cat /etc/omniclash-agent/token 获取令牌后填入"
     }));
+} else if (action == "discover_ap") {
+    /* 扫描局域网中的子 AP：
+     * 1. 获取主路由自身 LAN IP 和网段前缀
+     * 2. 读取 /proc/net/arp 与 /tmp/dhcp.leases 提取候选 IP
+     * 3. 快速探测各候选 IP 的 /cgi-bin/omniclash-agent ping */
+    let lan_ip = uci.get("network", "lan", "ipaddr") || "192.168.100.1";
+    let lan_prefix = "";
+    let m_pre = match(lan_ip, /^([0-9]+\.[0-9]+\.[0-9]+)\./);
+    if (m_pre) lan_prefix = m_pre[1] + ".";
+
+    let candidates = {};
+    let cur_ap = ap_host();
+    if (cur_ap) candidates[cur_ap] = true;
+    if (lan_prefix) candidates[lan_prefix + "2"] = true;
+
+    let arp_raw = fs.readfile("/proc/net/arp") || "";
+    for (let line in split(arp_raw, "\n")) {
+        let parts = split(trim(line), /[ \t]+/);
+        if (length(parts) >= 6) {
+            let ip = parts[0];
+            let flags = parts[2];
+            if (lan_prefix && match(ip, sprintf("^%s[0-9]+$", replace(lan_prefix, ".", "\\."))) && ip != lan_ip && flags == "0x2") {
+                candidates[ip] = true;
+            }
+        }
+    }
+
+    let dhcp_raw = fs.readfile("/tmp/dhcp.leases") || "";
+    for (let line in split(dhcp_raw, "\n")) {
+        let parts = split(trim(line), " ");
+        if (length(parts) >= 4) {
+            let ip = parts[2];
+            if (lan_prefix && match(ip, sprintf("^%s[0-9]+$", replace(lan_prefix, ".", "\\."))) && ip != lan_ip) {
+                candidates[ip] = true;
+            }
+        }
+    }
+
+    let found = [];
+    let cur_token = ap_token();
+
+    for (let ip in keys(candidates)) {
+        let cmd = sprintf(
+            "curl -s -m 1 -X POST -H 'Authorization: Bearer %s' http://%s/cgi-bin/omniclash-agent -d '{\"method\":\"ping\",\"params\":{}}' 2>/dev/null",
+            shq(cur_token), shq(ip));
+        let p = fs.popen(cmd);
+        let out = p ? p.read("all") : "";
+        if (p) p.close();
+        let j = null;
+        try { j = json(out); } catch(e) {}
+        if (j && j.ok == true) {
+            push(found, {
+                ip: ip,
+                hostname: j.hostname || "",
+                board: j.board || "",
+                version: j.version || "",
+                token_ok: !!j.token_ok,
+                current: (ip == cur_ap)
+            });
+        }
+    }
+
+    print(sprintf("%.J\n", {
+        success: true,
+        devices: found,
+        count: length(found)
+    }));
+} else if (action == "get_slot_clients") {
+    let input_raw = fs.readfile("/dev/stdin") || "";
+    let p = {};
+    try { p = json(input_raw) || {}; } catch(e) {}
+    let sid = p.sid || ARGV[1] || "";
+    if (!sid) {
+        print("{\"success\":false,\"error\":\"缺少 sid 参数\"}\n");
+        return;
+    }
+
+    let num = uci.get("omniclash", sid, "num") || sid;
+    let ssid = uci.get("omniclash", sid, "ssid") || "";
+    let vlan = uci.get("omniclash", sid, "vlan") || "";
+    let mode = uci.get("omniclash", sid, "mode") || "split";
+    let target = uci.get("omniclash", sid, "target") || "🚀 节点选择";
+    let ap_sec = uci.get("omniclash", sid, "ap_section") || sid;
+
+    let raw_stations = [];
+
+    if (is_local_mode()) {
+        /* 单主机模式：本地读取 ubus wireless status 与 station dump */
+        try {
+            let u = require("ubus").connect();
+            let wstatus = u.call("network.wireless", "status", {});
+            u.disconnect();
+            let target_ifname = null;
+            for (let rk in keys(wstatus || {})) {
+                let r = wstatus[rk];
+                for (let ifc in (r.interfaces || [])) {
+                    if (ifc.section == ap_sec && ifc.ifname) {
+                        target_ifname = ifc.ifname;
+                        break;
+                    }
+                }
+            }
+            if (target_ifname) {
+                let p_dump = fs.popen(sprintf("iw dev %s station dump 2>/dev/null", target_ifname));
+                let dump_out = p_dump ? p_dump.read("all") : "";
+                if (p_dump) p_dump.close();
+                let cur = null;
+                for (let line in split(dump_out, "\n")) {
+                    let t = trim(line);
+                    let m_sta = match(t, /^Station\s+([0-9a-fA-F:]{17})/);
+                    if (m_sta) {
+                        if (cur) push(raw_stations, cur);
+                        cur = { mac: lc(m_sta[1]), section: ap_sec, ifname: target_ifname };
+                        continue;
+                    }
+                    if (!cur) continue;
+                    let m_sig = match(t, /^signal:\s*(-?[0-9]+)/);
+                    if (m_sig) cur.signal = int(m_sig[1]);
+                    let m_tx = match(t, /^tx bitrate:\s*(.+)$/);
+                    if (m_tx) cur.tx_rate = m_tx[1];
+                    let m_rx = match(t, /^rx bitrate:\s*(.+)$/);
+                    if (m_rx) cur.rx_rate = m_rx[1];
+                    let m_conn = match(t, /^connected time:\s*([0-9]+)/);
+                    if (m_conn) cur.connected_sec = int(m_conn[1]);
+                    let m_inact = match(t, /^inactive time:\s*([0-9]+)/);
+                    if (m_inact) cur.inactive_ms = int(m_inact[1]);
+                }
+                if (cur) push(raw_stations, cur);
+            }
+        } catch(e) {}
+    } else {
+        /* 子 AP 模式：通过 Agent get_clients 拉取 */
+        let r = agent_call("get_clients", { section: ap_sec }, 6);
+        if (r.ok && r.data && type(r.data.stations) == "array") {
+            raw_stations = r.data.stations;
+        }
+    }
+
+    /* 结合主路由 DHCP 租约与 ARP 进行 MAC -> IP / 主机名解析 */
+    let dhcp_map = {};
+    let dhcp_raw = fs.readfile("/tmp/dhcp.leases") || "";
+    for (let line in split(dhcp_raw, "\n")) {
+        let parts = split(trim(line), " ");
+        if (length(parts) >= 4) {
+            let mac = lc(parts[1]);
+            let ip = parts[2];
+            let host = parts[3];
+            if (host == "*") host = "";
+            dhcp_map[mac] = { ip: ip, hostname: host };
+        }
+    }
+
+    /* 结合当前槽位的实时代理走向 */
+    let cur_res = shell_exec(sprintf("curl -s -H 'Authorization: Bearer %s' %s/proxies", API_SECRET, MIHOMO_API));
+    let proxies_json = {};
+    try { proxies_json = json(cur_res.out) || {}; } catch(e) {}
+    let proxies_map = proxies_json.proxies || {};
+    let group_name = sprintf("🌐 %s-出口", num);
+    let cur_target = target;
+    if (proxies_map[group_name] && proxies_map[group_name].now) {
+        cur_target = proxies_map[group_name].now;
+    }
+
+    let clients = [];
+    for (let sta in raw_stations) {
+        let d = dhcp_map[sta.mac] || {};
+        push(clients, {
+            mac: sta.mac,
+            ip: d.ip || "",
+            hostname: d.hostname || "未知设备",
+            signal: sta.signal || 0,
+            tx_rate: sta.tx_rate || "",
+            rx_rate: sta.rx_rate || "",
+            connected_sec: sta.connected_sec || 0,
+            inactive_ms: sta.inactive_ms || 0,
+            target: cur_target
+        });
+    }
+
+    print(sprintf("%.J\n", {
+        success: true,
+        slot: num,
+        ssid: ssid,
+        vlan: vlan,
+        mode: mode,
+        target: cur_target,
+        clients: clients,
+        count: length(clients)
+    }));
 } else if (action == "clear_logs") {
     fs.writefile("/var/log/omniclash/core.log", "");
     fs.writefile("/var/log/omniclash/app.log", "");

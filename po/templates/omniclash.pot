@@ -130,6 +130,9 @@ msgstr ""
 msgid "Assigned VLAN"
 msgstr ""
 
+msgid "Auto Scan AP"
+msgstr ""
+
 msgid "Auto-detect (Recommended)"
 msgstr ""
 
@@ -223,6 +226,15 @@ msgstr ""
 msgid "Clearing core and plugin log files..."
 msgstr ""
 
+msgid "Click to use this AP IP address"
+msgstr ""
+
+msgid "Click to view connected client details"
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
 msgid "Collapse"
 msgstr ""
 
@@ -245,6 +257,9 @@ msgid "Configured proxy groups (dedicated lines, regions, application groups). A
 msgstr ""
 
 msgid "Confirm Fill All (%d slots)"
+msgstr ""
+
+msgid "Connected Time"
 msgstr ""
 
 msgid "Copy All"
@@ -310,6 +325,9 @@ msgstr ""
 msgid "Deploying 32-WiFi Architecture"
 msgstr ""
 
+msgid "Device / IP"
+msgstr ""
+
 msgid "Disable"
 msgstr ""
 
@@ -317,6 +335,9 @@ msgid "Disabled"
 msgstr ""
 
 msgid "Disabled (Managed by OmniClash rules, Recommended)"
+msgstr ""
+
+msgid "Discovered %d AP(s) on LAN:"
 msgstr ""
 
 msgid "Dismiss"
@@ -329,6 +350,9 @@ msgid "Dynamically compiled from settings, providers, groups, rules, and 32-WiFi
 msgstr ""
 
 msgid "Egress"
+msgstr ""
+
+msgid "Egress Node"
 msgstr ""
 
 msgid "Egress Target"
@@ -349,6 +373,9 @@ msgstr ""
 msgid "Enabled (Bypass CN IP directly)"
 msgstr ""
 
+msgid "Excellent"
+msgstr ""
+
 msgid "Expand"
 msgstr ""
 
@@ -356,6 +383,9 @@ msgid "Failed to change service state"
 msgstr ""
 
 msgid "Failed to clear logs"
+msgstr ""
+
+msgid "Failed to fetch slot clients"
 msgstr ""
 
 msgid "Failed to fetch update from repository."
@@ -394,6 +424,9 @@ msgstr ""
 msgid "Failed to update WiFi broadcast status"
 msgstr ""
 
+msgid "Fair"
+msgstr ""
+
 msgid "Fake-IP (Recommended)"
 msgstr ""
 
@@ -401,6 +434,9 @@ msgid "Fake-IP Range"
 msgstr ""
 
 msgid "Fast cache hit, updated %s"
+msgstr ""
+
+msgid "Fetching live client hardware metrics from child AP..."
 msgstr ""
 
 msgid "Fill All (%d slots)"
@@ -433,6 +469,9 @@ msgstr ""
 msgid "Global-mode and targeted-mode WiFi devices are matched at the highest physical priority and always egress through their dedicated proxy. They never fall through to any application card below, preventing IP leaks and rule hijacking."
 msgstr ""
 
+msgid "Good"
+msgstr ""
+
 msgid "Group Name"
 msgstr ""
 
@@ -457,6 +496,9 @@ msgstr ""
 msgid "Initializing VLANs, DHCP, AP radios, and routing rules, please wait 5~8 seconds..."
 msgstr ""
 
+msgid "Install Agent on Child AP"
+msgstr ""
+
 msgid "Interval (s)"
 msgstr ""
 
@@ -479,6 +521,9 @@ msgid "Logs cleared, waiting for new entries..."
 msgstr ""
 
 msgid "Low-Memory Compact Mode (Optimized for <= 256MB)"
+msgstr ""
+
+msgid "MAC Address"
 msgstr ""
 
 msgid "Main Router: Automatically configure 32 independent static VLAN subnets (192.168.101.1/24 ~ 132.1/24) and DHCP pools"
@@ -523,7 +568,13 @@ msgstr ""
 msgid "New Scenario Card"
 msgstr ""
 
+msgid "No active clients currently associated with this slot."
+msgstr ""
+
 msgid "No application scenarios configured. Use \"+ New Scenario Card\" or \"Reset to Defaults\"."
+msgstr ""
+
+msgid "No child APs running omniclash-agent detected on LAN."
 msgstr ""
 
 msgid "No custom rules yet."
@@ -629,6 +680,9 @@ msgid "Paste the token generated on the child AP"
 msgstr ""
 
 msgid "Performance Profile"
+msgstr ""
+
+msgid "Phy Bitrate"
 msgstr ""
 
 msgid "Physical Line Isolation Guarantee"
@@ -745,6 +799,9 @@ msgstr ""
 msgid "Rules are matched top to bottom. Use the arrows to change priority."
 msgstr ""
 
+msgid "Run this command in the child AP terminal to install directly from this router:"
+msgstr ""
+
 msgid "Running (PID: %s)"
 msgstr ""
 
@@ -790,6 +847,12 @@ msgstr ""
 msgid "Saving standard WiFi settings and smoothly reloading wireless..."
 msgstr ""
 
+msgid "Scanning LAN for child APs..."
+msgstr ""
+
+msgid "Scanning..."
+msgstr ""
+
 msgid "Scenario Name"
 msgstr ""
 
@@ -799,7 +862,19 @@ msgstr ""
 msgid "Scheduled Restart"
 msgstr ""
 
+msgid "Select"
+msgstr ""
+
+msgid "Signal Strength (RSSI)"
+msgstr ""
+
 msgid "Slot"
+msgstr ""
+
+msgid "Slot #%s (%s) · VLAN %s · Target: %s"
+msgstr ""
+
+msgid "Slot #%s Clients Profile"
 msgstr ""
 
 msgid "Standard Dual-Band WiFi (5G / 2.4G) | Stored in /etc/omniclash/wifi_normal.json"
@@ -889,6 +964,9 @@ msgstr ""
 msgid "UDP Proxy Mode"
 msgstr ""
 
+msgid "Unknown Device"
+msgstr ""
+
 msgid "Unnamed Scenario"
 msgstr ""
 
@@ -896,6 +974,9 @@ msgid "Upserting wireless interfaces on the child AP..."
 msgstr ""
 
 msgid "Warning (Lightweight)"
+msgstr ""
+
+msgid "Weak"
 msgstr ""
 
 msgid "WiFi #%s %s successfully!"

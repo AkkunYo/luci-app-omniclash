@@ -73,6 +73,17 @@ var callApplyApNetwork = rpc.declare({
 	method: 'apply_ap_network'
 });
 
+var callDiscoverAp = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'discover_ap'
+});
+
+var callGetSlotClients = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'get_slot_clients',
+	params: [ 'sid' ]
+});
+
 var CACHE_KEY = 'omniclash_matrix_cache_v3';
 var CACHE_TTL = 10 * 60 * 1000;
 
@@ -235,23 +246,186 @@ window.refreshAgentStatus = function() {
 	});
 };
 
+
+window.discoverChildAps = function() {
+	var box = document.getElementById('modal_discovered_devices');
+	var btn = document.getElementById('modal_btn_discover');
+	if (btn) { btn.disabled = true; btn.innerText = _('Scanning...'); }
+	if (box) dom.content(box, E('span', { 'class': 'spinning', 'style': 'color: #3b82f6; font-size: 12px; margin-top: 6px; display: inline-block;' }, _('Scanning LAN for child APs...')));
+
+	callDiscoverAp().then(function(res) {
+		if (btn) { btn.disabled = false; btn.innerText = '🔍 ' + _('Auto Scan AP'); }
+		var devices = (res && res.devices) ? res.devices : [];
+		if (!box) return;
+
+		if (!devices.length) {
+			dom.content(box, E('div', { 'style': 'color: #94a3b8; font-size: 12px; margin-top: 6px;' }, _('No child APs running omniclash-agent detected on LAN.')));
+			return;
+		}
+
+		var chips = devices.map(function(d) {
+			return E('button', {
+				'type': 'button',
+				'class': 'cbi-button',
+				'style': 'display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; margin-right: 8px; margin-top: 6px; border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.08);',
+				'title': _('Click to use this AP IP address'),
+				'click': function() {
+					var el = document.getElementById('modal_ap_host');
+					if (el) el.value = d.ip;
+					window.refreshAgentStatus();
+				}
+			}, [
+				E('b', { 'style': 'color: #2563eb;' }, d.hostname || d.ip),
+				E('span', { 'style': 'color: #64748b; font-size: 11px;' }, '(' + d.ip + (d.version ? ' v' + d.version : '') + ')'),
+				E('span', { 'style': 'color: #059669; font-weight: bold;' }, '↵ ' + _('Select'))
+			]);
+		});
+
+		dom.content(box, [
+			E('div', { 'style': 'font-size: 12px; color: #059669; font-weight: 500; margin-top: 6px;' },
+				_('Discovered %d AP(s) on LAN:').replace('%d', devices.length)),
+			E('div', { 'style': 'display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px;' }, chips)
+		]);
+	}).catch(function(err) {
+		if (btn) { btn.disabled = false; btn.innerText = '🔍 ' + _('Auto Scan AP'); }
+		if (box) dom.content(box, E('span', { 'style': 'color: #dc2626; font-size: 12px; margin-top: 6px; display: inline-block;' }, '🔴 ' + err.message));
+	});
+};
+
+window.openSlotClientsModal = function(sid, num, ssid) {
+	ui.showModal(_('Slot #%s Clients Profile').replace('%s', num), [
+		E('p', { 'class': 'spinning' }, _('Fetching live client hardware metrics from child AP...'))
+	]);
+
+	callGetSlotClients(sid).then(function(res) {
+		ensureRpcOk(res, _('Failed to fetch slot clients'));
+		var clients = (res && res.clients) ? res.clients : [];
+		if (!clients.length) {
+			ui.showModal(_('Slot #%s Clients Profile').replace('%s', num), [
+				E('p', { 'style': 'padding: 24px; text-align: center; color: #64748b; font-size: 13px;' }, _('No active clients currently associated with this slot.')),
+				E('div', { 'class': 'right', 'style': 'margin-top: 12px; display: flex; justify-content: flex-end;' }, [
+					E('button', { 'class': 'cbi-button', 'click': ui.hideModal }, _('Close'))
+				])
+			]);
+			return;
+		}
+
+		function formatDuration(secs) {
+			if (secs < 60) return secs + 's';
+			var mins = Math.floor(secs / 60);
+			if (mins < 60) return mins + 'm ' + (secs % 60) + 's';
+			var hrs = Math.floor(mins / 60);
+			return hrs + 'h ' + (mins % 60) + 'm';
+		}
+
+		function signalBadge(sig) {
+			var color = '#10b981';
+			var label = _('Excellent');
+			if (sig < -75) { color = '#ef4444'; label = _('Weak'); }
+			else if (sig < -65) { color = '#f59e0b'; label = _('Fair'); }
+			else if (sig < -55) { color = '#3b82f6'; label = _('Good'); }
+			return E('span', {
+				'style': 'display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; color: ' + color + '; background: rgba(0,0,0,0.04);'
+			}, [
+				E('span', { 'style': 'width: 6px; height: 6px; border-radius: 50%; background: ' + color + ';' }),
+				sig + ' dBm (' + label + ')'
+			]);
+		}
+
+		var rows = clients.map(function(c) {
+			return E('tr', {}, [
+				E('td', { 'style': 'font-weight: 600;' }, [
+					E('span', {}, c.hostname || _('Unknown Device')),
+					c.ip ? E('div', { 'style': 'font-size: 11px; font-family: monospace; color: #2563eb;' }, c.ip) : ''
+				]),
+				E('td', { 'style': 'font-family: monospace; font-size: 12px;' }, c.mac),
+				E('td', {}, signalBadge(c.signal)),
+				E('td', { 'style': 'font-size: 12px;' }, [
+					E('div', {}, 'Tx: ' + (c.tx_rate || '-')),
+					E('div', { 'style': 'color: #64748b; font-size: 11px;' }, 'Rx: ' + (c.rx_rate || '-'))
+				]),
+				E('td', { 'style': 'font-size: 12px; color: #64748b;' }, formatDuration(c.connected_sec || 0)),
+				E('td', { 'style': 'font-size: 12px; font-weight: 500;' }, c.target || res.target || '-')
+			]);
+		});
+
+		var content = E('div', { 'style': 'min-width: 680px; max-width: 820px;' }, [
+			E('div', { 'style': 'margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;' }, [
+				E('span', { 'style': 'color: #64748b; font-size: 13px;' },
+					_('Slot #%s (%s) · VLAN %s · Target: %s')
+						.replace('%s', num)
+						.replace('%s', ssid)
+						.replace('%s', res.vlan || '-')
+						.replace('%s', res.target || '-')
+				),
+				E('button', {
+					'type': 'button',
+					'class': 'cbi-button',
+					'style': 'padding: 2px 8px; font-size: 12px;',
+					'click': function() { window.openSlotClientsModal(sid, num, ssid); }
+				}, '🔄 ' + _('Refresh'))
+			]),
+			E('table', { 'class': 'table', 'style': 'width: 100%; border-collapse: collapse;' }, [
+				E('thead', {}, [
+					E('tr', {}, [
+						E('th', {}, _('Device / IP')),
+						E('th', {}, _('MAC Address')),
+						E('th', {}, _('Signal Strength (RSSI)')),
+						E('th', {}, _('Phy Bitrate')),
+						E('th', {}, _('Connected Time')),
+						E('th', {}, _('Egress Node'))
+					])
+				]),
+				E('tbody', {}, rows)
+			]),
+			E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end;' }, [
+				E('button', { 'class': 'cbi-button', 'click': ui.hideModal }, _('Close'))
+			])
+		]);
+
+		ui.showModal(_('Slot #%s Clients Profile').replace('%s', num), content);
+	}).catch(function(err) {
+		ui.hideModal();
+		ui.addNotification(null, E('p', {}, err.message), 'error');
+	});
+};
+
 window.openApConfigModal = function() {
 	var curHost = uci.get('omniclash', 'config', 'ap_host') || '192.168.100.2';
 	var curToken = uci.get('omniclash', 'config', 'ap_token') || '';
 
 	var modalContent = E('div', { 'class': 'cbi-map', 'style': 'margin: 0; padding: 6px 0;' }, [
 		E('div', { 'class': 'cbi-section' }, [
+			E('div', {
+				'style': 'background: rgba(59, 130, 246, 0.08); border-left: 3px solid #3b82f6; padding: 10px 12px; border-radius: 4px; margin-bottom: 16px; font-size: 12px;'
+			}, [
+				E('div', { 'style': 'font-weight: 600; color: #2563eb; margin-bottom: 4px;' }, '⚡ ' + _('Install Agent on Child AP')),
+				E('div', { 'style': 'color: #64748b; margin-bottom: 6px;' }, _('Run this command in the child AP terminal to install directly from this router:')),
+				E('code', {
+					'style': 'display: block; padding: 6px 8px; background: rgba(0, 0, 0, 0.05); border-radius: 4px; font-family: monospace; font-size: 11px; user-select: all; word-break: break-all; color: #0f172a;'
+				}, 'wget -qO /tmp/agent.ipk http://' + (window.location.hostname || '192.168.100.1') + '/omniclash-agent.ipk && opkg install /tmp/agent.ipk')
+			]),
 			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 14px; gap: 12px;' }, [
 				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 6px;' }, _('AP Host IP')),
 				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
-					E('input', {
-						'type': 'text',
-						'id': 'modal_ap_host',
-						'class': 'cbi-input-text',
-						'style': 'width: 100%; max-width: 340px; font-family: monospace;',
-						'value': curHost,
-						'placeholder': '192.168.100.2'
-					}),
+					E('div', { 'style': 'display: flex; gap: 8px; align-items: center; max-width: 480px;' }, [
+						E('input', {
+							'type': 'text',
+							'id': 'modal_ap_host',
+							'class': 'cbi-input-text',
+							'style': 'flex: 1; font-family: monospace;',
+							'value': curHost,
+							'placeholder': '192.168.100.2'
+						}),
+						E('button', {
+							'type': 'button',
+							'id': 'modal_btn_discover',
+							'class': 'cbi-button',
+							'style': 'white-space: nowrap;',
+							'click': window.discoverChildAps
+						}, '🔍 ' + _('Auto Scan AP'))
+					]),
+					E('div', { 'id': 'modal_discovered_devices' }),
 					E('div', { 'class': 'cbi-value-description', 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' },
 						_('IP address of the child AP on the local network (defaults to 192.168.100.2).'))
 				])
@@ -714,9 +888,19 @@ return view.extend({
 							'style': 'padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; background: ' + (isOff ? '#94a3b8' : '#10b981')
 						}, isOff ? _('Disabled') : _('Broadcasting'))
 					]),
-					E('td', { 'style': 'text-align: center; width: 70px; vertical-align: middle;' }, [
-						E('span', { 'style': 'font-weight: bold; font-size: 13px; color: ' + (slot.clients > 0 ? '#10b981' : '#94a3b8') }, isOff ? '-' : (slot.clients || 0))
-					]),
+						E('td', { 'style': 'text-align: center; width: 70px; vertical-align: middle;' }, [
+							(isOff) ? E('span', { 'style': 'color: #94a3b8;' }, '-') :
+							(slot.clients > 0) ? E('button', {
+								'type': 'button',
+								'class': 'cbi-button',
+								'style': 'padding: 2px 8px; font-size: 12px; font-weight: bold; color: #059669; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); cursor: pointer; border-radius: 4px;',
+								'title': _('Click to view connected client details'),
+								'click': (function(sid, num, ssid) {
+									return function() { window.openSlotClientsModal(sid, num, ssid); };
+								})(slot.sid, slot.num, slot.ssid)
+							}, '📱 ' + slot.clients) :
+							E('span', { 'style': 'color: #94a3b8; font-size: 13px;' }, '0')
+						]),
 					E('td', { 'style': 'width: 150px; white-space: nowrap; text-align: center; vertical-align: middle;' }, [
 						E('button', {
 							'class': 'cbi-button cbi-button-apply',
@@ -818,9 +1002,19 @@ return view.extend({
 							'style': 'padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; background: ' + (isOff ? '#94a3b8' : '#10b981')
 						}, isOff ? _('Disabled') : _('Broadcasting'))
 					]),
-					E('td', { 'style': 'text-align: center; width: 80px; vertical-align: middle;' }, [
-						E('span', { 'style': 'font-weight: bold; font-size: 13px; color: ' + (item.clients > 0 ? '#10b981' : '#94a3b8') }, isOff ? '-' : (item.clients || 0))
-					]),
+						E('td', { 'style': 'text-align: center; width: 80px; vertical-align: middle;' }, [
+							(isOff) ? E('span', { 'style': 'color: #94a3b8;' }, '-') :
+							(item.clients > 0) ? E('button', {
+								'type': 'button',
+								'class': 'cbi-button',
+								'style': 'padding: 2px 8px; font-size: 12px; font-weight: bold; color: #059669; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); cursor: pointer; border-radius: 4px;',
+								'title': _('Click to view connected client details'),
+								'click': (function(sid, num, ssid) {
+									return function() { window.openSlotClientsModal(sid, num, ssid); };
+								})(id, item.band.toUpperCase(), item.ssid)
+							}, '📱 ' + item.clients) :
+							E('span', { 'style': 'color: #94a3b8; font-size: 13px;' }, '0')
+						]),
 					E('td', { 'style': 'width: 160px; white-space: nowrap; text-align: center; vertical-align: middle;' }, [
 						E('button', {
 							'class': 'cbi-button cbi-button-apply',

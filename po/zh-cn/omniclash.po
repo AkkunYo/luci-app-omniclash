@@ -135,6 +135,9 @@ msgstr "确定要恢复全套默认应用库吗？\n所有自定义场景与自�
 msgid "Assigned VLAN"
 msgstr "分配独立 VLAN"
 
+msgid "Auto Scan AP"
+msgstr "自动扫描 AP"
+
 msgid "Auto-detect (Recommended)"
 msgstr "自动检测推荐"
 
@@ -228,6 +231,15 @@ msgstr "正在清空日志"
 msgid "Clearing core and plugin log files..."
 msgstr "正在清空内核日志与插件日志..."
 
+msgid "Click to use this AP IP address"
+msgstr "点击采用此 AP 的 IP 地址"
+
+msgid "Click to view connected client details"
+msgstr "点击查看当前槽位已连接客户端详情"
+
+msgid "Close"
+msgstr "关闭"
+
 msgid "Collapse"
 msgstr "收起"
 
@@ -251,6 +263,9 @@ msgstr "预置全套策略组（专线组、地区组、应用分流组）。各
 
 msgid "Confirm Fill All (%d slots)"
 msgstr "确认一键补全 (%d 个)"
+
+msgid "Connected Time"
+msgstr "连续在线时长"
 
 msgid "Copy All"
 msgstr "复制全部"
@@ -315,6 +330,9 @@ msgstr "专为换新子 AP 或新网络场景打造的一键初始化向导。�
 msgid "Deploying 32-WiFi Architecture"
 msgstr "正在部署 32-WiFi 全套架构"
 
+msgid "Device / IP"
+msgstr "设备名称 / IP"
+
 msgid "Disable"
 msgstr "关闭广播"
 
@@ -323,6 +341,9 @@ msgstr "已关闭"
 
 msgid "Disabled (Managed by OmniClash rules, Recommended)"
 msgstr "关闭 (由 OmniClash 槽位规则决定，推荐)"
+
+msgid "Discovered %d AP(s) on LAN:"
+msgstr "局域网中发现 %d 台子 AP 设备："
 
 msgid "Dismiss"
 msgstr "关闭"
@@ -335,6 +356,9 @@ msgstr "由【基础设置 + 节点池 + 策略组 + 分流规则 + 32-WiFi 矩�
 
 msgid "Egress"
 msgstr "走向"
+
+msgid "Egress Node"
+msgstr "出海代理节点"
 
 msgid "Egress Target"
 msgstr "出口走向"
@@ -354,6 +378,9 @@ msgstr "启用该场景"
 msgid "Enabled (Bypass CN IP directly)"
 msgstr "开启 (内核直接绕过大陆 IP)"
 
+msgid "Excellent"
+msgstr "极强"
+
 msgid "Expand"
 msgstr "展开"
 
@@ -362,6 +389,9 @@ msgstr "服务状态切换失败"
 
 msgid "Failed to clear logs"
 msgstr "清空日志失败"
+
+msgid "Failed to fetch slot clients"
+msgstr "获取槽位客户端画像失败"
 
 msgid "Failed to fetch update from repository."
 msgstr "无法从软件源获取更新。"
@@ -399,6 +429,9 @@ msgstr "同步到子 AP 失败"
 msgid "Failed to update WiFi broadcast status"
 msgstr "更新 WiFi 广播状态失败"
 
+msgid "Fair"
+msgstr "一般"
+
 msgid "Fake-IP (Recommended)"
 msgstr "Fake-IP (虚拟 IP，秒开推荐)"
 
@@ -407,6 +440,9 @@ msgstr "Fake-IP 网段范围"
 
 msgid "Fast cache hit, updated %s"
 msgstr "极速缓存已命中，更新于 %s"
+
+msgid "Fetching live client hardware metrics from child AP..."
+msgstr "正在从子 AP 采集客户端物理层实时指标..."
 
 msgid "Fill All (%d slots)"
 msgstr "一键补全 (%d 个)"
@@ -438,6 +474,9 @@ msgstr "通用分流 (按序兜底)"
 msgid "Global-mode and targeted-mode WiFi devices are matched at the highest physical priority and always egress through their dedicated proxy. They never fall through to any application card below, preventing IP leaks and rule hijacking."
 msgstr "全局模式与定向模式的无线设备享有最高物理匹配优先级，始终经由各自的专属出口发出；它们绝不会落入下方的任何应用卡片，从根本上杜绝 IP 泄漏与规则截胡。"
 
+msgid "Good"
+msgstr "良好"
+
 msgid "Group Name"
 msgstr "策略组名称"
 
@@ -462,6 +501,9 @@ msgstr "初始匹配域名 / IP"
 msgid "Initializing VLANs, DHCP, AP radios, and routing rules, please wait 5~8 seconds..."
 msgstr "正在初始化补全全量 VLAN、DHCP、AP 射频与规则链，请稍候约 5~8 秒..."
 
+msgid "Install Agent on Child AP"
+msgstr "一键安装 Agent 到子 AP"
+
 msgid "Interval (s)"
 msgstr "更新周期(秒)"
 
@@ -485,6 +527,9 @@ msgstr "日志已清空，等待新日志写入..."
 
 msgid "Low-Memory Compact Mode (Optimized for <= 256MB)"
 msgstr "轻量小内存模式 (专为 <= 256MB 极限调优)"
+
+msgid "MAC Address"
+msgstr "MAC 物理地址"
 
 msgid "Main Router: Automatically configure 32 independent static VLAN subnets (192.168.101.1/24 ~ 132.1/24) and DHCP pools"
 msgstr "主路由侧：自动配置 32 组独立静态 VLAN 子网接口 (192.168.101.1/24 ~ 132.1/24) 与 DHCP 地址池"
@@ -528,8 +573,14 @@ msgstr "新策略组"
 msgid "New Scenario Card"
 msgstr "新建场景卡片"
 
+msgid "No active clients currently associated with this slot."
+msgstr "当前槽位暂无活跃关联客户端。"
+
 msgid "No application scenarios configured. Use \"+ New Scenario Card\" or \"Reset to Defaults\"."
 msgstr "尚未配置任何应用场景，可点击【+ 新建场景卡片】或【恢复默认应用库】。"
+
+msgid "No child APs running omniclash-agent detected on LAN."
+msgstr "未在局域网主网段检测到运行 omniclash-agent 的子 AP。"
 
 msgid "No custom rules yet."
 msgstr "暂无自定义规则。"
@@ -635,6 +686,9 @@ msgstr "粘贴在子 AP 上生成的令牌"
 
 msgid "Performance Profile"
 msgstr "性能配置预设"
+
+msgid "Phy Bitrate"
+msgstr "协商速率 (Tx/Rx)"
 
 msgid "Physical Line Isolation Guarantee"
 msgstr "物理专线隔离保障"
@@ -750,6 +804,9 @@ msgstr "规则类型"
 msgid "Rules are matched top to bottom. Use the arrows to change priority."
 msgstr "规则自上而下依次匹配，使用箭头调整优先级顺序。"
 
+msgid "Run this command in the child AP terminal to install directly from this router:"
+msgstr "在子 AP 终端执行此单行命令直接从本路由下载并安装："
+
 msgid "Running (PID: %s)"
 msgstr "运行中 (PID: %s)"
 
@@ -795,6 +852,12 @@ msgstr "正在写入全量核心设置、Provider、策略组与应用卡片并�
 msgid "Saving standard WiFi settings and smoothly reloading wireless..."
 msgstr "正在保存标准普通 WiFi 配置并平滑重载无线..."
 
+msgid "Scanning LAN for child APs..."
+msgstr "正在局域网扫描子 AP..."
+
+msgid "Scanning..."
+msgstr "正在扫描..."
+
 msgid "Scenario Name"
 msgstr "场景名称"
 
@@ -804,8 +867,20 @@ msgstr "场景名称不能为空。"
 msgid "Scheduled Restart"
 msgstr "开启定时重启/重载"
 
+msgid "Select"
+msgstr "选择填入"
+
+msgid "Signal Strength (RSSI)"
+msgstr "无线信号强度 (RSSI)"
+
 msgid "Slot"
 msgstr "序号"
+
+msgid "Slot #%s (%s) · VLAN %s · Target: %s"
+msgstr "槽位 #%s (%s) · VLAN %s · 走向：%s"
+
+msgid "Slot #%s Clients Profile"
+msgstr "槽位 #%s 在线客户端画像"
 
 msgid "Standard Dual-Band WiFi (5G / 2.4G) | Stored in /etc/omniclash/wifi_normal.json"
 msgstr "标准双频 WiFi (5G / 2.4G) | 独立存储于 /etc/omniclash/wifi_normal.json"
@@ -894,6 +969,9 @@ msgstr "正在切换无线广播状态..."
 msgid "UDP Proxy Mode"
 msgstr "UDP 代理模式"
 
+msgid "Unknown Device"
+msgstr "未知设备"
+
 msgid "Unnamed Scenario"
 msgstr "未命名场景"
 
@@ -902,6 +980,9 @@ msgstr "正在子 AP 上创建/更新无线接口..."
 
 msgid "Warning (Lightweight)"
 msgstr "Warning (仅告警，轻量)"
+
+msgid "Weak"
+msgstr "较弱"
 
 msgid "WiFi #%s %s successfully!"
 msgstr "WiFi #%s %s成功！"

@@ -332,6 +332,17 @@ const methods = {
 			return engine_call('get_ap_token');
 		}
 	},
+	discover_ap: {
+		call: function() {
+			return engine_call('discover_ap');
+		}
+	},
+	get_slot_clients: {
+		args: { sid: '' },
+		call: function(req) {
+			return engine_call('get_slot_clients', req.args || {});
+		}
+	},
 	compile_reload: {
 		call: function() {
 			let comp = engine_call('compile');
