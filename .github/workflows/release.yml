@@ -49,5 +49,5 @@ jobs:
           gh release create "$TAG_NAME" \
             build/*.ipk \
             build/sha256sums.txt \
-            --title "OmniClash $TAG_NAME" \
+            --title "$TAG_NAME" \
             --generate-notes
