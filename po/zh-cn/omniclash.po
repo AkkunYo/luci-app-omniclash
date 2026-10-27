@@ -210,6 +210,9 @@ msgstr "正在通过软件源 / GitHub Releases 检查并升级 /usr/bin/mihomo 
 msgid "Checking and updating luci-app-omniclash from software repository..."
 msgstr "正在通过软件源 / GitHub Releases 检查并升级 luci-app-omniclash 插件..."
 
+msgid "Checking for differences before overwriting the child AP..."
+msgstr "下推前先比对差异..."
+
 msgid "Child AP Configuration & Authentication"
 msgstr "子 AP 连接与认证配置"
 
@@ -648,6 +651,12 @@ msgstr "可选。留空则仅创建一个带出口走向的卡片。"
 msgid "Overview"
 msgstr "运行概览"
 
+msgid "Overwrite Anyway"
+msgstr "仍要覆盖"
+
+msgid "Overwrite Confirmation"
+msgstr "覆盖确认"
+
 msgid "Pairing..."
 msgstr "正在配对..."
 
@@ -924,8 +933,14 @@ msgstr "正在连接..."
 msgid "The Agent channel is a structured HTTP endpoint on the child AP and needs no SSH password. SSH is kept as a compatibility fallback."
 msgstr "Agent 通道是子 AP 上的结构化 HTTP 端点，无需 SSH 密码；SSH 作为兼容回退保留。"
 
+msgid "The child AP has Wi-Fi names that differ from this router. Continuing will overwrite them:"
+msgstr "子 AP 上存在与本路由不一致的 WiFi 名称，继续下推将覆盖它们："
+
 msgid "These two rules are always emitted after every application card and cannot be reordered."
 msgstr "这两条规则始终排在所有应用卡片之后，不可调整顺序。"
+
+msgid "To keep a name, change the slot SSID on this router first, then push again."
+msgstr "若要保留某个名称，请先在本路由的对应槽位改好 SSID 再下推。"
 
 msgid "Toggling wireless broadcast..."
 msgstr "正在切换无线广播状态..."

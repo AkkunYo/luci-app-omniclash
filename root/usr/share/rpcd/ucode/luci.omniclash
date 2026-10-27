@@ -304,8 +304,9 @@ const methods = {
 		}
 	},
 	sync_matrix: {
-		call: function() {
-			return engine_call('sync_matrix');
+		args: { dry_run: false },
+		call: function(req) {
+			return engine_call('sync_matrix', req.args || {});
 		}
 	},
 	apply_ap_network: {

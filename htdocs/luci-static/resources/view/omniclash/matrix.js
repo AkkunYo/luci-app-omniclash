@@ -57,7 +57,8 @@ var callAgentStatus = rpc.declare({
 
 var callSyncMatrix = rpc.declare({
 	object: 'luci.omniclash',
-	method: 'sync_matrix'
+	method: 'sync_matrix',
+	params: [ 'dry_run' ]
 });
 
 var callApplyApNetwork = rpc.declare({
@@ -151,9 +152,46 @@ window.applyApNetwork = function() {
 window.syncMatrixToAp = function() {
 	if (!confirm(_('Push the 32-slot wireless configuration to the child AP?\nOnly wireless interfaces are touched; AP networks and firewall stay unchanged.'))) return;
 
+	ui.showModal(_('Syncing to Child AP'), [ E('p', { 'class': 'spinning' }, _('Checking for differences before overwriting the child AP...')) ]);
+
+	/* 下推前先做一次 dry-run：子 AP 上被手工改过的 SSID 会被本机记录覆盖，
+	 * 必须先让用户看到差异（Xiaomi_ZMY 就是这样丢过一次）。 */
+	callSyncMatrix(true).then(function(pre) {
+		ensureRpcOk(pre, _('Failed to sync to child AP'));
+		var conflicts = (pre && pre.conflicts) ? pre.conflicts : [];
+
+		if (conflicts.length) {
+			var lines = conflicts.map(function(c) {
+				return E('li', {}, '#' + c.slot + ' ' + c.section + ': ' + c.ap_ssid + ' → ' + c.cfg_ssid);
+			});
+			ui.showModal(_('Overwrite Confirmation'), [
+				E('p', {}, '⚠️ ' + _('The child AP has Wi-Fi names that differ from this router. Continuing will overwrite them:')),
+				E('ul', { 'style': 'margin: 8px 0 12px 20px; font-size: 13px;' }, lines),
+				E('p', { 'style': 'color: #64748b; font-size: 13px;' },
+					_('To keep a name, change the slot SSID on this router first, then push again.')),
+				E('div', { 'class': 'right', 'style': 'margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px;' }, [
+					E('button', { 'type': 'button', 'class': 'cbi-button', 'click': function() { ui.hideModal(); } }, _('Cancel')),
+					E('button', {
+						'type': 'button',
+						'class': 'cbi-button cbi-button-apply',
+						'click': function() { ui.hideModal(); window.doPushMatrix(); }
+					}, _('Overwrite Anyway'))
+				])
+			]);
+			return;
+		}
+
+		window.doPushMatrix();
+	}).catch(function(err) {
+		ui.hideModal();
+		ui.addNotification(null, E('p', {}, err.message), 'error');
+	});
+};
+
+window.doPushMatrix = function() {
 	ui.showModal(_('Syncing to Child AP'), [ E('p', { 'class': 'spinning' }, _('Upserting wireless interfaces on the child AP...')) ]);
 
-	callSyncMatrix().then(function(res) {
+	callSyncMatrix(false).then(function(res) {
 		ensureRpcOk(res, _('Failed to sync to child AP'));
 		try { if (window.localStorage) window.localStorage.removeItem(CACHE_KEY); } catch(e) {}
 		ui.hideModal();

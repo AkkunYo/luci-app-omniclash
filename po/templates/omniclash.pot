@@ -205,6 +205,9 @@ msgstr ""
 msgid "Checking and updating luci-app-omniclash from software repository..."
 msgstr ""
 
+msgid "Checking for differences before overwriting the child AP..."
+msgstr ""
+
 msgid "Child AP Configuration & Authentication"
 msgstr ""
 
@@ -643,6 +646,12 @@ msgstr ""
 msgid "Overview"
 msgstr ""
 
+msgid "Overwrite Anyway"
+msgstr ""
+
+msgid "Overwrite Confirmation"
+msgstr ""
+
 msgid "Pairing..."
 msgstr ""
 
@@ -919,7 +928,13 @@ msgstr ""
 msgid "The Agent channel is a structured HTTP endpoint on the child AP and needs no SSH password. SSH is kept as a compatibility fallback."
 msgstr ""
 
+msgid "The child AP has Wi-Fi names that differ from this router. Continuing will overwrite them:"
+msgstr ""
+
 msgid "These two rules are always emitted after every application card and cannot be reordered."
+msgstr ""
+
+msgid "To keep a name, change the slot SSID on this router first, then push again."
 msgstr ""
 
 msgid "Toggling wireless broadcast..."

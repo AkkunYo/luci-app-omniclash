@@ -332,17 +332,41 @@ function ap_provision_wifi(items) {
  *     因此运行态完全不变，管理通道零风险；
  *   - 如果无法补配置（例如通道不支持），该段回落到 network=lan，
  *     宁可牺牲隔离也不能让 SSID 指向不存在的接口。 */
-function ap_sync_matrix(slots) {
+function ap_sync_matrix(slots, dry_run) {
     let r = ap_get_wifi();
     if (!r.ok) return { ok: false, error: r.error || "无法读取子 AP 无线状态" };
 
     let existing = {};
+    let ap_ssid = {};
+
     if (r.via == "agent") {
-        for (let it in (r.data.interfaces || [])) existing[it.section] = true;
+        for (let it in (r.data.interfaces || [])) {
+            existing[it.section] = true;
+            ap_ssid[it.section] = it.ssid || "";
+        }
     } else {
         let parsed = parse_wifi_dump(r.raw || "");
-        for (let sec in keys(parsed.interfaces)) existing[sec] = true;
+        for (let sec in keys(parsed.interfaces)) {
+            existing[sec] = true;
+            ap_ssid[sec] = parsed.interfaces[sec].ssid || "";
+        }
     }
+
+    /* 冲突检测：子 AP 上该段的 SSID 与本机记录不一致。
+     *
+     * 这正是 Xiaomi_ZMY 丢失的成因——子 AP 上某段被手工改成了别的名字，
+     * 而本机记录仍是旧的默认名，一次下推就把好配置覆盖掉了。
+     * 因此在真正写之前把这些差异列出来，让调用方有机会先确认。 */
+    let conflicts = [];
+    for (let s in slots) {
+        if (!s.ap_section || !existing[s.ap_section]) continue;
+        let cur = ap_ssid[s.ap_section] || "";
+        if (cur && s.ssid && cur != s.ssid)
+            push(conflicts, { section: s.ap_section, slot: s.num, ap_ssid: cur, cfg_ssid: s.ssid });
+    }
+
+    if (dry_run)
+        return { ok: true, dry_run: true, conflicts: conflicts };
 
     /* 1. 先补齐 VLAN 配置（只 commit，不 reload） */
     let have_vlan = {};
@@ -427,7 +451,8 @@ function ap_sync_matrix(slots) {
         applied: total,
         vlan_created: vlan_created,
         vlan_pending_reload: vlan_pending,
-        fallback_lan: fallback_lan
+        fallback_lan: fallback_lan,
+        conflicts: conflicts
     };
 }
 
@@ -809,9 +834,28 @@ if (action == "compile") {
         return;
     }
 
-    let r = ap_sync_matrix(slots);
+    /* dry_run: 只比对不写入，用于下推前的冲突预览 */
+    let dry_run = false;
+    let in_raw = fs.readfile("/dev/stdin") || "";
+    if (in_raw) {
+        let opt = null;
+        try { opt = json(in_raw); } catch(e) { opt = null; }
+        if (type(opt) == "object" && opt.dry_run == true) dry_run = true;
+    }
+
+    let r = ap_sync_matrix(slots, dry_run);
     if (!r.ok) {
         print(sprintf("%.J\n", { success: false, error: r.error || "同步失败" }));
+        return;
+    }
+
+    if (dry_run) {
+        print(sprintf("%.J\n", {
+            success: true,
+            dry_run: true,
+            conflicts: r.conflicts || [],
+            msg: sprintf("检测到 %d 处本机与子 AP 的 SSID 差异", length(r.conflicts || []))
+        }));
         return;
     }
 
@@ -824,6 +868,7 @@ if (action == "compile") {
         vlan_created: r.vlan_created || [],
         vlan_pending_reload: r.vlan_pending_reload || false,
         fallback_lan: r.fallback_lan || [],
+        conflicts: r.conflicts || [],
         msg: sprintf("已向子 AP 同步 %d 个无线段", r.applied)
     }));
 } else if (action == "apply_ap_network") {
