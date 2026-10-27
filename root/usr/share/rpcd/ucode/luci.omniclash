@@ -299,8 +299,21 @@ const methods = {
 		}
 	},
 	agent_status: {
-		call: function() {
-			return engine_call('agent_status');
+		args: { host: '', token: '' },
+		call: function(req) {
+			return engine_call('agent_status', req.args || {});
+		}
+	},
+	save_ap_config: {
+		args: { host: '', token: '' },
+		call: function(req) {
+			return engine_call('save_ap_config', req.args || {});
+		}
+	},
+	save_wireless_mode: {
+		args: { mode: 'multi', run_mode: '' },
+		call: function(req) {
+			return engine_call('save_wireless_mode', req.args || {});
 		}
 	},
 	sync_matrix: {

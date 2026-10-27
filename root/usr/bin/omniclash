@@ -133,9 +133,9 @@ function ap_token() {
 }
 
 /* 向 agent 发一次请求。返回 { ok:bool, data:obj, error:str, ms:int } */
-function agent_call(method, params, timeout) {
-    let host = ap_host();
-    let token = ap_token();
+function agent_call(method, params, timeout, custom_host, custom_token) {
+    let host = custom_host || ap_host();
+    let token = (custom_token != null) ? custom_token : ap_token();
     let t = timeout || 8;
 
     if (!host) return { ok: false, error: "未配置子 AP 地址" };
@@ -936,19 +936,50 @@ if (action == "compile") {
         msg: sprintf("子 AP 网络配置已生效（恢复耗时 %d 秒）", waited)
     }));
 } else if (action == "agent_status") {
-    /* 主动刷新探测，然后把通道状态汇报给前端 */
-    _agent_state = null;
-    let avail = agent_available(true);
-    let st = agent_state();
+    /* 允许传入 host 和 token 用于弹窗实时探测，无需提前落盘或调用 uci apply */
+    let input_raw = fs.readfile("/dev/stdin") || "";
+    let p = {};
+    try { p = json(input_raw) || {}; } catch(e) {}
+    let custom_host = p.host || null;
+    let custom_token = (p.token != null && p.token != "") ? p.token : null;
+
+    let r = agent_call("ping", {}, 4, custom_host, custom_token);
+    let ok = !!(r.ok && r.data && r.data.token_ok);
+    let ver = (r.ok && r.data) ? (r.data.version || "") : "";
+    let err = r.ok ? (r.data && r.data.token_ok ? "" : "Agent 令牌不匹配") : (r.error || "");
+
     print(sprintf("%.J\n", {
         success: true,
-        available: avail,
+        available: ok,
         pref: ap_transport_pref(),
-        version: st.version || "",
-        host: st.host || "",
-        latency_ms: st.ms || 0,
-        error: st.error || ""
+        version: ver,
+        host: custom_host || ap_host(),
+        latency_ms: r.ms || 0,
+        error: err
     }));
+} else if (action == "save_ap_config") {
+    /* 保存 AP 地址与令牌并持久化 commit */
+    let input_raw = fs.readfile("/dev/stdin") || "";
+    let p = {};
+    try { p = json(input_raw) || {}; } catch(e) {}
+    if (p.host) uci.set("omniclash", "config", "ap_host", p.host);
+    if (p.token != null) uci.set("omniclash", "config", "ap_token", p.token);
+    uci.commit("omniclash");
+    _agent_state = null;
+    print("{\"success\":true,\"msg\":\"子 AP 配置已保存\"}\n");
+} else if (action == "save_wireless_mode") {
+    /* 保存无线架构模式并持久化生效 */
+    let input_raw = fs.readfile("/dev/stdin") || "";
+    let p = {};
+    try { p = json(input_raw) || {}; } catch(e) {}
+    let mode = p.mode || "multi";
+    let run_mode = p.run_mode || null;
+    uci.set("omniclash", "config", "wireless_mode", mode);
+    if (run_mode) uci.set("omniclash", "config", "run_mode", run_mode);
+    uci.commit("omniclash");
+    compile_config();
+    shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
+    print("{\"success\":true,\"msg\":\"无线模式已保存并生效\"}\n");
 } else if (action == "get_ap_token") {
     /* 令牌由子 AP 在安装 agent 时随机生成，主控只负责保存用户粘贴过来的值，
      * 因此这里绝不自动生成——否则会得到一个永远对不上的令牌。 */

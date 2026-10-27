@@ -379,6 +379,9 @@ msgstr ""
 msgid "Failed to save standard WiFi settings"
 msgstr ""
 
+msgid "Failed to save wireless mode"
+msgstr ""
+
 msgid "Failed to save: %s"
 msgstr ""
 

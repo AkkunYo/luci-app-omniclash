@@ -46,7 +46,20 @@ var callResetMatrix32Rpc = rpc.declare({
 
 var callAgentStatus = rpc.declare({
 	object: 'luci.omniclash',
-	method: 'agent_status'
+	method: 'agent_status',
+	params: [ 'host', 'token' ]
+});
+
+var callSaveApConfig = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'save_ap_config',
+	params: [ 'host', 'token' ]
+});
+
+var callSaveWirelessMode = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'save_wireless_mode',
+	params: [ 'mode', 'run_mode' ]
 });
 
 var callSyncMatrix = rpc.declare({
@@ -198,20 +211,16 @@ window.doPushMatrix = function() {
 window.refreshAgentStatus = function() {
 	var fb = document.getElementById('modal_agent_status');
 	var btn = document.getElementById('modal_btn_agent_probe');
+	var hostEl = document.getElementById('modal_ap_host');
+	var tokenEl = document.getElementById('modal_ap_token');
+
+	var host = hostEl ? hostEl.value.trim() : '';
+	var token = tokenEl ? tokenEl.value.trim() : '';
+
 	if (btn) { btn.disabled = true; btn.innerText = _('Testing...'); }
 	if (fb) dom.content(fb, E('span', { 'class': 'spinning' }, _('Probing control channel...')));
 
-	/* 探测前先把弹窗里的值落到 uci，否则探测用的还是上一次保存的地址/令牌 */
-	var host = document.getElementById('modal_ap_host');
-	var token = document.getElementById('modal_ap_token');
-	if (host && host.value.trim()) uci.set('omniclash', 'config', 'ap_host', host.value.trim());
-	if (token) uci.set('omniclash', 'config', 'ap_token', token.value.trim());
-
-	uci.save().then(function() {
-		return uci.apply();
-	}).then(function() {
-		return callAgentStatus();
-	}).then(function(res) {
+	callAgentStatus(host, token).then(function(res) {
 		if (btn) { btn.disabled = false; btn.innerText = '🔌 ' + _('Test Connection'); }
 		var ok = res && res.available;
 		if (!fb) return;
@@ -658,13 +667,8 @@ return view.extend({
 							ui.showModal(_('Saving & Applying'), [ E('p', { 'class': 'spinning' }, _('Saving operating modes and reloading configuration...')) ]);
 							uci.set('omniclash', 'config', 'run_mode', hasLocalWifi ? 'local' : 'ap');
 							uci.set('omniclash', 'config', 'wireless_mode', newWirelessMode);
-							Promise.all([
-								uci.save(),
-								uci.apply()
-							]).then(function() {
-								return fs.exec_direct('/usr/bin/omniclash', ['compile']);
-							}).then(function() {
-								return fs.exec_direct('/usr/bin/omniclash', ['reload']);
+							callSaveWirelessMode(newWirelessMode, hasLocalWifi ? 'local' : 'ap').then(function(res) {
+								ensureRpcOk(res, _('Failed to save wireless mode'));
 							}).then(function() {
 								try { if (window.localStorage) window.localStorage.removeItem(CACHE_KEY); } catch(e) {}
 								ui.hideModal();

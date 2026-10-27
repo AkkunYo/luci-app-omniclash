@@ -384,6 +384,9 @@ msgstr "保存 WiFi 槽位失败"
 msgid "Failed to save standard WiFi settings"
 msgstr "保存标准 WiFi 设置失败"
 
+msgid "Failed to save wireless mode"
+msgstr "保存无线模式失败"
+
 msgid "Failed to save: %s"
 msgstr "保存失败：%s"
 
