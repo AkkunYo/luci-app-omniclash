@@ -231,9 +231,6 @@ msgstr "正在清空日志"
 msgid "Clearing core and plugin log files..."
 msgstr "正在清空内核日志与插件日志..."
 
-msgid "Click to use this AP IP address"
-msgstr "点击采用此 AP 的 IP 地址"
-
 msgid "Click to view connected client details"
 msgstr "点击查看当前槽位已连接客户端详情"
 
@@ -330,9 +327,6 @@ msgstr "专为换新子 AP 或新网络场景打造的一键初始化向导。�
 msgid "Deploying 32-WiFi Architecture"
 msgstr "正在部署 32-WiFi 全套架构"
 
-msgid "Device / IP"
-msgstr "设备名称 / IP"
-
 msgid "Disable"
 msgstr "关闭广播"
 
@@ -407,6 +401,9 @@ msgstr "重置标准 WiFi 失败"
 
 msgid "Failed to restore default application library"
 msgstr "恢复默认应用库失败"
+
+msgid "Failed to save AP configuration"
+msgstr "保存子 AP 配置失败"
 
 msgid "Failed to save WiFi slot"
 msgstr "保存 WiFi 槽位失败"
@@ -869,9 +866,6 @@ msgstr "开启定时重启/重载"
 
 msgid "Select"
 msgstr "选择填入"
-
-msgid "Signal Strength (RSSI)"
-msgstr "无线信号强度 (RSSI)"
 
 msgid "Slot"
 msgstr "序号"

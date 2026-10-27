@@ -263,28 +263,33 @@ window.discoverChildAps = function() {
 			return;
 		}
 
-		var chips = devices.map(function(d) {
-			return E('button', {
-				'type': 'button',
-				'class': 'cbi-button',
-				'style': 'display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; margin-right: 8px; margin-top: 6px; border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.08);',
-				'title': _('Click to use this AP IP address'),
-				'click': function() {
-					var el = document.getElementById('modal_ap_host');
-					if (el) el.value = d.ip;
-					window.refreshAgentStatus();
-				}
+		var devCards = devices.map(function(d) {
+			return E('div', {
+				'style': 'display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; margin-top: 6px; background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 6px;'
 			}, [
-				E('b', { 'style': 'color: #2563eb;' }, d.hostname || d.ip),
-				E('span', { 'style': 'color: #64748b; font-size: 11px;' }, '(' + d.ip + (d.version ? ' v' + d.version : '') + ')'),
-				E('span', { 'style': 'color: #059669; font-weight: bold;' }, '↵ ' + _('Select'))
+				E('div', { 'style': 'display: flex; align-items: center; gap: 8px;' }, [
+					E('span', { 'style': 'font-size: 15px;' }, '📶'),
+					E('b', { 'style': 'font-size: 13px; color: #1e293b;' }, d.hostname || d.ip),
+					E('span', { 'style': 'color: #64748b; font-size: 12px; font-family: monospace;' }, d.ip),
+					d.version ? E('span', { 'style': 'color: #7c3aed; font-size: 11px; background: rgba(124, 58, 237, 0.1); padding: 1px 5px; border-radius: 3px;' }, 'v' + d.version) : ''
+				]),
+				E('button', {
+					'type': 'button',
+					'class': 'cbi-button cbi-button-action',
+					'style': 'padding: 2px 10px; font-size: 12px; margin: 0;',
+					'click': function() {
+						var el = document.getElementById('modal_ap_host');
+						if (el) el.value = d.ip;
+						window.refreshAgentStatus();
+					}
+				}, _('Select'))
 			]);
 		});
 
 		dom.content(box, [
 			E('div', { 'style': 'font-size: 12px; color: #059669; font-weight: 500; margin-top: 6px;' },
 				_('Discovered %d AP(s) on LAN:').replace('%d', devices.length)),
-			E('div', { 'style': 'display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px;' }, chips)
+			E('div', { 'style': 'margin-top: 2px;' }, devCards)
 		]);
 	}).catch(function(err) {
 		if (btn) { btn.disabled = false; btn.innerText = '🔍 ' + _('Auto Scan AP'); }
@@ -302,7 +307,10 @@ window.openSlotClientsModal = function(sid, num, ssid) {
 		var clients = (res && res.clients) ? res.clients : [];
 		if (!clients.length) {
 			ui.showModal(_('Slot #%s Clients Profile').replace('%s', num), [
-				E('p', { 'style': 'padding: 24px; text-align: center; color: #64748b; font-size: 13px;' }, _('No active clients currently associated with this slot.')),
+				E('div', { 'style': 'padding: 24px; text-align: center; color: #64748b; font-size: 13px;' }, [
+					E('span', { 'style': 'font-size: 24px; display: block; margin-bottom: 8px;' }, '📶'),
+					_('No active clients currently associated with this slot.')
+				]),
 				E('div', { 'class': 'right', 'style': 'margin-top: 12px; display: flex; justify-content: flex-end;' }, [
 					E('button', { 'class': 'cbi-button', 'click': ui.hideModal }, _('Close'))
 				])
@@ -311,11 +319,19 @@ window.openSlotClientsModal = function(sid, num, ssid) {
 		}
 
 		function formatDuration(secs) {
-			if (secs < 60) return secs + 's';
+			if (!secs || secs < 60) return (secs || 0) + 's';
 			var mins = Math.floor(secs / 60);
 			if (mins < 60) return mins + 'm ' + (secs % 60) + 's';
 			var hrs = Math.floor(mins / 60);
 			return hrs + 'h ' + (mins % 60) + 'm';
+		}
+
+		function formatRate(raw) {
+			if (!raw) return '-';
+			var speed = raw.split(' ')[0] + ' Mbps';
+			var modeMatch = raw.match(/((?:HE|VHT|HT)-MCS\s*\d+)/);
+			if (modeMatch) return speed + ' (' + modeMatch[1] + ')';
+			return speed;
 		}
 
 		function signalBadge(sig) {
@@ -325,32 +341,40 @@ window.openSlotClientsModal = function(sid, num, ssid) {
 			else if (sig < -65) { color = '#f59e0b'; label = _('Fair'); }
 			else if (sig < -55) { color = '#3b82f6'; label = _('Good'); }
 			return E('span', {
-				'style': 'display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; color: ' + color + '; background: rgba(0,0,0,0.04);'
+				'style': 'display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; color: ' + color + '; background: rgba(0,0,0,0.05);'
 			}, [
 				E('span', { 'style': 'width: 6px; height: 6px; border-radius: 50%; background: ' + color + ';' }),
 				sig + ' dBm (' + label + ')'
 			]);
 		}
 
-		var rows = clients.map(function(c) {
-			return E('tr', {}, [
-				E('td', { 'style': 'font-weight: 600;' }, [
-					E('span', {}, c.hostname || _('Unknown Device')),
-					c.ip ? E('div', { 'style': 'font-size: 11px; font-family: monospace; color: #2563eb;' }, c.ip) : ''
+		var clientCards = clients.map(function(c) {
+			var txStr = formatRate(c.tx_rate);
+			var rxStr = formatRate(c.rx_rate);
+			return E('div', {
+				'style': 'padding: 12px 14px; margin-bottom: 10px; border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 8px; background: rgba(0, 0, 0, 0.02);'
+			}, [
+				E('div', { 'style': 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;' }, [
+					E('div', { 'style': 'display: flex; align-items: center; gap: 8px;' }, [
+						E('span', { 'style': 'font-size: 16px;' }, '📱'),
+						E('b', { 'style': 'font-size: 14px; color: #1e293b;' }, c.hostname || _('Unknown Device')),
+						c.ip ? E('span', { 'style': 'font-size: 12px; font-family: monospace; color: #2563eb; background: rgba(37, 99, 235, 0.1); padding: 1px 6px; border-radius: 4px;' }, c.ip) : ''
+					]),
+					signalBadge(c.signal)
 				]),
-				E('td', { 'style': 'font-family: monospace; font-size: 12px;' }, c.mac),
-				E('td', {}, signalBadge(c.signal)),
-				E('td', { 'style': 'font-size: 12px;' }, [
-					E('div', {}, 'Tx: ' + (c.tx_rate || '-')),
-					E('div', { 'style': 'color: #64748b; font-size: 11px;' }, 'Rx: ' + (c.rx_rate || '-'))
-				]),
-				E('td', { 'style': 'font-size: 12px; color: #64748b;' }, formatDuration(c.connected_sec || 0)),
-				E('td', { 'style': 'font-size: 12px; font-weight: 500;' }, c.target || res.target || '-')
+				E('div', {
+					'style': 'display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; font-size: 12px; color: #64748b; background: rgba(0, 0, 0, 0.02); padding: 8px 10px; border-radius: 6px;'
+				}, [
+					E('div', {}, [ E('span', { 'style': 'color: #94a3b8;' }, _('MAC Address') + ': '), E('span', { 'style': 'font-family: monospace; color: #334155;' }, c.mac) ]),
+					E('div', {}, [ E('span', { 'style': 'color: #94a3b8;' }, _('Phy Bitrate') + ': '), E('span', { 'style': 'color: #334155; font-weight: 500;' }, 'Tx ' + txStr + ' / Rx ' + rxStr) ]),
+					E('div', {}, [ E('span', { 'style': 'color: #94a3b8;' }, _('Connected Time') + ': '), E('span', { 'style': 'color: #334155;' }, formatDuration(c.connected_sec || 0)) ]),
+					E('div', {}, [ E('span', { 'style': 'color: #94a3b8;' }, _('Egress Node') + ': '), E('span', { 'style': 'color: #059669; font-weight: 600;' }, c.target || res.target || '-') ])
+				])
 			]);
 		});
 
-		var content = E('div', { 'style': 'min-width: 680px; max-width: 820px;' }, [
-			E('div', { 'style': 'margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;' }, [
+		var content = E('div', { 'style': 'width: 100%; max-height: 480px; overflow-y: auto; padding: 2px;' }, [
+			E('div', { 'style': 'margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.15);' }, [
 				E('span', { 'style': 'color: #64748b; font-size: 13px;' },
 					_('Slot #%s (%s) · VLAN %s · Target: %s')
 						.replace('%s', num)
@@ -365,20 +389,8 @@ window.openSlotClientsModal = function(sid, num, ssid) {
 					'click': function() { window.openSlotClientsModal(sid, num, ssid); }
 				}, '🔄 ' + _('Refresh'))
 			]),
-			E('table', { 'class': 'table', 'style': 'width: 100%; border-collapse: collapse;' }, [
-				E('thead', {}, [
-					E('tr', {}, [
-						E('th', {}, _('Device / IP')),
-						E('th', {}, _('MAC Address')),
-						E('th', {}, _('Signal Strength (RSSI)')),
-						E('th', {}, _('Phy Bitrate')),
-						E('th', {}, _('Connected Time')),
-						E('th', {}, _('Egress Node'))
-					])
-				]),
-				E('tbody', {}, rows)
-			]),
-			E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end;' }, [
+			E('div', {}, clientCards),
+			E('div', { 'class': 'right', 'style': 'margin-top: 14px; display: flex; justify-content: flex-end;' }, [
 				E('button', { 'class': 'cbi-button', 'click': ui.hideModal }, _('Close'))
 			])
 		]);

@@ -226,9 +226,6 @@ msgstr ""
 msgid "Clearing core and plugin log files..."
 msgstr ""
 
-msgid "Click to use this AP IP address"
-msgstr ""
-
 msgid "Click to view connected client details"
 msgstr ""
 
@@ -325,9 +322,6 @@ msgstr ""
 msgid "Deploying 32-WiFi Architecture"
 msgstr ""
 
-msgid "Device / IP"
-msgstr ""
-
 msgid "Disable"
 msgstr ""
 
@@ -401,6 +395,9 @@ msgid "Failed to reset standard WiFi"
 msgstr ""
 
 msgid "Failed to restore default application library"
+msgstr ""
+
+msgid "Failed to save AP configuration"
 msgstr ""
 
 msgid "Failed to save WiFi slot"
@@ -863,9 +860,6 @@ msgid "Scheduled Restart"
 msgstr ""
 
 msgid "Select"
-msgstr ""
-
-msgid "Signal Strength (RSSI)"
 msgstr ""
 
 msgid "Slot"
