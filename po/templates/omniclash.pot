@@ -49,6 +49,9 @@ msgstr ""
 msgid "4. Logging & Scheduled Restart"
 msgstr ""
 
+msgid "5. Configuration Backup & Disaster Recovery"
+msgstr ""
+
 msgid "AP Host IP"
 msgstr ""
 
@@ -80,6 +83,9 @@ msgid "All settings, providers, groups, and application cards successfully saved
 msgstr ""
 
 msgid "All slots ready"
+msgstr ""
+
+msgid "All subscriptions updated successfully!"
 msgstr ""
 
 msgid "Already on latest version or updated successfully."
@@ -125,6 +131,9 @@ msgid "Are you sure you want to reset standard WiFi to defaults?"
 msgstr ""
 
 msgid "Are you sure you want to restore the full default application library? All custom scenarios and custom rules will be discarded."
+msgstr ""
+
+msgid "Are you sure you want to restore this configuration? Exported at: %s from %s All current slots, proxy groups, and application cards will be overwritten."
 msgstr ""
 
 msgid "Assigned VLAN"
@@ -244,7 +253,13 @@ msgstr ""
 msgid "Compiling template and provider node pool with seamless reload..."
 msgstr ""
 
+msgid "Configuration backup exported successfully!"
+msgstr ""
+
 msgid "Configuration compilation failed. Please check the log for details."
+msgstr ""
+
+msgid "Configuration successfully restored and recompiled!"
 msgstr ""
 
 msgid "Configure Child AP"
@@ -373,10 +388,22 @@ msgstr ""
 msgid "Expand"
 msgstr ""
 
+msgid "Export Backup Archive"
+msgstr ""
+
+msgid "Export or restore the complete configuration (all 32 slots, proxy groups, application card library, and core settings)."
+msgstr ""
+
+msgid "Exporting Backup"
+msgstr ""
+
 msgid "Failed to change service state"
 msgstr ""
 
 msgid "Failed to clear logs"
+msgstr ""
+
+msgid "Failed to export backup"
 msgstr ""
 
 msgid "Failed to fetch slot clients"
@@ -392,6 +419,9 @@ msgid "Failed to reset proxy groups"
 msgstr ""
 
 msgid "Failed to reset standard WiFi"
+msgstr ""
+
+msgid "Failed to restore configuration"
 msgstr ""
 
 msgid "Failed to restore default application library"
@@ -421,6 +451,9 @@ msgstr ""
 msgid "Failed to update WiFi broadcast status"
 msgstr ""
 
+msgid "Failed to update subscriptions"
+msgstr ""
+
 msgid "Fair"
 msgstr ""
 
@@ -431,6 +464,9 @@ msgid "Fake-IP Range"
 msgstr ""
 
 msgid "Fast cache hit, updated %s"
+msgstr ""
+
+msgid "Fetching latest node pools from all subscription providers..."
 msgstr ""
 
 msgid "Fetching live client hardware metrics from child AP..."
@@ -484,6 +520,9 @@ msgstr ""
 msgid "IP address of the child AP on the local network (defaults to 192.168.100.2)."
 msgstr ""
 
+msgid "Import & Restore Backup"
+msgstr ""
+
 msgid "Info (Detailed, Recommended)"
 msgstr ""
 
@@ -497,6 +536,12 @@ msgid "Install Agent on Child AP"
 msgstr ""
 
 msgid "Interval (s)"
+msgstr ""
+
+msgid "Invalid backup file: not an OmniClash backup archive"
+msgstr ""
+
+msgid "Invalid backup file: not valid JSON"
 msgstr ""
 
 msgid "Live Mihomo core log stream (auto-scrolls every 3 seconds)"
@@ -673,6 +718,9 @@ msgstr ""
 msgid "Overwrite Confirmation"
 msgstr ""
 
+msgid "Packaging system configuration, slots, groups, and application cards..."
+msgstr ""
+
 msgid "Paste the token generated on the child AP"
 msgstr ""
 
@@ -782,6 +830,12 @@ msgid "Resetting default proxy groups template..."
 msgstr ""
 
 msgid "Resetting standard WiFi to defaults..."
+msgstr ""
+
+msgid "Restoring Configuration"
+msgstr ""
+
+msgid "Restoring configuration files, recompiling rules, and seamlessly reloading..."
 msgstr ""
 
 msgid "Restoring default application library..."
@@ -958,10 +1012,22 @@ msgstr ""
 msgid "UDP Proxy Mode"
 msgstr ""
 
+msgid "Unknown Date"
+msgstr ""
+
 msgid "Unknown Device"
 msgstr ""
 
 msgid "Unnamed Scenario"
+msgstr ""
+
+msgid "Update All Subscriptions Now"
+msgstr ""
+
+msgid "Updating Subscriptions"
+msgstr ""
+
+msgid "Updating..."
 msgstr ""
 
 msgid "Upserting wireless interfaces on the child AP..."

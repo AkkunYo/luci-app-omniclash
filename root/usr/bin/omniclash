@@ -1211,6 +1211,110 @@ if (action == "compile") {
         clients: clients,
         count: length(clients)
     }));
+} else if (action == "update_providers") {
+    /* 立即强制刷新所有订阅 Provider 的节点池 */
+    let p_res = shell_exec(sprintf("curl -s -H 'Authorization: Bearer %s' %s/providers/proxies", API_SECRET, MIHOMO_API));
+    let p_json = {};
+    try { p_json = json(p_res.out) || {}; } catch(e) {}
+    let provs = p_json.providers || {};
+
+    let updated = [];
+    for (let name in keys(provs)) {
+        let pr = provs[name];
+        if (pr && (pr.vehicleType == "HTTP" || pr.vehicleType == "File")) {
+            let u_res = shell_exec(sprintf("curl -s -o /dev/null -w '%%{http_code}' -X PUT -H 'Authorization: Bearer %s' %s/providers/proxies/%s", API_SECRET, MIHOMO_API, shq(name)));
+            let code = int(trim(u_res.out || "0"));
+            push(updated, { name: name, ok: (code == 204 || code == 200), code: code });
+        }
+    }
+
+    /* 重新获取更新后的节点数 */
+    let p2_res = shell_exec(sprintf("curl -s -H 'Authorization: Bearer %s' %s/providers/proxies", API_SECRET, MIHOMO_API));
+    let p2_json = {};
+    try { p2_json = json(p2_res.out) || {}; } catch(e) {}
+    let provs2 = p2_json.providers || {};
+    let total_nodes = 0;
+    for (let u in updated) {
+        let pr2 = provs2[u.name];
+        if (pr2 && pr2.proxies) {
+            u.node_count = length(pr2.proxies);
+            total_nodes += u.node_count;
+        }
+    }
+
+    print(sprintf("%.J\n", {
+        success: true,
+        updated_count: length(updated),
+        total_nodes: total_nodes,
+        details: updated,
+        msg: sprintf("已成功强制更新 %d 个订阅提供商，共计 %d 个出海节点", length(updated), total_nodes)
+    }));
+} else if (action == "export_backup") {
+    /* 导出全套配置为结构化 JSON 档案 */
+    ensure_defaults();
+    let cfg_raw = fs.readfile("/etc/config/omniclash") || "";
+    let grp_raw = json(fs.readfile(GROUPS_FILE) || "[]");
+    let app_raw = json(fs.readfile(APPS_FILE) || "[]");
+    let wfn_raw = json(fs.readfile(NORMAL_WIFI_FILE) || "[]");
+
+    let hostname = trim(fs.readfile("/proc/sys/kernel/hostname") || "OpenWrt");
+
+    print(sprintf("%.J\n", {
+        success: true,
+        backup: {
+            app: "omniclash",
+            format_version: 1,
+            version: "0.1.3",
+            exported_at: time(),
+            hostname: hostname,
+            data: {
+                config: cfg_raw,
+                groups: (type(grp_raw) == "array") ? grp_raw : [],
+                apps: (type(app_raw) == "array") ? app_raw : [],
+                wifi_normal: (type(wfn_raw) == "array") ? wfn_raw : []
+            }
+        }
+    }));
+} else if (action == "import_backup") {
+    /* 从结构化 JSON 档案恢复全套配置 */
+    let input_raw = fs.readfile("/dev/stdin") || "";
+    let p = null;
+    let parsed_ok = false;
+    try { p = json(input_raw); parsed_ok = true; } catch(e) {}
+
+    let b = p;
+    if (type(b) == "object" && b.backup) b = b.backup;
+    if (type(b) == "object" && b.backup) b = b.backup;
+    if (!parsed_ok || type(b) != "object" || b.app != "omniclash" || type(b.data) != "object") {
+        print("{\"success\":false,\"error\":\"备份档案格式非法，必须为 OmniClash 导出的 JSON 备份文件\"}\n");
+        return;
+    }
+
+    let d = b.data;
+    if (type(d.config) != "string" || type(d.groups) != "array" || type(d.apps) != "array") {
+        print("{\"success\":false,\"error\":\"备份数据项缺失或损坏 (缺少 config/groups/apps)\"}\n");
+        return;
+    }
+
+    /* 恢复前在本地留一份快照以防误恢复 */
+    let bk_dir = "/etc/omniclash/backup_before_restore";
+    shell_exec(sprintf("mkdir -p %s && cp -f /etc/config/omniclash %s/omniclash.uci 2>/dev/null", bk_dir, bk_dir));
+    shell_exec(sprintf("cp -f %s %s/groups.json 2>/dev/null", GROUPS_FILE, bk_dir));
+    shell_exec(sprintf("cp -f %s %s/apps.json 2>/dev/null", APPS_FILE, bk_dir));
+    shell_exec(sprintf("cp -f %s %s/wifi_normal.json 2>/dev/null", NORMAL_WIFI_FILE, bk_dir));
+
+    fs.writefile("/etc/config/omniclash", d.config);
+    fs.writefile(GROUPS_FILE, sprintf("%.J\n", d.groups));
+    fs.writefile(APPS_FILE, sprintf("%.J\n", d.apps));
+    if (type(d.wifi_normal) == "array") {
+        fs.writefile(NORMAL_WIFI_FILE, sprintf("%.J\n", d.wifi_normal));
+    }
+
+    uci = require("uci").cursor();
+    compile_config();
+    shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
+
+    print("{\"success\":true,\"msg\":\"全套配置已成功恢复并重新编译合流生效！\"}\n");
 } else if (action == "clear_logs") {
     fs.writefile("/var/log/omniclash/core.log", "");
     fs.writefile("/var/log/omniclash/app.log", "");

@@ -53,6 +53,28 @@ var callCompileReload = rpc.declare({
 	method: 'compile_reload'
 });
 
+var callUpdateProviders = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'update_providers'
+});
+
+var callExportBackup = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'export_backup'
+});
+
+var callImportBackup = rpc.declare({
+	object: 'luci.omniclash',
+	method: 'import_backup',
+	params: [ 'backup' ]
+});
+
+function ensureRpcOk(res, fallbackMsg) {
+	if (res && res.success === false)
+		throw new Error(res.error || fallbackMsg || _('Operation failed'));
+	return res;
+}
+
 return view.extend({
 	load: function() {
 		return Promise.all([
@@ -182,6 +204,96 @@ return view.extend({
 				if (intEl) p.interval = intEl.value.trim();
 			});
 		}
+
+		window.updateAllSubscriptionsNow = function() {
+			var btn = document.getElementById('btn_update_providers');
+			if (btn) { btn.disabled = true; btn.innerText = _('Updating...'); }
+			ui.showModal(_('Updating Subscriptions'), [
+				E('p', { 'class': 'spinning' }, _('Fetching latest node pools from all subscription providers...'))
+			]);
+
+			callUpdateProviders().then(function(res) {
+				if (btn) { btn.disabled = false; btn.innerText = '🔄 ' + _('Update All Subscriptions Now'); }
+				ui.hideModal();
+				ensureRpcOk(res, _('Failed to update subscriptions'));
+				ui.addNotification(null, E('p', {}, '✅ ' + (res.msg || _('All subscriptions updated successfully!'))), 'success');
+			}).catch(function(err) {
+				if (btn) { btn.disabled = false; btn.innerText = '🔄 ' + _('Update All Subscriptions Now'); }
+				ui.hideModal();
+				ui.addNotification(null, E('p', {}, err.message), 'error');
+			});
+		};
+
+		window.exportOmniBackup = function() {
+			ui.showModal(_('Exporting Backup'), [
+				E('p', { 'class': 'spinning' }, _('Packaging system configuration, slots, groups, and application cards...'))
+			]);
+
+			callExportBackup().then(function(res) {
+				ui.hideModal();
+				ensureRpcOk(res, _('Failed to export backup'));
+				var b = res.backup || {};
+				var jsonStr = JSON.stringify(b, null, 2);
+				var blob = new Blob([jsonStr], { type: 'application/json' });
+				var url = URL.createObjectURL(blob);
+				var a = document.createElement('a');
+				var dateStr = (new Date()).toISOString().slice(0, 10);
+				a.href = url;
+				a.download = 'omniclash-backup-' + dateStr + '.json';
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+				ui.addNotification(null, E('p', {}, '✅ ' + _('Configuration backup exported successfully!')), 'success');
+			}).catch(function(err) {
+				ui.hideModal();
+				ui.addNotification(null, E('p', {}, err.message), 'error');
+			});
+		};
+
+		window.handleBackupFileSelect = function(ev) {
+			var file = ev.target.files ? ev.target.files[0] : null;
+			if (!file) return;
+
+			var reader = new FileReader();
+			reader.onload = function(e) {
+				var content = e.target.result;
+				var parsed = null;
+				try { parsed = JSON.parse(content); } catch (err) {
+					ui.addNotification(null, E('p', {}, _('Invalid backup file: not valid JSON')), 'error');
+					return;
+				}
+
+				if (!parsed || parsed.app !== 'omniclash' || !parsed.data) {
+					ui.addNotification(null, E('p', {}, _('Invalid backup file: not an OmniClash backup archive')), 'error');
+					return;
+				}
+
+				var dateStr = parsed.exported_at ? (new Date(parsed.exported_at * 1000)).toLocaleString() : _('Unknown Date');
+				var hostStr = parsed.hostname || '-';
+
+				if (!confirm(_('Are you sure you want to restore this configuration?\nExported at: %s from %s\nAll current slots, proxy groups, and application cards will be overwritten.').replace('%s', dateStr).replace('%s', hostStr))) {
+					ev.target.value = '';
+					return;
+				}
+
+				ui.showModal(_('Restoring Configuration'), [
+					E('p', { 'class': 'spinning' }, _('Restoring configuration files, recompiling rules, and seamlessly reloading...'))
+				]);
+
+				callImportBackup(parsed).then(function(res) {
+					ui.hideModal();
+					ensureRpcOk(res, _('Failed to restore configuration'));
+					ui.addNotification(null, E('p', {}, '✅ ' + (res.msg || _('Configuration successfully restored and recompiled!'))), 'success');
+					setTimeout(function() { window.location.reload(); }, 1200);
+				}).catch(function(err) {
+					ui.hideModal();
+					ui.addNotification(null, E('p', {}, err.message), 'error');
+				});
+			};
+			reader.readAsText(file);
+			ev.target.value = '';
+		};
 
 		// ---------------- 2. Proxy Groups 策略组渲染与增删 ----------------
 		function renderGroupRows() {
@@ -866,8 +978,37 @@ return view.extend({
 							E('span', { 'style': 'color: #94a3b8; margin-left: 8px;' }, _('(Default: 0 3 * * * Daily at 03:00)'))
 						])
 					])
-				])
-			]),
+				]),
+
+					E('div', { 'class': 'cbi-section' }, [
+						E('h3', {}, _('5. Configuration Backup & Disaster Recovery')),
+						E('p', { 'style': 'margin-bottom: 12px; color: #64748b; font-size: 13px;' },
+							_('Export or restore the complete configuration (all 32 slots, proxy groups, application card library, and core settings).')
+						),
+						E('div', { 'style': 'display: flex; gap: 10px; align-items: center; flex-wrap: wrap;' }, [
+							E('button', {
+								'type': 'button',
+								'class': 'cbi-button cbi-button-action',
+								'click': window.exportOmniBackup
+							}, '📦 ' + _('Export Backup Archive')),
+							E('button', {
+								'type': 'button',
+								'class': 'cbi-button cbi-button-apply',
+								'click': function() {
+									var fi = document.getElementById('omni_backup_file_input');
+									if (fi) fi.click();
+								}
+							}, '📥 ' + _('Import & Restore Backup')),
+							E('input', {
+								'type': 'file',
+								'id': 'omni_backup_file_input',
+								'accept': '.json',
+								'style': 'display: none;',
+								'change': window.handleBackupFileSelect
+							})
+						])
+					])
+				]),
 
 			// 子 Tab 2: Provider 集
 			E('div', { 'id': 'pane_providers', 'class': 'subtab-pane', 'style': 'display: none;' }, [
@@ -888,11 +1029,19 @@ return view.extend({
 						]),
 						E('tbody', { 'id': 'omniclash_providers_tbody' })
 					]),
-					E('button', {
-						'type': 'button',
-						'class': 'cbi-button cbi-button-action',
-						'click': function() { addProvider(); }
-					}, _('+ Add Provider'))
+					E('div', { 'style': 'display: flex; gap: 10px; align-items: center; flex-wrap: wrap;' }, [
+						E('button', {
+							'type': 'button',
+							'class': 'cbi-button cbi-button-action',
+							'click': function() { addProvider(); }
+						}, _('+ Add Provider')),
+						E('button', {
+							'type': 'button',
+							'id': 'btn_update_providers',
+							'class': 'cbi-button cbi-button-apply',
+							'click': window.updateAllSubscriptionsNow
+						}, '🔄 ' + _('Update All Subscriptions Now'))
+					])
 				])
 			]),
 

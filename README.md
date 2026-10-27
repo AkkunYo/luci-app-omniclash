@@ -54,8 +54,8 @@ Following official OpenWrt ecosystem packaging standards, the base package `luci
 * **Overview**: Core status badge, continuous uptime, start/stop/restart/reload buttons, Zashboard launch, and one-click core update. App Version and Core Version are clearly separated.
 * **WiFi AP Matrix**: Native data binding with 10-minute instant local cache and manual cache-bypass refresh.
 * **Subscription & Routing**:
-  * `⚙️ Core Settings`: TUN mode/stack, port customization (7890/1080), DNS mode, core log level, cron scheduled restart.
-  * `📦 Provider Subscriptions`: Editable inline table for provider URLs, tags, and prefixes.
+  * `⚙️ Core Settings`: TUN mode/stack, port customization (7890/1080), DNS mode, core log level, cron scheduled restart, **one-click full backup export and disaster recovery restore**.
+  * `📦 Provider Subscriptions`: Editable inline table for provider URLs, tags, and prefixes, **one-click manual update of all subscription providers**.
   * `🎯 Proxy Groups`: High-contrast overview of all 42 structured proxy groups.
   * `🔀 Application Routing Cards`: Three-tier card stream — a read-only physical-line isolation banner, the reorderable scenario cards (egress dropdown, enable toggle, expandable built-in + custom rules, new-card modal, one-click restore), and a baseline zone for the CN-direct and terminal MATCH targets.
   * `📄 Running Config (Read-only)`: Real-time viewer and one-click copy of the compiled `/etc/omniclash/run/config.yaml`.

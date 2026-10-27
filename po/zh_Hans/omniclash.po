@@ -54,6 +54,9 @@ msgstr "32-WiFi 矩阵已成功恢复为默认配置！"
 msgid "4. Logging & Scheduled Restart"
 msgstr "4. 核心日志与定时守护 (对标 Nikki 日志与 Cron 能力)"
 
+msgid "5. Configuration Backup & Disaster Recovery"
+msgstr "5. 配置备份与灾难恢复"
+
 msgid "AP Host IP"
 msgstr "子 AP IP 地址"
 
@@ -86,6 +89,9 @@ msgstr "全量设置、Provider 订阅、策略组与应用卡片已全部保存
 
 msgid "All slots ready"
 msgstr "已全部满额就绪"
+
+msgid "All subscriptions updated successfully!"
+msgstr "所有订阅已成功更新！"
 
 msgid "Already on latest version or updated successfully."
 msgstr "当前已是最新版本或已成功更新。"
@@ -131,6 +137,9 @@ msgstr "确定要将标准普通 WiFi 恢复为默认配置吗？"
 
 msgid "Are you sure you want to restore the full default application library? All custom scenarios and custom rules will be discarded."
 msgstr "确定要恢复全套默认应用库吗？\n所有自定义场景与自定义规则都将被丢弃。"
+
+msgid "Are you sure you want to restore this configuration? Exported at: %s from %s All current slots, proxy groups, and application cards will be overwritten."
+msgstr "确定要从该备份文件恢复全套配置吗？\n导出时间: %s (来自 %s)\n当前所有槽位、策略组和应用卡片都将被完整替换。"
 
 msgid "Assigned VLAN"
 msgstr "分配独立 VLAN"
@@ -249,8 +258,14 @@ msgstr "正在合流编译"
 msgid "Compiling template and provider node pool with seamless reload..."
 msgstr "正在执行模板+节点池合流并平滑热重载..."
 
+msgid "Configuration backup exported successfully!"
+msgstr "配置备份已成功导出！"
+
 msgid "Configuration compilation failed. Please check the log for details."
 msgstr "配置编译失败，请查看日志排查原因。"
+
+msgid "Configuration successfully restored and recompiled!"
+msgstr "配置已成功恢复并重新编译生效！"
 
 msgid "Configure Child AP"
 msgstr "配置子 AP"
@@ -378,11 +393,23 @@ msgstr "极强"
 msgid "Expand"
 msgstr "展开"
 
+msgid "Export Backup Archive"
+msgstr "导出配置备份包"
+
+msgid "Export or restore the complete configuration (all 32 slots, proxy groups, application card library, and core settings)."
+msgstr "导出或恢复全套配置（包含全部 32 槽位、策略组、应用场景卡片库以及核心设置）。"
+
+msgid "Exporting Backup"
+msgstr "正在导出备份"
+
 msgid "Failed to change service state"
 msgstr "服务状态切换失败"
 
 msgid "Failed to clear logs"
 msgstr "清空日志失败"
+
+msgid "Failed to export backup"
+msgstr "导出备份失败"
 
 msgid "Failed to fetch slot clients"
 msgstr "获取槽位客户端画像失败"
@@ -398,6 +425,9 @@ msgstr "重置策略组失败"
 
 msgid "Failed to reset standard WiFi"
 msgstr "重置标准 WiFi 失败"
+
+msgid "Failed to restore configuration"
+msgstr "恢复配置失败"
 
 msgid "Failed to restore default application library"
 msgstr "恢复默认应用库失败"
@@ -426,6 +456,9 @@ msgstr "同步到子 AP 失败"
 msgid "Failed to update WiFi broadcast status"
 msgstr "更新 WiFi 广播状态失败"
 
+msgid "Failed to update subscriptions"
+msgstr "更新订阅失败"
+
 msgid "Fair"
 msgstr "一般"
 
@@ -437,6 +470,9 @@ msgstr "Fake-IP 网段范围"
 
 msgid "Fast cache hit, updated %s"
 msgstr "极速缓存已命中，更新于 %s"
+
+msgid "Fetching latest node pools from all subscription providers..."
+msgstr "正在从所有订阅提供商拉取最新节点池..."
 
 msgid "Fetching live client hardware metrics from child AP..."
 msgstr "正在从子 AP 采集客户端物理层实时指标..."
@@ -489,6 +525,9 @@ msgstr "极速性能模式 (全功能与策略组)"
 msgid "IP address of the child AP on the local network (defaults to 192.168.100.2)."
 msgstr "子 AP 在局域网的 IP 地址 (默认 192.168.100.2)。"
 
+msgid "Import & Restore Backup"
+msgstr "导入备份包恢复"
+
 msgid "Info (Detailed, Recommended)"
 msgstr "Info (正常详细，推荐)"
 
@@ -503,6 +542,12 @@ msgstr "一键安装 Agent 到子 AP"
 
 msgid "Interval (s)"
 msgstr "更新周期(秒)"
+
+msgid "Invalid backup file: not an OmniClash backup archive"
+msgstr "备份文件非法：非 OmniClash 导出的备份档案"
+
+msgid "Invalid backup file: not valid JSON"
+msgstr "备份文件非法：非有效 JSON 格式"
 
 msgid "Live Mihomo core log stream (auto-scrolls every 3 seconds)"
 msgstr "实时监听 Mihomo 核心运行日志流（每 3 秒自动滚动更新）"
@@ -678,6 +723,9 @@ msgstr "仍要覆盖"
 msgid "Overwrite Confirmation"
 msgstr "覆盖确认"
 
+msgid "Packaging system configuration, slots, groups, and application cards..."
+msgstr "正在打包系统配置、WiFi 槽位、策略组与应用卡片..."
+
 msgid "Paste the token generated on the child AP"
 msgstr "粘贴在子 AP 上生成的令牌"
 
@@ -788,6 +836,12 @@ msgstr "正在恢复默认策略组模板..."
 
 msgid "Resetting standard WiFi to defaults..."
 msgstr "正在恢复默认标准普通 WiFi..."
+
+msgid "Restoring Configuration"
+msgstr "正在恢复配置"
+
+msgid "Restoring configuration files, recompiling rules, and seamlessly reloading..."
+msgstr "正在恢复配置文件、重新编译合流规则并无缝重载..."
 
 msgid "Restoring default application library..."
 msgstr "正在恢复默认应用库..."
@@ -963,11 +1017,23 @@ msgstr "正在切换无线广播状态..."
 msgid "UDP Proxy Mode"
 msgstr "UDP 代理模式"
 
+msgid "Unknown Date"
+msgstr "未知时间"
+
 msgid "Unknown Device"
 msgstr "未知设备"
 
 msgid "Unnamed Scenario"
 msgstr "未命名场景"
+
+msgid "Update All Subscriptions Now"
+msgstr "立即更新全部订阅节点"
+
+msgid "Updating Subscriptions"
+msgstr "正在更新订阅"
+
+msgid "Updating..."
+msgstr "正在更新..."
 
 msgid "Upserting wireless interfaces on the child AP..."
 msgstr "正在子 AP 上创建/更新无线接口..."

@@ -343,6 +343,22 @@ const methods = {
 			return engine_call('get_slot_clients', req.args || {});
 		}
 	},
+	update_providers: {
+		call: function() {
+			return engine_call('update_providers');
+		}
+	},
+	export_backup: {
+		call: function() {
+			return engine_call('export_backup');
+		}
+	},
+	import_backup: {
+		args: { backup: {} },
+		call: function(req) {
+			return engine_call('import_backup', req.args || {});
+		}
+	},
 	compile_reload: {
 		call: function() {
 			let comp = engine_call('compile');
