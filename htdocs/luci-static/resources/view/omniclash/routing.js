@@ -587,13 +587,13 @@ return view.extend({
 				'type': 'text',
 				'class': 'cbi-input-text',
 				'id': 'new_app_name',
-				'style': 'width: 100%;',
+				'style': 'width: 100%; box-sizing: border-box;',
 				'placeholder': _('e.g. Company Office')
 			});
 			var typeSelect = E('select', {
 				'class': 'cbi-input-select',
 				'id': 'new_app_type',
-				'style': 'width: 100%;'
+				'style': 'width: 100%; box-sizing: border-box;'
 			}, appRuleTypes.map(function(t) {
 				return E('option', { 'value': t }, t);
 			}));
@@ -601,36 +601,34 @@ return view.extend({
 				'type': 'text',
 				'class': 'cbi-input-text',
 				'id': 'new_app_payload',
-				'style': 'width: 100%; font-family: monospace;',
+				'style': 'width: 100%; box-sizing: border-box; font-family: monospace;',
 				'placeholder': _('e.g. example.com')
 			});
 			var targetSelect = E('select', {
 				'class': 'cbi-input-select',
 				'id': 'new_app_target',
-				'style': 'width: 100%;'
+				'style': 'width: 100%; box-sizing: border-box;'
 			}, getTargetOptions().map(function(t) {
 				return E('option', { 'value': t, 'selected': t === '🚀 节点选择' ? 'selected' : null }, t);
 			}));
 
-			ui.showModal(_('New Scenario Card'), [
-				E('div', { 'class': 'cbi-value' }, [
-					E('label', { 'class': 'cbi-value-title' }, _('Scenario Name')),
-					E('div', { 'class': 'cbi-value-field' }, [ nameInput ])
+			ui.showModal(_('New Scenario Card'), E('div', { 'style': 'width: 100%; box-sizing: border-box; padding: 4px 0;' }, [
+				E('div', { 'style': 'margin-bottom: 14px;' }, [
+					E('label', { 'style': 'display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;' }, _('Scenario Name')),
+					nameInput
 				]),
-				E('div', { 'class': 'cbi-value' }, [
-					E('label', { 'class': 'cbi-value-title' }, _('Rule Type')),
-					E('div', { 'class': 'cbi-value-field' }, [ typeSelect ])
+				E('div', { 'style': 'margin-bottom: 14px;' }, [
+					E('label', { 'style': 'display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;' }, _('Rule Type')),
+					typeSelect
 				]),
-				E('div', { 'class': 'cbi-value' }, [
-					E('label', { 'class': 'cbi-value-title' }, _('Initial Domain / IP')),
-					E('div', { 'class': 'cbi-value-field' }, [
-						payloadInput,
-						E('div', { 'class': 'cbi-value-description' }, _('Optional. Leave blank to create a card with only an egress target.'))
-					])
+				E('div', { 'style': 'margin-bottom: 14px;' }, [
+					E('label', { 'style': 'display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;' }, _('Initial Domain / IP')),
+					payloadInput,
+					E('div', { 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' }, _('Optional. Leave blank to create a card with only an egress target.'))
 				]),
-				E('div', { 'class': 'cbi-value' }, [
-					E('label', { 'class': 'cbi-value-title' }, _('Egress Target')),
-					E('div', { 'class': 'cbi-value-field' }, [ targetSelect ])
+				E('div', { 'style': 'margin-bottom: 16px;' }, [
+					E('label', { 'style': 'display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;' }, _('Egress Target')),
+					targetSelect
 				]),
 				E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;' }, [
 					E('button', { 'type': 'button', 'class': 'cbi-button', 'click': ui.hideModal }, _('Cancel')),
@@ -669,7 +667,7 @@ return view.extend({
 						}
 					}, _('Create'))
 				])
-			]);
+			]));
 		};
 
 		window.resetDefaultApps = function() {

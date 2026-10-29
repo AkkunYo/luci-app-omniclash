@@ -406,71 +406,73 @@ window.openApConfigModal = function() {
 	var curHost = uci.get('omniclash', 'config', 'ap_host') || '192.168.100.2';
 	var curToken = uci.get('omniclash', 'config', 'ap_token') || '';
 
-	var modalContent = E('div', { 'class': 'cbi-map', 'style': 'margin: 0; padding: 6px 0;' }, [
-		E('div', { 'class': 'cbi-section' }, [
-			E('div', {
-				'style': 'background: rgba(59, 130, 246, 0.08); border-left: 3px solid #3b82f6; padding: 10px 12px; border-radius: 4px; margin-bottom: 16px; font-size: 12px;'
-			}, [
-				E('div', { 'style': 'font-weight: 600; color: #2563eb; margin-bottom: 4px;' }, '⚡ ' + _('Install Agent on Child AP')),
-				E('div', { 'style': 'color: #64748b; margin-bottom: 6px;' }, _('Run this command in the child AP terminal to install directly from this router:')),
-				E('code', {
-					'style': 'display: block; padding: 6px 8px; background: rgba(0, 0, 0, 0.05); border-radius: 4px; font-family: monospace; font-size: 11px; user-select: all; word-break: break-all; color: #0f172a;'
-				}, 'wget -qO /tmp/agent.ipk http://' + (window.location.hostname || '192.168.100.1') + '/omniclash-agent.ipk && opkg install /tmp/agent.ipk')
-			]),
-			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 14px; gap: 12px;' }, [
-				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 6px;' }, _('AP Host IP')),
-				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
-					E('div', { 'style': 'display: flex; gap: 8px; align-items: center; max-width: 480px;' }, [
-						E('input', {
-							'type': 'text',
-							'id': 'modal_ap_host',
-							'class': 'cbi-input-text',
-							'style': 'flex: 1; font-family: monospace;',
-							'value': curHost,
-							'placeholder': '192.168.100.2'
-						}),
-						E('button', {
-							'type': 'button',
-							'id': 'modal_btn_discover',
-							'class': 'cbi-button',
-							'style': 'white-space: nowrap;',
-							'click': window.discoverChildAps
-						}, '🔍 ' + _('Auto Scan AP'))
-					]),
-					E('div', { 'id': 'modal_discovered_devices' }),
-					E('div', { 'class': 'cbi-value-description', 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' },
-						_('IP address of the child AP on the local network (defaults to 192.168.100.2).'))
-				])
-			]),
-			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 14px; gap: 12px;' }, [
-				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 6px;' }, _('Agent Token')),
-				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
-					E('input', {
-						'type': 'text',
-						'id': 'modal_ap_token',
-						'class': 'cbi-input-text',
-						'style': 'width: 100%; max-width: 340px; font-family: monospace; font-size: 12px;',
-						'value': curToken,
-						'placeholder': _('Paste the token generated on the child AP')
-					}),
-					E('div', { 'class': 'cbi-value-description', 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' },
-						_('Read it on the child AP with: cat /etc/omniclash-agent/token'))
-				])
-			]),
-			E('div', { 'class': 'cbi-value', 'style': 'display: flex; align-items: flex-start; margin-bottom: 8px; gap: 12px;' }, [
-				E('label', { 'class': 'cbi-value-title', 'style': 'width: 140px; min-width: 140px; text-align: right; padding-right: 12px; margin: 0; font-weight: 500; font-size: 13px; padding-top: 4px;' }, _('Channel Status')),
-				E('div', { 'class': 'cbi-value-field', 'style': 'flex: 1; padding: 0;' }, [
-					E('div', { 'id': 'modal_agent_status', 'style': 'font-size: 13px; min-height: 20px; line-height: 1.5; color: #64748b; margin-bottom: 6px;' }, _('Not probed yet')),
-					E('button', {
-						'type': 'button',
-						'id': 'modal_btn_agent_probe',
-						'class': 'cbi-button',
-						'click': window.refreshAgentStatus
-					}, '🔌 ' + _('Test Connection'))
-				])
-			])
+	var modalContent = E('div', { 'style': 'width: 100%; box-sizing: border-box; padding: 4px 0;' }, [
+		// 1. 顶部单行免中转安装指导框
+		E('div', {
+			'style': 'background: rgba(59, 130, 246, 0.08); border-left: 4px solid #3b82f6; padding: 10px 14px; border-radius: 4px; margin-bottom: 18px; font-size: 12px;'
+		}, [
+			E('div', { 'style': 'font-weight: 600; color: #2563eb; margin-bottom: 4px;' }, '⚡ ' + _('Install Agent on Child AP')),
+			E('div', { 'style': 'color: #64748b; margin-bottom: 6px;' }, _('Run this command in the child AP terminal to install directly from this router:')),
+			E('code', {
+				'style': 'display: block; padding: 6px 10px; background: rgba(0, 0, 0, 0.06); border-radius: 4px; font-family: monospace; font-size: 11px; user-select: all; word-break: break-all; color: #0f172a;'
+			}, 'wget -qO /tmp/agent.ipk http://' + (window.location.hostname || '192.168.100.1') + '/omniclash-agent.ipk && opkg install /tmp/agent.ipk')
 		]),
-		E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;' }, [
+
+		// 2. 表单：上下堆叠式 (Stacked Layout)
+		E('div', { 'style': 'margin-bottom: 14px;' }, [
+			E('label', { 'style': 'display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;' }, _('AP Host IP')),
+			E('div', { 'style': 'display: flex; gap: 8px; align-items: center;' }, [
+				E('input', {
+					'type': 'text',
+					'id': 'modal_ap_host',
+					'class': 'cbi-input-text',
+					'style': 'flex: 1; min-width: 0; box-sizing: border-box; font-family: monospace;',
+					'value': curHost,
+					'placeholder': '192.168.100.2'
+				}),
+				E('button', {
+					'type': 'button',
+					'id': 'modal_btn_discover',
+					'class': 'cbi-button',
+					'style': 'white-space: nowrap; padding: 0 12px; height: 34px; line-height: 34px; flex-shrink: 0;',
+					'click': window.discoverChildAps
+				}, '🔍 ' + _('Auto Scan AP'))
+			]),
+			E('div', { 'id': 'modal_discovered_devices' }),
+			E('div', { 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' },
+				_('IP address of the child AP on the local network (defaults to 192.168.100.2).'))
+		]),
+
+		E('div', { 'style': 'margin-bottom: 14px;' }, [
+			E('label', { 'style': 'display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;' }, _('Agent Token')),
+			E('input', {
+				'type': 'text',
+				'id': 'modal_ap_token',
+				'class': 'cbi-input-text',
+				'style': 'width: 100%; box-sizing: border-box; font-family: monospace; font-size: 12px;',
+				'value': curToken,
+				'placeholder': _('Paste the token generated on the child AP')
+			}),
+			E('div', { 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' },
+				_('Read it on the child AP with: cat /etc/omniclash-agent/token'))
+		]),
+
+		E('div', { 'style': 'margin-bottom: 16px; padding: 12px 14px; background: rgba(0, 0, 0, 0.02); border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.2);' }, [
+			E('div', { 'style': 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;' }, [
+				E('label', { 'style': 'font-weight: 600; font-size: 13px; color: #1e293b; margin: 0;' }, _('Channel Status')),
+				E('button', {
+					'type': 'button',
+					'id': 'modal_btn_agent_probe',
+					'class': 'cbi-button',
+					'style': 'padding: 0 10px; font-size: 12px; margin: 0;',
+					'click': window.refreshAgentStatus
+				}, '🔌 ' + _('Test Connection'))
+			]),
+			E('div', { 'id': 'modal_agent_status', 'style': 'font-size: 13px; min-height: 20px; line-height: 1.5; color: #64748b;' }, _('Not probed yet'))
+		]),
+
+		// 3. 底部操作按钮栏
+		E('div', { 'class': 'right', 'style': 'margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px;' }, [
 			E('button', {
 				'type': 'button',
 				'class': 'cbi-button',
