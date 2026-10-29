@@ -169,6 +169,8 @@ cat << 'POST' > "$BUILD_DIR/control/postinst"
 	[ -f /etc/omniclash/groups.json ] || cp -f /etc/omniclash/groups_default.json /etc/omniclash/groups.json
 	[ -f /etc/omniclash/apps.json ] || cp -f /etc/omniclash/apps_default.json /etc/omniclash/apps.json
 	[ -f /etc/omniclash/wifi_normal.json ] || cp -f /etc/omniclash/wifi_normal_default.json /etc/omniclash/wifi_normal.json
+	# 已有用户库时，把默认库新增的卡片/内置规则无损合并进去（不改用户的走向与自定义规则）
+	/usr/bin/omniclash merge_apps >/dev/null 2>&1 || true
 
 	# 3. 权限与系统守护进程启动
 	rm -f /tmp/luci-indexcache /tmp/luci-modulecache

@@ -538,6 +538,48 @@ function ensure_defaults() {
     }
 }
 
+/* 升级时把默认库新增的卡片与内置规则无损合并进用户的 apps.json。
+ * 只做"补缺"：用户改过的走向、自定义规则、启用状态和卡片顺序都原样保留；
+ * 新卡片插入到其在默认库中前一张卡片之后（找不到就放最前）。 */
+function merge_default_apps() {
+    let def = null, cur = null;
+    try { def = json(fs.readfile(APPS_DEF_FILE) || "[]"); } catch(e) { def = null; }
+    try { cur = json(fs.readfile(APPS_FILE) || "[]"); } catch(e) { cur = null; }
+    if (type(def) != "array" || type(cur) != "array") return 0;
+
+    let changed = 0;
+    let index = {};
+    for (let a in cur) if (type(a) == "object" && a.id) index[a.id] = a;
+
+    let prev_id = null;
+    for (let d in def) {
+        if (type(d) != "object" || !d.id) continue;
+        let u = index[d.id];
+        if (!u) {
+            let pos = 0;
+            if (prev_id) {
+                for (let i = 0; i < length(cur); i++)
+                    if (type(cur[i]) == "object" && cur[i].id == prev_id) { pos = i + 1; break; }
+            }
+            splice(cur, pos, 0, d);
+            index[d.id] = d;
+            changed++;
+        } else {
+            if (type(u.builtin_rules) != "array") u.builtin_rules = [];
+            for (let r in (d.builtin_rules || [])) {
+                let found = false;
+                for (let x in u.builtin_rules)
+                    if (type(x) == "object" && x.type == r.type && x.payload == r.payload) { found = true; break; }
+                if (!found) { push(u.builtin_rules, r); changed++; }
+            }
+        }
+        prev_id = d.id;
+    }
+
+    if (changed) fs.writefile(APPS_FILE, sprintf("%.J\n", cur));
+    return changed;
+}
+
 function get_all_slots() {
     let slots = [];
     uci.foreach("omniclash", "slot", function(s) {
@@ -744,7 +786,28 @@ function compile_config() {
     ];
     let tier2_global = [];
     let tier3_split = [];
-    let tier4_ad = [];
+    /* 层级 4 广告拦截：迁移到卡片流时曾被置空导致整层失效，这里恢复原规则表内容 */
+    let tier4_ad = [
+        "  - DOMAIN-SUFFIX,bxcdn.net,REJECT",
+        "  - DOMAIN-KEYWORD,-ad-sign.byteimg.com,REJECT",
+        "  - DOMAIN-SUFFIX,pangle.io,REJECT",
+        "  - DOMAIN-SUFFIX,pangolin-sdk-toutiao.com,REJECT",
+        "  - DOMAIN-SUFFIX,pangolin-sdk-toutiao-b.com,REJECT",
+        "  - DOMAIN-SUFFIX,pglstatp-toutiao.com,REJECT",
+        "  - DOMAIN-SUFFIX,volcsirius.com,REJECT",
+        "  - DOMAIN-SUFFIX,ulogs.umeng.com,REJECT",
+        "  - DOMAIN-SUFFIX,alog.umeng.com,REJECT",
+        "  - DOMAIN-SUFFIX,gdt.qq.com,REJECT",
+        "  - DOMAIN-SUFFIX,e.qq.com,REJECT",
+        "  - DOMAIN-SUFFIX,mi.gdt.qq.com,REJECT",
+        "  - DOMAIN-SUFFIX,tmead.y.qq.com,REJECT",
+        "  - DOMAIN-SUFFIX,adkwai.com,REJECT",
+        "  - DOMAIN-SUFFIX,e.kuaishou.com,REJECT",
+        "  - DOMAIN-SUFFIX,mobads.baidu.com,REJECT",
+        "  - DOMAIN-SUFFIX,cpro.baidustatic.com,REJECT",
+        "  - RULE-SET,reject_ad,REJECT",
+        "  - GEOSITE,category-ads-all,REJECT"
+    ];
     let tier5_app = [];
     let tier6_app_pool = [];
     let tier7_match = [];
@@ -795,6 +858,7 @@ function compile_config() {
         }
     }
 
+    push(tier7_match, "  - GEOSITE,geolocation-!cn,🚀 节点选择");
     push(tier7_match, sprintf("  - GEOSITE,cn,%s", cn_target));
     push(tier7_match, sprintf("  - GEOIP,cn,%s,no-resolve", cn_target));
     push(tier7_match, sprintf("  - MATCH,%s", final_target));
@@ -1211,6 +1275,9 @@ if (action == "compile") {
         clients: clients,
         count: length(clients)
     }));
+} else if (action == "merge_apps") {
+    let n = merge_default_apps();
+    print(sprintf("{\"success\":true,\"merged\":%d}\n", n));
 } else if (action == "update_providers") {
     /* 立即强制刷新所有订阅 Provider 的节点池 */
     let p_res = shell_exec(sprintf("curl -s -H 'Authorization: Bearer %s' %s/providers/proxies", API_SECRET, MIHOMO_API));

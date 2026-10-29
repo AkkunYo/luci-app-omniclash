@@ -1,5 +1,74 @@
 [
   {
+    "id": "special_direct",
+    "name": "🇨🇳 特殊直连",
+    "desc": "需要可切换直连/代理的特定国内站点",
+    "target": "🇨🇳 特殊直连",
+    "builtin_rules": [
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "hybgzs.com"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "custom_direct",
+    "name": "🟢 自定义直连",
+    "desc": "加速镜像与工具站点强制直连",
+    "target": "DIRECT",
+    "builtin_rules": [
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "mob.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "ghfast.top"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "gh-proxy.org"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "spaceship.com"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "my_sites",
+    "name": "🌏 我的网站",
+    "desc": "个人站点与自建服务",
+    "target": "🌏 我的网站",
+    "builtin_rules": [
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "hidns.vip"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "openapi.cfd"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "zkyml.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "945395.xyz"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
     "id": "ai",
     "name": "🤖 AI 场景服务",
     "desc": "ChatGPT / Claude / OpenAI / Anthropic 等生成式 AI 接口",
@@ -16,6 +85,10 @@
       {
         "type": "GEOSITE",
         "payload": "anthropic"
+      },
+      {
+        "type": "GEOIP",
+        "payload": "ai"
       }
     ],
     "custom_rules": [],
@@ -45,6 +118,10 @@
     "builtin_rules": [
       {
         "type": "GEOSITE",
+        "payload": "netflix"
+      },
+      {
+        "type": "GEOIP",
         "payload": "netflix"
       }
     ],
@@ -78,7 +155,59 @@
     "target": "🚀 节点选择",
     "builtin_rules": [
       {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "services.googleapis.cn"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "googleapis.cn"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "google.cn"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "gstatic.cn"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "g.cn"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "gvt1.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "gvt2.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "gvt3.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "googleusercontent.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "play.google.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "android.clients.google.com"
+      },
+      {
+        "type": "DOMAIN-KEYWORD",
+        "payload": "xn--ngstr-lra8j"
+      },
+      {
         "type": "GEOSITE",
+        "payload": "google"
+      },
+      {
+        "type": "GEOIP",
         "payload": "google"
       }
     ],
@@ -110,6 +239,10 @@
       {
         "type": "GEOSITE",
         "payload": "biliintl"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "bilibili"
       }
     ],
     "custom_rules": [],
@@ -245,6 +378,10 @@
       {
         "type": "GEOSITE",
         "payload": "apple"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "apple-cn"
       }
     ],
     "custom_rules": [],
