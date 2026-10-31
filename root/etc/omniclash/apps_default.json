@@ -59,10 +59,6 @@
       },
       {
         "type": "DOMAIN-SUFFIX",
-        "payload": "mi.gdt.qq.com"
-      },
-      {
-        "type": "DOMAIN-SUFFIX",
         "payload": "tmead.y.qq.com"
       },
       {
@@ -99,10 +95,6 @@
       {
         "type": "DOMAIN-SUFFIX",
         "payload": "anyrouter.top"
-      },
-      {
-        "type": "DOMAIN-SUFFIX",
-        "payload": "cdk.hybgzs.com"
       },
       {
         "type": "DOMAIN-SUFFIX",
@@ -293,10 +285,6 @@
     "builtin_rules": [
       {
         "type": "DOMAIN-SUFFIX",
-        "payload": "services.googleapis.cn"
-      },
-      {
-        "type": "DOMAIN-SUFFIX",
         "payload": "googleapis.cn"
       },
       {
@@ -392,14 +380,6 @@
       {
         "type": "DOMAIN-SUFFIX",
         "payload": "quay.io"
-      },
-      {
-        "type": "DOMAIN-SUFFIX",
-        "payload": "registry-1.docker.io"
-      },
-      {
-        "type": "DOMAIN-SUFFIX",
-        "payload": "auth.docker.io"
       },
       {
         "type": "GEOSITE",
