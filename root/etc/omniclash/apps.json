@@ -85,7 +85,7 @@
   {
     "id": "special_proxy",
     "name": "🇨🇳 特殊互接",
-    "desc": "特定高风控管理、测速及业务站点统一路由策略（可选直连、住宅落地等）",
+    "desc": "内部大模型网关与特定高风控业务站点统一路由策略",
     "target": "🇨🇳 特殊互接",
     "builtin_rules": [
       {
@@ -99,18 +99,6 @@
       {
         "type": "DOMAIN-SUFFIX",
         "payload": "hybgzs.com"
-      },
-      {
-        "type": "DOMAIN-SUFFIX",
-        "payload": "speedtest.net"
-      },
-      {
-        "type": "DOMAIN-KEYWORD",
-        "payload": "speedtest"
-      },
-      {
-        "type": "DOMAIN-SUFFIX",
-        "payload": "ip138.com"
       }
     ],
     "custom_rules": [],
