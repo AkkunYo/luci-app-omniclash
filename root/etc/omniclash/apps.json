@@ -87,16 +87,38 @@
     "is_custom": false
   },
   {
-    "id": "special_direct",
-    "name": "🇨🇳 特殊直连",
-    "desc": "需要可切换直连/代理的特定国内站点",
-    "target": "🇨🇳 特殊直连",
+    "id": "residential_sites",
+    "name": "🏠 住宅落地服务",
+    "desc": "内部大模型网关与特定高风控服务强制走住宅独享落地",
+    "target": "🏠 住宅落地",
     "builtin_rules": [
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "agentrouter.org"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "anyrouter.top"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "cdk.hybgzs.com"
+      },
       {
         "type": "DOMAIN-SUFFIX",
         "payload": "hybgzs.com"
       }
     ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "special_direct",
+    "name": "🇨🇳 特殊直连",
+    "desc": "需要可切换直连/代理的特定国内站点",
+    "target": "🇨🇳 特殊直连",
+    "builtin_rules": [],
     "custom_rules": [],
     "enabled": true,
     "is_custom": false
