@@ -178,12 +178,12 @@
     "name": "📹 YouTube",
     "type": "select",
     "proxies": [
+      "🇭🇰 香港节点",
       "🚀 节点选择",
       "♻️ 自动选择",
       "☢ 负载均衡-散列",
       "☢ 负载均衡-轮询",
       "🌐 全部节点",
-      "🇭🇰 香港节点",
       "🇨🇳 台湾节点",
       "🇯🇵 日本节点",
       "🇸🇬 新加坡",
@@ -225,11 +225,11 @@
     "type": "select",
     "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/bilibili_2.png",
     "proxies": [
+      "🇨🇳 台湾节点",
       "🚀 节点选择",
       "🟢 直连",
       "♻️ 自动选择",
       "🇭🇰 香港节点",
-      "🇨🇳 台湾节点",
       "🇯🇵 日本节点",
       "🇸🇬 新加坡",
       "🇰🇷 韩国",
@@ -244,6 +244,7 @@
     "name": "🎵 Spotify",
     "type": "select",
     "proxies": [
+      "🇸🇬 新加坡",
       "🚀 节点选择",
       "♻️ 自动选择",
       "☢ 负载均衡-散列",
@@ -252,7 +253,6 @@
       "🇭🇰 香港节点",
       "🇨🇳 台湾节点",
       "🇯🇵 日本节点",
-      "🇸🇬 新加坡",
       "🇰🇷 韩国",
       "🇺🇲 美国节点",
       "🇩🇪 德国节点",
@@ -304,6 +304,7 @@
     "name": "🐬 OneDrive",
     "type": "select",
     "proxies": [
+      "🇸🇬 新加坡",
       "🚀 节点选择",
       "♻️ 自动选择",
       "☢ 负载均衡-散列",
@@ -312,7 +313,6 @@
       "🇭🇰 香港节点",
       "🇨🇳 台湾节点",
       "🇯🇵 日本节点",
-      "🇸🇬 新加坡",
       "🇰🇷 韩国",
       "🇺🇲 美国节点",
       "🇩🇪 德国节点",
@@ -350,6 +350,7 @@
     "name": "🎵 TikTok",
     "type": "select",
     "proxies": [
+      "🇺🇲 美国节点",
       "🚀 节点选择",
       "♻️ 自动选择",
       "☢ 负载均衡-散列",
@@ -360,7 +361,6 @@
       "🇯🇵 日本节点",
       "🇸🇬 新加坡",
       "🇰🇷 韩国",
-      "🇺🇲 美国节点",
       "🇩🇪 德国节点",
       "🇬🇧 英国节点",
       "🧿 其它地区",
@@ -396,6 +396,7 @@
     "name": "🎥 NETFLIX",
     "type": "select",
     "proxies": [
+      "🇸🇬 新加坡",
       "🚀 节点选择",
       "♻️ 自动选择",
       "☢ 负载均衡-散列",
@@ -404,7 +405,6 @@
       "🇭🇰 香港节点",
       "🇨🇳 台湾节点",
       "🇯🇵 日本节点",
-      "🇸🇬 新加坡",
       "🇰🇷 韩国",
       "🇺🇲 美国节点",
       "🇩🇪 德国节点",
@@ -416,9 +416,25 @@
     "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Netflix.png"
   },
   {
+    "name": "🎬 Disney+",
+    "type": "select",
+    "proxies": [
+      "🇸🇬 新加坡",
+      "🇺🇲 美国节点",
+      "🇨🇳 台湾节点",
+      "🇭🇰 香港节点",
+      "🚀 节点选择",
+      "♻️ 自动选择",
+      "🌐 全部节点",
+      "🟢 直连"
+    ],
+    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Disney.png"
+  },
+  {
     "name": "📖 Notion",
     "type": "select",
     "proxies": [
+      "🇺🇲 美国节点",
       "🚀 节点选择",
       "♻️ 自动选择",
       "☢ 负载均衡-散列",
@@ -429,7 +445,6 @@
       "🇯🇵 日本节点",
       "🇸🇬 新加坡",
       "🇰🇷 韩国",
-      "🇺🇲 美国节点",
       "🇩🇪 德国节点",
       "🇬🇧 英国节点",
       "🧿 其它地区",
@@ -442,6 +457,7 @@
     "name": "💶 PayPal",
     "type": "select",
     "proxies": [
+      "🇺🇲 美国节点",
       "🚀 节点选择",
       "♻️ 自动选择",
       "☢ 负载均衡-散列",
@@ -452,7 +468,6 @@
       "🇯🇵 日本节点",
       "🇸🇬 新加坡",
       "🇰🇷 韩国",
-      "🇺🇲 美国节点",
       "🇩🇪 德国节点",
       "🇬🇧 英国节点",
       "🧿 其它地区",
@@ -465,6 +480,7 @@
     "name": "🐙 GitHub",
     "type": "select",
     "proxies": [
+      "🇺🇲 美国节点",
       "🚀 节点选择",
       "♻️ 自动选择",
       "☢ 负载均衡-散列",
@@ -475,7 +491,6 @@
       "🇯🇵 日本节点",
       "🇸🇬 新加坡",
       "🇰🇷 韩国",
-      "🇺🇲 美国节点",
       "🇩🇪 德国节点",
       "🇬🇧 英国节点",
       "🧿 其它地区",
@@ -485,9 +500,40 @@
     "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/GitHub.png"
   },
   {
+    "name": "🐳 容器镜像",
+    "type": "select",
+    "proxies": [
+      "🇺🇲 美国节点",
+      "🇭🇰 香港节点",
+      "🇯🇵 日本节点",
+      "🇸🇬 新加坡",
+      "🚀 节点选择",
+      "♻️ 自动选择",
+      "🌐 全部节点",
+      "🟢 直连"
+    ],
+    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Docker.png"
+  },
+  {
+    "name": "🎮 游戏服务",
+    "type": "select",
+    "proxies": [
+      "🟢 直连",
+      "🇭🇰 香港节点",
+      "🇨🇳 台湾节点",
+      "🇯🇵 日本节点",
+      "🇺🇲 美国节点",
+      "🚀 节点选择",
+      "♻️ 自动选择",
+      "🌐 全部节点"
+    ],
+    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Game.png"
+  },
+  {
     "name": "🐦 Twitter",
     "type": "select",
     "proxies": [
+      "🇺🇲 美国节点",
       "🚀 节点选择",
       "♻️ 自动选择",
       "☢ 负载均衡-散列",
@@ -498,7 +544,6 @@
       "🇯🇵 日本节点",
       "🇸🇬 新加坡",
       "🇰🇷 韩国",
-      "🇺🇲 美国节点",
       "🇩🇪 德国节点",
       "🇬🇧 英国节点",
       "🧿 其它地区",
@@ -512,8 +557,8 @@
     "type": "select",
     "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Apple.png",
     "proxies": [
-      "🚀 节点选择",
       "🟢 直连",
+      "🚀 节点选择",
       "♻️ 自动选择",
       "🇭🇰 香港节点",
       "🇨🇳 台湾节点",

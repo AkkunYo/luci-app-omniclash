@@ -116,9 +116,22 @@
   {
     "id": "special_direct",
     "name": "🇨🇳 特殊直连",
-    "desc": "需要可切换直连/代理的特定国内站点",
+    "desc": "测速与归属地查询等需要灵活在直连与特定代理节点之间一键切换的站点",
     "target": "🇨🇳 特殊直连",
-    "builtin_rules": [],
+    "builtin_rules": [
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "speedtest.net"
+      },
+      {
+        "type": "DOMAIN-KEYWORD",
+        "payload": "speedtest"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "ip138.com"
+      }
+    ],
     "custom_rules": [],
     "enabled": true,
     "is_custom": false
@@ -208,7 +221,7 @@
     "id": "youtube",
     "name": "📹 YouTube 媒体",
     "desc": "YouTube 视频与分发 CDN 流量",
-    "target": "🇭🇰 香港节点",
+    "target": "📹 YouTube",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -223,7 +236,7 @@
     "id": "netflix",
     "name": "🎥 NETFLIX 流媒体",
     "desc": "Netflix 流媒体与 CDN",
-    "target": "🇸🇬 新加坡",
+    "target": "🎥 NETFLIX",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -239,10 +252,25 @@
     "is_custom": false
   },
   {
+    "id": "disney",
+    "name": "🎬 Disney+ 国际影视",
+    "desc": "Disney+ 与 Star+ 国际高清影视流媒体",
+    "target": "🎬 Disney+",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "disney"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
     "id": "telegram",
     "name": "📲 Telegram 通讯",
     "desc": "Telegram 客户端与数据中心 IP",
-    "target": "🚀 节点选择",
+    "target": "📲 Telegram",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -261,7 +289,7 @@
     "id": "google",
     "name": "🍀 Google 服务",
     "desc": "Google 搜索、Gmail、Drive 等",
-    "target": "🚀 节点选择",
+    "target": "🍀 Google",
     "builtin_rules": [
       {
         "type": "DOMAIN-SUFFIX",
@@ -332,7 +360,7 @@
     "id": "github",
     "name": "🐙 GitHub 开发者",
     "desc": "GitHub 代码托管与资源加速",
-    "target": "🇺🇲 美国节点",
+    "target": "🐙 GitHub",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -344,10 +372,84 @@
     "is_custom": false
   },
   {
+    "id": "docker",
+    "name": "🐳 Docker 容器加速",
+    "desc": "Docker Hub / GHCR / Quay 容器镜像拉取与开发者镜像加速",
+    "target": "🐳 容器镜像",
+    "builtin_rules": [
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "docker.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "docker.io"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "ghcr.io"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "quay.io"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "registry-1.docker.io"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "auth.docker.io"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "docker"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
+    "id": "game",
+    "name": "🎮 游戏联机与平台",
+    "desc": "Steam / Epic Games / Blizzard / EA / PlayStation / Xbox 游戏平台与联机",
+    "target": "🎮 游戏服务",
+    "builtin_rules": [
+      {
+        "type": "GEOSITE",
+        "payload": "steam"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "epicgames"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "ea"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "blizzard"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "playstation"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "xbox"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
     "id": "bilibili",
     "name": "📹 哔哩哔哩海外",
     "desc": "哔哩哔哩及港澳台限定番剧",
-    "target": "🇨🇳 台湾节点",
+    "target": "📹 哔哩哔哩",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -366,7 +468,7 @@
     "id": "spotify",
     "name": "🎵 Spotify 音乐",
     "desc": "Spotify 音乐流媒体",
-    "target": "🇸🇬 新加坡",
+    "target": "🎵 Spotify",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -381,7 +483,7 @@
     "id": "bahamut",
     "name": "📹 巴哈姆特动画",
     "desc": "巴哈姆特动画疯",
-    "target": "🇨🇳 台湾节点",
+    "target": "📹 巴哈姆特",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -396,7 +498,7 @@
     "id": "onedrive",
     "name": "🐬 OneDrive 云盘",
     "desc": "Microsoft OneDrive 同步",
-    "target": "🇸🇬 新加坡",
+    "target": "🐬 OneDrive",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -411,7 +513,7 @@
     "id": "microsoft",
     "name": "🪟 Microsoft 服务",
     "desc": "Microsoft 与 Office 在线服务",
-    "target": "🚀 节点选择",
+    "target": "🪟 Microsoft",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -426,7 +528,7 @@
     "id": "tiktok",
     "name": "🎵 TikTok 短视频",
     "desc": "TikTok 国际版",
-    "target": "🇺🇲 美国节点",
+    "target": "🎵 TikTok",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -441,7 +543,7 @@
     "id": "notion",
     "name": "📖 Notion 笔记",
     "desc": "Notion 协作平台",
-    "target": "🇺🇲 美国节点",
+    "target": "📖 Notion",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -456,7 +558,7 @@
     "id": "paypal",
     "name": "💶 PayPal 支付",
     "desc": "PayPal 支付与风控",
-    "target": "🇺🇲 美国节点",
+    "target": "💶 PayPal",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -471,7 +573,7 @@
     "id": "twitter",
     "name": "🐦 Twitter / X",
     "desc": "X (Twitter) 社交平台",
-    "target": "🇺🇲 美国节点",
+    "target": "🐦 Twitter",
     "builtin_rules": [
       {
         "type": "GEOSITE",
@@ -486,7 +588,7 @@
     "id": "apple",
     "name": "🍎 Apple 服务",
     "desc": "Apple 海外服务与 iCloud",
-    "target": "🇺🇲 美国节点",
+    "target": "🍎 Apple",
     "builtin_rules": [
       {
         "type": "GEOSITE",
