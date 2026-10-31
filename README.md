@@ -41,14 +41,14 @@ Following official OpenWrt ecosystem packaging standards, the base package `luci
 ### 3. 🧩 Fully Data-Driven Dynamic Compilation Engine
 * **Purified External Subscriptions**: Remote subscriptions are strictly treated as `proxy-providers` node pools, never overwriting or corrupting local rules or AP mappings!
 * **Structured Proxy Groups**: Pre-configured with 42 proxy groups (dedicated lines, auto-test regions, application routing), fully editable via UI with one-click restore.
-* **Ironclad 6-Tier Routing Pipeline**:
+* **Ironclad 7-Tier Routing Pipeline**:
   1. `Layer 1`: LAN & private subnet direct connection (`private`) and Google .cn anti-hijacking.
   2. `Layer 2`: **Global Mode WiFi Slots** (`01~08`, etc.): Top-tier interception strictly locked to dedicated proxies; zero leaks, zero disturbance.
   3. `Layer 3`: **Targeted Mode WiFi Slots** (`09~16`, etc.): Domestic traffic direct, foreign traffic strictly sent to dedicated egress, preventing subsequent rule interference.
-  4. `Layer 4`: **Ad Blocking** (`RULE-SET, reject_ad` / `category-ads-all`): Exclusively active for general devices; never interferes with dedicated development machines.
-  5. `Layer 5`: **Application Card Pipeline**: One card per scenario (AI, YouTube, Netflix, Telegram, Google, GitHub, Bilibili, Spotify, Bahamut, OneDrive, Microsoft, TikTok, Notion, PayPal, Twitter, Apple), each binding its own egress target plus user-added domains/IPs. Rules are emitted in card order, so priority is reordered by moving cards.
-  6. `Layer 6`: **General Routing WiFi Fallback**: Unmatched foreign traffic routed via respective assigned proxy nodes.
-  7. `Layer 7`: Final `MATCH` fallback.
+  4. `Layer 4`: **Application Card Pipeline** (driven by `apps.json`): One card per scenario (Ad Blocking, Special Direct, Custom Direct, My Sites, AI, YouTube, Netflix, Telegram, Google, GitHub, Bilibili, Spotify, Bahamut, OneDrive, Microsoft, TikTok, Notion, PayPal, Twitter, Apple), each binding its own egress target plus user-added domains/IPs. Rules are emitted in card order, so priority is reordered by moving cards.
+  5. `Layer 5`: **Domestic Direct Routing (CN)**: (`GEOSITE,cn` & `GEOIP,cn` direct connection driven by UCI `cn_target`, ensuring instant domestic app & site loading).
+  6. `Layer 6`: **General Routing WiFi Fallback**: Unmatched foreign traffic from slots 17~32 routed via respective assigned proxy nodes.
+  7. `Layer 7`: **Catch-All MATCH Fallback**: `GEOSITE,geolocation-!cn` and final `MATCH` (driven by UCI `final_target`).
 
 ### 4. 🖥️ Modern Native LuCI Interface
 * **Overview**: Core status badge, continuous uptime, start/stop/restart/reload buttons, Zashboard launch, and one-click core update. App Version and Core Version are clearly separated.

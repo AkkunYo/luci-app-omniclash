@@ -1,5 +1,92 @@
 [
   {
+    "id": "ad_block",
+    "name": "🛑 广告拦截",
+    "desc": "拦截常见商业广告、追踪脚本与推广 SDK",
+    "target": "REJECT",
+    "builtin_rules": [
+      {
+        "type": "RULE-SET",
+        "payload": "reject_ad"
+      },
+      {
+        "type": "GEOSITE",
+        "payload": "category-ads-all"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "bxcdn.net"
+      },
+      {
+        "type": "DOMAIN-KEYWORD",
+        "payload": "-ad-sign.byteimg.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "pangle.io"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "pangolin-sdk-toutiao.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "pangolin-sdk-toutiao-b.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "pglstatp-toutiao.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "volcsirius.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "ulogs.umeng.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "alog.umeng.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "gdt.qq.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "e.qq.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "mi.gdt.qq.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "tmead.y.qq.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "adkwai.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "e.kuaishou.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "mobads.baidu.com"
+      },
+      {
+        "type": "DOMAIN-SUFFIX",
+        "payload": "cpro.baidustatic.com"
+      }
+    ],
+    "custom_rules": [],
+    "enabled": true,
+    "is_custom": false
+  },
+  {
     "id": "special_direct",
     "name": "🇨🇳 特殊直连",
     "desc": "需要可切换直连/代理的特定国内站点",
@@ -72,7 +159,7 @@
     "id": "ai",
     "name": "🤖 AI 场景服务",
     "desc": "ChatGPT / Claude / OpenAI / Anthropic 等生成式 AI 接口",
-    "target": "🎯 专线-Tallflix",
+    "target": "🤖 AI",
     "builtin_rules": [
       {
         "type": "GEOSITE",

@@ -41,14 +41,14 @@
 ### 3. 🧩 全量数据驱动动态合流编译器 (Data-Driven Engine)
 * **外部订阅纯化**：云端订阅 100% 仅作为 `proxy-providers` 节点池拉取，绝不污染或覆盖本地规则与矩阵！
 * **分流策略组全景**：预置 42 组完整策略组（自建专线组、地区自动优选组、多应用策略组），支持 UI 自由增删改与恢复默认。
-* **六层纯净直达流水线 (Ironclad Pipeline)**：
+* **七层纯净直达流水线 (Ironclad Pipeline)**：
   1. `Layer 1`: 局域网私网直连 (`private`) 与 Google .cn 防劫持
   2. `Layer 2`: **【全局模式】WiFi 槽位**（`01~08` 等）：最顶层直接锁死出口，零泄漏、零打扰
   3. `Layer 3`: **【定向分流】WiFi 槽位**（`09~16` 等）：国内直连，国外锁死出口，防规则截胡
-  4. `Layer 4`: **广告拦截** (`RULE-SET, reject_ad` / `category-ads-all`)：仅供通用分流设备专享，不误杀工作机
-  5. `Layer 5`: **业务应用卡片流**：每个场景一张卡片（AI、YouTube、Netflix、Telegram、Google、GitHub、哔哩哔哩、Spotify、巴哈姆特、OneDrive、Microsoft、TikTok、Notion、PayPal、Twitter、Apple），各自绑定出口走向并可自由追加域名/IP 规则；规则按卡片顺序发射，移动卡片即可调整优先级
-  6. `Layer 6`: **【通用分流】WiFi 槽位专属出口兜底**
-  7. `Layer 7`: 最终 `MATCH` 兜底
+  4. `Layer 4`: **业务应用卡片流**（由 `apps.json` 驱动）：包含广告拦截、特殊直连、自定义直连、我的网站、AI、YouTube、Netflix、Telegram、Google、GitHub、哔哩哔哩、Spotify、巴哈姆特、OneDrive、Microsoft、TikTok、Notion、PayPal、Twitter、Apple 等全场景卡片；各自绑定出口走向并可自由追加域名/IP 规则，拖动卡片即可调整优先级
+  5. `Layer 5`: **【国内直连与防漏】**（由 UCI `cn_target` 驱动，`GEOSITE,cn` 与 `GEOIP,cn` 直连，保障国内 App 与网页秒开）
+  6. `Layer 6`: **【通用分流】WiFi 槽位专属出口兜底**（`17~32` 槽位未匹配国外流量各自按槽位绑定的出口发出）
+  7. `Layer 7`: **最终 MATCH 兜底**（由 UCI `final_target` 驱动，`GEOSITE,geolocation-!cn` 与终极 `MATCH`）
 
 ### 4. 🖥️ 现代化纯原生 LuCI 界面
 * **运行概览**：内核状态徽标、连续运行时间、停止/启动/重启/热重载按钮、Zashboard 打开与一键加速升级。插件版本与核心版本严格分离标准展示。

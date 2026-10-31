@@ -779,38 +779,15 @@ function compile_config() {
         push(group_lines, sprintf("  - {%s}", join(", ", parts)));
     }
 
-    // 3. 动态组装六层纯净直达规则流
+    // 3. 动态组装纯净直达规则流（全量由配置文件与 UCI 选项驱动，零代码级硬编码）
     let tier1_infra = [
         "  - GEOSITE,private,DIRECT",
         "  - GEOIP,private,DIRECT,no-resolve"
     ];
     let tier2_global = [];
     let tier3_split = [];
-    /* 层级 4 广告拦截：迁移到卡片流时曾被置空导致整层失效，这里恢复原规则表内容 */
-    let tier4_ad = [
-        "  - DOMAIN-SUFFIX,bxcdn.net,REJECT",
-        "  - DOMAIN-KEYWORD,-ad-sign.byteimg.com,REJECT",
-        "  - DOMAIN-SUFFIX,pangle.io,REJECT",
-        "  - DOMAIN-SUFFIX,pangolin-sdk-toutiao.com,REJECT",
-        "  - DOMAIN-SUFFIX,pangolin-sdk-toutiao-b.com,REJECT",
-        "  - DOMAIN-SUFFIX,pglstatp-toutiao.com,REJECT",
-        "  - DOMAIN-SUFFIX,volcsirius.com,REJECT",
-        "  - DOMAIN-SUFFIX,ulogs.umeng.com,REJECT",
-        "  - DOMAIN-SUFFIX,alog.umeng.com,REJECT",
-        "  - DOMAIN-SUFFIX,gdt.qq.com,REJECT",
-        "  - DOMAIN-SUFFIX,e.qq.com,REJECT",
-        "  - DOMAIN-SUFFIX,mi.gdt.qq.com,REJECT",
-        "  - DOMAIN-SUFFIX,tmead.y.qq.com,REJECT",
-        "  - DOMAIN-SUFFIX,adkwai.com,REJECT",
-        "  - DOMAIN-SUFFIX,e.kuaishou.com,REJECT",
-        "  - DOMAIN-SUFFIX,mobads.baidu.com,REJECT",
-        "  - DOMAIN-SUFFIX,cpro.baidustatic.com,REJECT",
-        "  - RULE-SET,reject_ad,REJECT",
-        "  - GEOSITE,category-ads-all,REJECT"
-    ];
-    let tier5_app = [];
-    let tier6_app_pool = [];
-    let tier7_match = [];
+    let tier4_app = [];
+    let tier5_app_pool = [];
 
     if (wmode == "multi") {
         for (let slot in slots) {
@@ -829,39 +806,42 @@ function compile_config() {
                 push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOIP,cn)),DIRECT", cidr));
                 push(tier3_split, sprintf("  - SRC-IP-CIDR,%s,%s", cidr, out));
             } else if (slot.mode == "app_pool") {
-                push(tier6_app_pool, sprintf("  # [通用分流兜底] 槽位 #%s: %s (VLAN %s)", slot.num, slot.ssid, slot.vlan));
-                push(tier6_app_pool, sprintf("  - SRC-IP-CIDR,%s,%s", cidr, out));
+                push(tier5_app_pool, sprintf("  # [通用分流兜底] 槽位 #%s: %s (VLAN %s)", slot.num, slot.ssid, slot.vlan));
+                push(tier5_app_pool, sprintf("  - SRC-IP-CIDR,%s,%s", cidr, out));
             }
         }
     }
 
-    // 卡片数据可能被 UI 直接写入畸形 JSON，逐字段校验类型并跳过非法项，避免污染规则
+    // 业务与安全卡片流（完全由配置文件 apps.json 驱动，包含广告拦截、特殊直连、各应用卡片）
     for (let app in apps) {
         if (!app || type(app) != "object") continue;
         if (app.enabled == false || app.enabled == 0 || app.enabled == "false" || app.enabled == "0") continue;
         let tgt = app.target;
-        if (type(tgt) != "string" || !tgt) tgt = "🚀 节点选择";
+        if (type(tgt) != "string" || !tgt) tgt = final_target;
         let app_rules = [];
-        for (let r in app.builtin_rules) push(app_rules, r);
-        for (let r in app.custom_rules) push(app_rules, r);
+        for (let r in (app.builtin_rules || [])) push(app_rules, r);
+        for (let r in (app.custom_rules || [])) push(app_rules, r);
         for (let r in app_rules) {
             if (!r || type(r) != "object") continue;
             if (type(r.type) != "string" || type(r.payload) != "string") continue;
             if (!r.type || !r.payload) continue;
-            if (r.type == "MATCH") {
-                push(tier7_match, sprintf("  - MATCH,%s", tgt));
-                continue;
-            }
             let line = sprintf("  - %s,%s,%s", r.type, r.payload, tgt);
             if (r.type == "GEOIP") line += ",no-resolve";
-            push(tier5_app, line);
+            push(tier4_app, line);
         }
     }
 
-    push(tier7_match, "  - GEOSITE,geolocation-!cn,🚀 节点选择");
-    push(tier7_match, sprintf("  - GEOSITE,cn,%s", cn_target));
-    push(tier7_match, sprintf("  - GEOIP,cn,%s,no-resolve", cn_target));
-    push(tier7_match, sprintf("  - MATCH,%s", final_target));
+    // 国内直连与防漏收口（由 UCI cn_target 选项驱动，默认 DIRECT）
+    let tier_cn_direct = [
+        sprintf("  - GEOSITE,cn,%s", cn_target),
+        sprintf("  - GEOIP,cn,%s,no-resolve", cn_target)
+    ];
+
+    // 最终兜底收口（由 UCI final_target 选项驱动，默认 🚀 节点选择）
+    let tier_final_match = [
+        sprintf("  - GEOSITE,geolocation-!cn,%s", final_target),
+        sprintf("  - MATCH,%s", final_target)
+    ];
 
     let compiled_rules = [
         "  # === 层级 1: 私网直连与防劫持 ===",
@@ -870,14 +850,14 @@ function compile_config() {
         join("\n", tier2_global),
         "\n  # === 层级 3: 定向分流 WiFi (09~16等) ===",
         join("\n", tier3_split),
-        "\n  # === 层级 4: 广告拦截 (通用分流专享) ===",
-        join("\n", tier4_ad),
-        "\n  # === 层级 5: 应用场景卡片分流 (/etc/omniclash/apps.json) ===",
-        join("\n", tier5_app),
+        "\n  # === 层级 4: 业务应用卡片分流 (/etc/omniclash/apps.json) ===",
+        join("\n", tier4_app),
+        "\n  # === 层级 5: 国内直连与防漏 (/etc/config/omniclash cn_target) ===",
+        join("\n", tier_cn_direct),
         "\n  # === 层级 6: 通用分流 WiFi 专属出口兜底 ===",
-        join("\n", tier6_app_pool),
-        "\n  # === 层级 7: 最终 MATCH 兜底 ===",
-        join("\n", tier7_match)
+        join("\n", tier5_app_pool),
+        "\n  # === 层级 7: 最终 MATCH 兜底 (/etc/config/omniclash final_target) ===",
+        join("\n", tier_final_match)
     ];
 
     let pg_marker = "\nproxy-groups:\n";
