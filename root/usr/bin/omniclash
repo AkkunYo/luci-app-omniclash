@@ -600,90 +600,359 @@ function get_all_slots() {
     return slots;
 }
 
-function get_template_providers() {
-    let p = fs.popen(sprintf("yq -o=json '.proxy-providers' '%s' 2>/dev/null", TEMPLATE_FILE));
-    if (!p) return [];
+/* 订阅 Provider 以结构化对象的形式读出：顶层字段原样保留（health-check、filter、
+ * exclude-type 等），前端常用的几项再平铺成便于表单绑定的别名字段。
+ * 回写时以原始对象为底、只覆盖表单给出的字段，模板里未在 UI 暴露的选项不会丢。 */
+let PROVIDER_FLAT = {
+    prefix: "additional-prefix",
+    dialer_proxy: "dialer-proxy",
+    udp: "udp",
+    skip_cert_verify: "skip-cert-verify"
+};
+
+function read_template_providers_raw() {
+    let p = fs.popen(sprintf("yq -o=json '.proxy-providers // {}' '%s' 2>/dev/null", TEMPLATE_FILE));
+    if (!p) return {};
     let out = p.read("all") || "{}";
     p.close();
-    let pp_obj = {};
-    try { pp_obj = json(out) || {}; } catch(e) { return []; }
+    let obj = {};
+    try { obj = json(out) || {}; } catch(e) { obj = {}; }
+    return (type(obj) == "object") ? obj : {};
+}
 
+function get_template_providers() {
+    let raw = read_template_providers_raw();
     let list = [];
-    for (let name in keys(pp_obj)) {
-        let item = pp_obj[name];
+    for (let name in keys(raw)) {
+        let item = raw[name];
         if (type(item) != "object") continue;
-        let ov = item.override || {};
-        push(list, {
-            name: name,
-            type: item.type || "http",
-            url: item.url || "",
-            prefix: ov["additional-prefix"] || "",
-            interval: sprintf("%d", item.interval || 1800)
-        });
+        let ov = (type(item.override) == "object") ? item.override : {};
+        let entry = { name: name, raw: item };
+        entry.type = item.type || "http";
+        entry.url = item.url || "";
+        entry.path = item.path || "";
+        entry.interval = sprintf("%d", item.interval || 1800);
+        entry.proxy = item.proxy || "";
+        entry.filter = item.filter || "";
+        entry.exclude_filter = item["exclude-filter"] || "";
+        entry.exclude_type = item["exclude-type"] || "";
+        let hc = item["health-check"];
+        entry.health_check = (type(hc) == "object" && hc.enable != false);
+        for (let k in keys(PROVIDER_FLAT)) {
+            let v = ov[PROVIDER_FLAT[k]];
+            entry[k] = (v == null) ? "" : v;
+        }
+        push(list, entry);
     }
     return list;
+}
+
+/* 把单个字符串标量安全地写成 YAML 双引号字符串 */
+function yq_str(v) {
+    let s = sprintf("%s", v == null ? "" : v);
+    s = replace(s, "\\", "\\\\");
+    s = replace(s, "\"", "\\\"");
+    return "\"" + s + "\"";
+}
+
+function provider_yaml_lines(name, p) {
+    let raw = (type(p.raw) == "object") ? p.raw : {};
+    let item = {};
+    for (let k in keys(raw)) item[k] = raw[k];
+
+    item.type = p.type || item.type || "http";
+    if (item.type == "http") {
+        item.url = p.url || item.url || "";
+        if (p.path) item.path = p.path;
+    } else {
+        delete item.url;
+        item.path = p.path || item.path || "";
+    }
+    item.interval = int(p.interval || item.interval || 1800);
+
+    let set_or_drop = function(key, val) {
+        if (val == null || val === "") delete item[key];
+        else item[key] = val;
+    };
+    if (p.proxy != null) set_or_drop("proxy", p.proxy);
+    if (p.filter != null) set_or_drop("filter", p.filter);
+    if (p.exclude_filter != null) set_or_drop("exclude-filter", p.exclude_filter);
+    if (p.exclude_type != null) set_or_drop("exclude-type", p.exclude_type);
+
+    if (p.health_check === false) {
+        delete item["health-check"];
+    } else if (p.health_check === true && type(item["health-check"]) != "object") {
+        item["health-check"] = { enable: true, url: "https://www.gstatic.com/generate_204", interval: 300 };
+    }
+
+    let ov = (type(item.override) == "object") ? item.override : {};
+    let ov2 = {};
+    for (let k in keys(ov)) ov2[k] = ov[k];
+    for (let k in keys(PROVIDER_FLAT)) {
+        if (p[k] == null) continue;
+        let key = PROVIDER_FLAT[k];
+        let v = p[k];
+        if (v === "" ) { delete ov2[key]; continue; }
+        if (key == "udp" || key == "skip-cert-verify") v = (v === true || v == "true" || v == "1" || v === 1);
+        ov2[key] = v;
+    }
+    if (length(keys(ov2))) item.override = ov2; else delete item.override;
+
+    /* 用 flow 风格的 JSON 输出（YAML 1.2 的子集），避免手写缩进出错 */
+    return [ sprintf("  %s: %J", yq_str(name), item) ];
 }
 
 function save_template_providers(providers) {
     let t = fs.readfile(TEMPLATE_FILE) || "";
     let marker = "\nproxy-providers:\n";
     let p_start = index(t, marker);
-    if (p_start == -1) return false;
-    let p_end = index(t, "\nrule-providers:\n", p_start);
-    if (p_end == -1) p_end = index(t, "\nmixed-port:", p_start);
+    if (p_start == -1) return { ok: false, error: "模板中找不到 proxy-providers 段" };
 
-    let pre = substr(t, 0, p_start + length(marker));
-    let post = substr(t, p_end);
+    /* 段结束位置：之后第一个顶格（非缩进、非注释）的键 */
+    let body_start = p_start + length(marker);
+    let rest = substr(t, body_start);
+    let lines = split(rest, "\n");
+    let consumed = 0;
+    for (let i = 0; i < length(lines); i++) {
+        let l = lines[i];
+        if (length(l) && match(l, /^[^ \t#]/)) break;
+        consumed += length(l) + 1;
+    }
+    let pre = substr(t, 0, body_start);
+    let post = substr(t, body_start + consumed);
 
+    let raw_map = read_template_providers_raw();
+    let seen = {};
     let pp_lines = [];
     for (let p in providers) {
-        push(pp_lines, sprintf("  %s:", p.name));
-        push(pp_lines, sprintf("    type: %s", p.type || "http"));
-        push(pp_lines, sprintf("    interval: %s", p.interval || "1800"));
-        push(pp_lines, "    health-check: *health");
-        push(pp_lines, "    proxy: 🟢 直连");
-        push(pp_lines, sprintf("    url: \"%s\"", p.url));
-
-        if (p.name == "githubhy" || p.name == "sub_provider_4") {
-            push(pp_lines, "    filter: \"^((?!(中国|china|cn)).)*$\"");
-            push(pp_lines, "    exclude-type: \"ss|http|vmess\"");
-        } else if (p.name == "sub_provider_2" || p.name == "sub_provider_3") {
-            push(pp_lines, "    exclude-type: \"ss|http|vmess\"");
-        }
-
-        push(pp_lines, "    override:");
-        if (p.name == "socks5vps") {
-            push(pp_lines, "      udp: false");
-            push(pp_lines, "      skip-cert-verify: true");
-            push(pp_lines, sprintf("      additional-prefix: \"%s\"", p.prefix || "s5v_"));
-            push(pp_lines, "      dialer-proxy: 🔗 前置入口");
-        } else if (p.name == "vpscloud" || p.name == "sub_provider_1") {
-            push(pp_lines, "      <<: *override");
-            push(pp_lines, sprintf("      additional-prefix: \"%s\"", p.prefix || "vc_"));
-            push(pp_lines, "      up: \"50 Mbps\"");
-            push(pp_lines, "      down: \"200 Mbps\"");
-        } else {
-            push(pp_lines, "      <<: *override");
-            if (p.prefix) {
-                push(pp_lines, sprintf("      additional-prefix: \"%s\"", p.prefix));
-            }
-        }
-        push(pp_lines, "");
+        if (type(p) != "object") continue;
+        let name = trim(sprintf("%s", p.name || ""));
+        if (!name || !match(name, /^[A-Za-z0-9_.-]+$/))
+            return { ok: false, error: sprintf("订阅名称非法：%s（只允许字母、数字、下划线、点和短横线）", name) };
+        if (seen[name]) return { ok: false, error: sprintf("订阅名称重复：%s", name) };
+        seen[name] = true;
+        if (type(p.raw) != "object" && raw_map[name]) p.raw = raw_map[name];
+        for (let l in provider_yaml_lines(name, p)) push(pp_lines, l);
     }
 
-    let new_template = pre + join("\n", pp_lines) + post;
-    fs.writefile(TEMPLATE_FILE, new_template);
-    return true;
+    fs.writefile(TEMPLATE_FILE, pre + join("\n", pp_lines) + "\n\n" + post);
+    return { ok: true };
 }
 
-function compile_config() {
+/* 32 个槽位出口组共用一份模板（slot_group.json）。
+ * 模板只声明 mihomo 原生字段；engine 只负责填入组名并把槽位绑定的出口排到第一位。 */
+let SLOT_GROUP_FILE = "/etc/omniclash/slot_group.json";
+let SLOT_GROUP_DEF_FILE = "/etc/omniclash/slot_group_default.json";
+
+function read_slot_group_template() {
+    let t = null;
+    for (let f in [ SLOT_GROUP_FILE, SLOT_GROUP_DEF_FILE ]) {
+        try { t = json(fs.readfile(f) || "null"); } catch(e) { t = null; }
+        if (type(t) == "object") return t;
+    }
+    return { type: "select", proxies: [ "🚀 节点选择", "🟢 直连" ] };
+}
+
+function build_slot_group(tpl, slot) {
+    let g = {};
+    for (let k in keys(tpl)) g[k] = tpl[k];
+    g.name = sprintf("🌐 %s-出口", slot.num);
+    g.type = g.type || "select";
+    let base = (type(tpl.proxies) == "array") ? tpl.proxies : [];
+    let ordered = [];
+    if (slot.target) push(ordered, slot.target);
+    for (let c in base) if (c != slot.target) push(ordered, c);
+    g.proxies = ordered;
+    return g;
+}
+
+/* 只放行 mihomo 认识的策略组字段，并剔除空值，防止前端临时字段泄漏到核心配置里 */
+let GROUP_KEYS = [
+    "name", "type", "proxies", "use", "include-all", "include-all-proxies", "include-all-providers",
+    "filter", "exclude-filter", "exclude-type", "url", "interval", "tolerance", "timeout",
+    "max-failed-times", "lazy", "strategy", "hidden", "icon", "disable-udp", "interface-name",
+    "routing-mark", "expected-status"
+];
+let GROUP_INT_KEYS = { interval: 1, tolerance: 1, timeout: 1, "max-failed-times": 1, "routing-mark": 1 };
+let GROUP_BOOL_KEYS = { "include-all": 1, "include-all-proxies": 1, "include-all-providers": 1, lazy: 1, hidden: 1, "disable-udp": 1 };
+
+function clean_group(g) {
+    if (type(g) != "object" || type(g.name) != "string" || !g.name) return null;
+    let o = {};
+    for (let k in GROUP_KEYS) {
+        let v = g[k];
+        if (v == null || v === "") continue;
+        if (type(v) == "array") {
+            let arr = [];
+            for (let x in v) if (x != null && x !== "") push(arr, sprintf("%s", x));
+            if (!length(arr)) continue;
+            v = arr;
+        } else if (GROUP_INT_KEYS[k]) {
+            v = int(v);
+            if (!v) continue;
+        } else if (GROUP_BOOL_KEYS[k]) {
+            v = (v === true || v == "true" || v == "1" || v === 1);
+        }
+        o[k] = v;
+    }
+    o.type = o.type || "select";
+    return o;
+}
+
+/* 保存前的结构校验：在写盘之前就拦下必然导致 mihomo 拒绝加载的配置，
+ * 并返回人能看懂的原因，而不是只在编译时报一句"语法校验未通过"。 */
+function validate_groups(groups, providers) {
+    let names = {};
+    let errs = [];
+    let prov = {};
+    for (let p in providers) prov[p.name] = true;
+    let builtins = { DIRECT: 1, REJECT: 1, "REJECT-DROP": 1, PASS: 1, COMPATIBLE: 1 };
+    let proxy_names = {};
+    let t = fs.readfile(TEMPLATE_FILE) || "";
+    for (let m in match(t, /\n  - name: "?([^"\n]+)"?\n/g) || []) proxy_names[m[1]] = true;
+
+    for (let g in groups) {
+        if (type(g) != "object" || !g.name) { push(errs, "存在未命名的策略组"); continue; }
+        if (names[g.name]) push(errs, sprintf("策略组名称重复：%s", g.name));
+        names[g.name] = true;
+    }
+    for (let i = 1; i <= 32; i++) names[sprintf("🌐 %02d-出口", i)] = true;
+
+    for (let g in groups) {
+        if (type(g) != "object" || !g.name) continue;
+        let has_source = (type(g.proxies) == "array" && length(g.proxies))
+            || (type(g.use) == "array" && length(g.use))
+            || g["include-all"] || g["include-all-proxies"] || g["include-all-providers"];
+        if (!has_source) push(errs, sprintf("%s：没有任何节点来源（需要子代理、订阅或 include-all 之一）", g.name));
+        for (let x in (g.proxies || []))
+            if (!names[x] && !builtins[x] && !proxy_names[x])
+                push(errs, sprintf("%s：引用了不存在的代理或策略组 %s", g.name, x));
+        for (let u in (g.use || []))
+            if (!prov[u]) push(errs, sprintf("%s：引用了不存在的订阅 %s", g.name, u));
+        if (index(g.proxies || [], g.name) >= 0) push(errs, sprintf("%s：不能把自己作为子代理", g.name));
+    }
+    return errs;
+}
+
+/* 直接解析 geodata 的 protobuf 外层结构，只读每条记录的 country_code（字段 1），
+ * 不加载整个文件。用于在保存规则前检查 GEOSITE / GEOIP 标签是否真实存在。 */
+function pb_varint(s, i) {
+    let v = 0, sh = 0;
+    while (true) {
+        let b = ord(s, i); i++;
+        if (b == null) break;
+        v += (b & 0x7f) * (1 << sh);
+        sh += 7;
+        if (!(b & 0x80)) break;
+    }
+    return [ v, i ];
+}
+
+function geodata_tags(kind) {
+    let run = "/etc/omniclash/run";
+    let path = null;
+    for (let c in (kind == "geoip") ? [ "GeoIP.dat", "geoip.dat" ] : [ "GeoSite.dat", "geosite.dat" ])
+        if (fs.access(run + "/" + c)) { path = run + "/" + c; break; }
+    if (!path) return null;
+    let st = fs.stat(path);
+    let f = fs.open(path, "r");
+    if (!f || !st) return null;
+    let out = [];
+    let pos = 0;
+    while (pos < st.size) {
+        f.seek(pos);
+        let h = f.read(64);
+        if (!h || ord(h, 0) != 0x0a) break;
+        let r = pb_varint(h, 1);
+        let len = r[0], i = r[1];
+        if (ord(h, i) == 0x0a) {
+            let r2 = pb_varint(h, i + 1);
+            push(out, lc(substr(h, r2[1], r2[0])));
+        }
+        pos += i + len;
+    }
+    f.close();
+    return out;
+}
+
+let RULE_TYPES = {
+    "DOMAIN": 1, "DOMAIN-SUFFIX": 1, "DOMAIN-KEYWORD": 1, "DOMAIN-REGEX": 1, "DOMAIN-WILDCARD": 1,
+    "GEOSITE": 1, "GEOIP": 1, "IP-CIDR": 1, "IP-CIDR6": 1, "IP-SUFFIX": 1, "IP-ASN": 1,
+    "SRC-IP-CIDR": 1, "SRC-GEOIP": 1, "SRC-PORT": 1, "DST-PORT": 1, "IN-PORT": 1,
+    "NETWORK": 1, "PROCESS-NAME": 1, "PROCESS-PATH": 1, "RULE-SET": 1,
+    "AND": 1, "OR": 1, "NOT": 1
+};
+/* 这些类型匹配的是目标 IP，追加 no-resolve 可避免为了匹配而触发 DNS 解析 */
+let RULE_NO_RESOLVE = { "GEOIP": 1, "IP-CIDR": 1, "IP-CIDR6": 1, "IP-SUFFIX": 1, "IP-ASN": 1 };
+
+function rule_set_names() {
+    let p = fs.popen(sprintf("yq -o=json '.rule-providers // {} | keys' '%s' 2>/dev/null", TEMPLATE_FILE));
+    let out = p ? (p.read("all") || "[]") : "[]";
+    if (p) p.close();
+    let arr = [];
+    try { arr = json(out) || []; } catch(e) { arr = []; }
+    let m = {};
+    for (let n in arr) m[n] = true;
+    return m;
+}
+
+function validate_apps(apps) {
+    let errs = [];
+    let site = geodata_tags("geosite"), ip = geodata_tags("geoip");
+    let site_m = {}, ip_m = {};
+    for (let t in (site || [])) site_m[t] = true;
+    for (let t in (ip || [])) ip_m[t] = true;
+    let rs = rule_set_names();
+    let ids = {};
+    for (let a in apps) {
+        if (type(a) != "object") { push(errs, "存在格式错误的卡片"); continue; }
+        if (!a.id) push(errs, sprintf("卡片 %s 缺少 id", a.name || "?"));
+        else if (ids[a.id]) push(errs, sprintf("卡片 id 重复：%s", a.id));
+        ids[a.id] = true;
+        let rules = [];
+        for (let r in (a.builtin_rules || [])) push(rules, r);
+        for (let r in (a.custom_rules || [])) push(rules, r);
+        for (let r in rules) {
+            if (type(r) != "object" || !r.type || r.payload == null || r.payload === "") {
+                push(errs, sprintf("%s：存在空规则", a.name || a.id)); continue;
+            }
+            let t = uc(r.type);
+            let pl = lc(sprintf("%s", r.payload));
+            if (!RULE_TYPES[t]) push(errs, sprintf("%s：不支持的规则类型 %s", a.name || a.id, r.type));
+            else if (t == "GEOSITE" && site && !site_m[pl]) push(errs, sprintf("%s：GEOSITE 标签 %s 在本机 geodata 中不存在", a.name || a.id, r.payload));
+            else if ((t == "GEOIP" || t == "SRC-GEOIP") && ip && !ip_m[pl]) push(errs, sprintf("%s：GEOIP 标签 %s 在本机 geodata 中不存在", a.name || a.id, r.payload));
+            else if (t == "RULE-SET" && !rs[r.payload]) push(errs, sprintf("%s：规则集 %s 未在模板 rule-providers 中定义", a.name || a.id, r.payload));
+        }
+    }
+    return errs;
+}
+
+/* 编译失败时从 mihomo 输出里提取真正的错误行（level=error / fatal），返回给前端 */
+function extract_mihomo_error(out) {
+    let found = [];
+    for (let l in split(out || "", "\n")) {
+        if (!match(l, /level=(error|fatal)|test failed|parse config error/)) continue;
+        let m = match(l, /msg="(.*)"\s*$/);
+        push(found, m ? replace(m[1], /\\"/g, "\"") : trim(l));
+        if (length(found) >= 3) break;
+    }
+    return length(found) ? join("；", found) : "";
+}
+
+let compile_error = null;
+function compile_fail(quiet, msg) {
+    if (quiet) compile_error = msg;
+    else print(sprintf("%.J\n", { success: false, error: msg }));
+    return false;
+}
+
+function compile_config(quiet) {
     ensure_defaults();
     shell_exec("uci commit omniclash >/dev/null 2>&1");
     uci = require("uci").cursor();
     let template = fs.readfile(TEMPLATE_FILE);
     if (!template) {
-        print(sprintf("{\"success\":false,\"error\":\"找不到基础模板文件: %s\"}\n", TEMPLATE_FILE));
-        return false;
+        return compile_fail(quiet, sprintf("找不到基础模板文件: %s", TEMPLATE_FILE));
     }
 
     // 1. 动态注入基础设置 (UCI omniclash.config)
@@ -721,28 +990,17 @@ function compile_config() {
     if (type(apps) != "array") apps = [];
     let slots = get_all_slots();
 
-    let candidate_names = [
-        "🎯 专线-Tallflix", "🎯 专线-Snacky", "🎯 专线-Realith", "🇭🇰 香港节点",
-        "🇨🇳 台湾节点", "🇸🇬 新加坡", "🇯🇵 日本节点", "🇺🇲 美国节点", "🇰🇷 韩国",
-        "🇬🇧 英国节点", "🇩🇪 德国节点", "🏠 住宅落地", "🚀 节点选择", "♻️ 自动选择",
-        "☢ 负载均衡-散列", "☢ 负载均衡-轮询", "🌐 全部节点", "🟢 直连", "🛑 黑洞"
-    ];
-
+    let slot_tpl = read_slot_group_template();
     let wmode = uci.get("omniclash", "config", "wireless_mode") || "multi";
 
     let group_lines = [];
     if (wmode == "multi") {
         push(group_lines, "  # ==========================================");
-        push(group_lines, "  # 🎛️ 槽位专属出口策略组 (32 槽位常驻注入)");
+        push(group_lines, "  # 🎛️ 槽位专属出口策略组 (/etc/omniclash/slot_group.json)");
         push(group_lines, "  # ==========================================");
 
         for (let slot in slots) {
-            let node_group = sprintf("🌐 %s-出口", slot.num);
-            let ordered = [ slot.target ];
-            for (let c in candidate_names) {
-                if (c != slot.target) push(ordered, c);
-            }
-            push(group_lines, sprintf("  - {name: \"%s\", type: select, include-all: true, exclude-filter: \"s5v_\", proxies: [%s], icon: https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/WiFi.png}", node_group, join(", ", ordered)));
+            push(group_lines, sprintf("  - %J", build_slot_group(slot_tpl, slot)));
         }
     }
 
@@ -750,40 +1008,11 @@ function compile_config() {
     push(group_lines, "  # 🎯 用户与系统分流策略组 (/etc/omniclash/groups.json)");
     push(group_lines, "  # ==========================================");
 
-    let template_providers = get_template_providers();
-    let all_provider_names = [];
-    for (let p in template_providers) {
-        if (p.name) push(all_provider_names, p.name);
-    }
-
+    /* 策略组原样输出：groups.json 中的每个字段都是 mihomo 原生字段，
+     * 引擎不再根据组名或类型猜测节点来源（use / include-all-providers 由配置显式声明） */
     for (let g in groups) {
-        let parts = [ sprintf("name: \"%s\"", g.name), sprintf("type: %s", g.type) ];
-        let use_list = (g.use && length(g.use)) ? g.use : null;
-        if (!use_list) {
-            // 自动为需要节点池的策略组注入全量 Provider 列表，由前缀与正则过滤节点
-            if (g.filter || g.type == "url-test" || g.type == "load-balance" || g.type == "fallback" || match(g.name, /专线|自动|散列|轮询|前置|落地/)) {
-                use_list = all_provider_names;
-            }
-        }
-        if (use_list && length(use_list)) push(parts, sprintf("use: [%s]", join(", ", use_list)));
-        if (g.proxies && length(g.proxies)) {
-            let quoted_proxies = [];
-            for (let px in g.proxies) {
-                if (px) push(quoted_proxies, sprintf("\"%s\"", replace(px, "\"", "\\\"")));
-            }
-            if (length(quoted_proxies)) push(parts, sprintf("proxies: [%s]", join(", ", quoted_proxies)));
-        }
-        if (g.filter) push(parts, sprintf("filter: \"%s\"", replace(g.filter, "\"", "\\\"")));
-        if (g.url) push(parts, sprintf("url: \"%s\"", replace(g.url, "\"", "\\\"")));
-        if (g.tolerance) push(parts, sprintf("tolerance: %d", g.tolerance));
-        if (g.interval) push(parts, sprintf("interval: %d", g.interval));
-        if (g.lazy != null) push(parts, sprintf("lazy: %s", g.lazy ? "true" : "false"));
-        if (g.hidden != null) push(parts, sprintf("hidden: %s", g.hidden ? "true" : "false"));
-        if (g.icon) push(parts, sprintf("icon: \"%s\"", g.icon));
-        if (g["include-all"] != null) push(parts, sprintf("include-all: %s", g["include-all"] ? "true" : "false"));
-        if (g["exclude-filter"]) push(parts, sprintf("exclude-filter: \"%s\"", g["exclude-filter"]));
-        if (g.strategy) push(parts, sprintf("strategy: %s", g.strategy));
-        push(group_lines, sprintf("  - {%s}", join(", ", parts)));
+        let obj = clean_group(g);
+        if (obj) push(group_lines, sprintf("  - %J", obj));
     }
 
     // 3. 动态组装纯净直达规则流（全量由配置文件与 UCI 选项驱动，零代码级硬编码）
@@ -830,10 +1059,13 @@ function compile_config() {
         for (let r in (app.custom_rules || [])) push(app_rules, r);
         for (let r in app_rules) {
             if (!r || type(r) != "object") continue;
-            if (type(r.type) != "string" || type(r.payload) != "string") continue;
-            if (!r.type || !r.payload) continue;
-            let line = sprintf("  - %s,%s,%s", r.type, r.payload, tgt);
-            if (r.type == "GEOIP") line += ",no-resolve";
+            if (type(r.type) != "string" || r.payload == null) continue;
+            let t = uc(trim(r.type));
+            let pl = trim(sprintf("%s", r.payload));
+            if (!t || !pl || !RULE_TYPES[t]) continue;
+            let line = sprintf("  - %s,%s,%s", t, pl, tgt);
+            /* 匹配目标 IP 的规则默认不触发 DNS 解析；卡片可用 resolve:true 显式关闭 */
+            if (RULE_NO_RESOLVE[t] && r.resolve !== true) line += ",no-resolve";
             push(tier4_app, line);
         }
     }
@@ -876,15 +1108,49 @@ function compile_config() {
 
     fs.writefile(TMP_FILE, final_yaml);
 
-    let test_res = shell_exec(sprintf("mihomo -t -d /etc/omniclash/run -f '%s' >/dev/null 2>&1", TMP_FILE));
+    let test_res = shell_exec(sprintf("mihomo -t -d /etc/omniclash/run -f '%s' 2>&1", TMP_FILE));
     if (test_res.code != 0) {
         fs.unlink(TMP_FILE);
-        print("{\"success\":false,\"error\":\"语法校验未通过\"}\n");
-        return false;
+        let detail = extract_mihomo_error(test_res.out);
+        return compile_fail(quiet, detail ? ("配置校验未通过：" + detail) : "配置校验未通过（mihomo -t 返回非零）");
     }
 
     shell_exec(sprintf("mv -f '%s' '%s'", TMP_FILE, TARGET_FILE));
     return true;
+}
+
+/* compile_config 的无输出版本：错误信息以返回值给出，供事务内部使用 */
+function compile_config_quiet() {
+    compile_error = null;
+    let ok = false;
+    try { ok = compile_config(true); } catch(e) { compile_error = sprintf("编译异常：%s", e); }
+    return ok ? { ok: true } : { ok: false, error: compile_error || "编译失败" };
+}
+
+/* 事务式落盘：先备份涉及的文件，执行修改后完整编译并经 mihomo -t 校验，
+ * 任何一步失败都恢复全部备份，保证磁盘上永远是一份可加载的配置。
+ * 成功后热重载（PUT /configs），不重启进程、不打断现有连接。 */
+function transactional_apply(files, mutate) {
+    let backups = {};
+    for (let f in files) backups[f] = fs.access(f) ? fs.readfile(f) : null;
+    let restore = function() {
+        for (let f in keys(backups)) {
+            if (backups[f] == null) fs.unlink(f);
+            else fs.writefile(f, backups[f]);
+        }
+        uci = require("uci").cursor();
+    };
+
+    let err = null;
+    try { err = mutate(); } catch(e) { err = sprintf("写入失败：%s", e); }
+    if (err) { restore(); return { ok: false, error: err }; }
+
+    uci = require("uci").cursor();
+    let ok = compile_config_quiet();
+    if (!ok.ok) { restore(); return { ok: false, error: ok.error }; }
+
+    shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
+    return { ok: true };
 }
 
 let action = ARGV[0];
@@ -1060,9 +1326,9 @@ if (action == "compile") {
     uci.set("omniclash", "config", "wireless_mode", mode);
     if (run_mode) uci.set("omniclash", "config", "run_mode", run_mode);
     uci.commit("omniclash");
-    compile_config();
-    shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
-    print("{\"success\":true,\"msg\":\"无线模式已保存并生效\"}\n");
+    let c = compile_config_quiet();
+    if (c.ok) shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
+    print(sprintf("%.J\n", c.ok ? { success: true, msg: "无线模式已保存并生效" } : { success: false, error: c.error }));
 } else if (action == "get_ap_token") {
     /* 令牌由子 AP 在安装 agent 时随机生成，主控只负责保存用户粘贴过来的值，
      * 因此这里绝不自动生成——否则会得到一个永远对不上的令牌。 */
@@ -1262,6 +1528,24 @@ if (action == "compile") {
         clients: clients,
         count: length(clients)
     }));
+} else if (action == "migrate_groups") {
+    /* 一次性迁移：旧引擎在编译时按下面这条启发式为策略组隐式注入全部订阅。
+     * 这里把同一条规则的结果显式写进 groups.json（include-all-providers），
+     * 之后引擎不再做任何猜测。已带有节点来源字段的组不会被改动，可重复执行。 */
+    let list = null;
+    try { list = json(fs.readfile(GROUPS_FILE) || "[]"); } catch(e) { list = null; }
+    if (type(list) != "array") { print("{\"success\":false,\"error\":\"groups.json 无法解析\"}\n"); return; }
+    let n = 0;
+    for (let g in list) {
+        if (type(g) != "object" || !g.name) continue;
+        if ((type(g.use) == "array" && length(g.use)) || g["include-all"] || g["include-all-proxies"] || g["include-all-providers"]) continue;
+        if (g.filter || g.type == "url-test" || g.type == "load-balance" || g.type == "fallback" || match(g.name, /专线|自动|散列|轮询|前置|落地/)) {
+            g["include-all-providers"] = true;
+            n++;
+        }
+    }
+    if (n) fs.writefile(GROUPS_FILE, sprintf("%.J\n", list));
+    print(sprintf("{\"success\":true,\"migrated\":%d}\n", n));
 } else if (action == "merge_apps") {
     let n = merge_default_apps();
     print(sprintf("{\"success\":true,\"merged\":%d}\n", n));
@@ -1304,42 +1588,38 @@ if (action == "compile") {
         msg: sprintf("已成功强制更新 %d 个订阅提供商，共计 %d 个出海节点", length(updated), total_nodes)
     }));
 } else if (action == "export_backup") {
-    /* 导出全套配置为结构化 JSON 档案 */
+    /* 导出全套配置：UCI、策略组、槽位组模板、应用卡片、普通 WiFi，以及含订阅与 DNS 的 template.yaml */
     ensure_defaults();
-    let cfg_raw = fs.readfile("/etc/config/omniclash") || "";
-    let grp_raw = json(fs.readfile(GROUPS_FILE) || "[]");
-    let app_raw = json(fs.readfile(APPS_FILE) || "[]");
-    let wfn_raw = json(fs.readfile(NORMAL_WIFI_FILE) || "[]");
-
+    let rd = function(f, dflt) { let v = null; try { v = json(fs.readfile(f) || "null"); } catch(e) { v = null; } return (v == null) ? dflt : v; };
     let hostname = trim(fs.readfile("/proc/sys/kernel/hostname") || "OpenWrt");
 
     print(sprintf("%.J\n", {
         success: true,
         backup: {
             app: "omniclash",
-            format_version: 1,
-            version: "0.1.6",
+            format_version: 2,
+            version: "0.1.7",
             exported_at: time(),
             hostname: hostname,
             data: {
-                config: cfg_raw,
-                groups: (type(grp_raw) == "array") ? grp_raw : [],
-                apps: (type(app_raw) == "array") ? app_raw : [],
-                wifi_normal: (type(wfn_raw) == "array") ? wfn_raw : []
+                config: fs.readfile("/etc/config/omniclash") || "",
+                groups: rd(GROUPS_FILE, []),
+                slot_group: rd(SLOT_GROUP_FILE, null),
+                apps: rd(APPS_FILE, []),
+                wifi_normal: rd(NORMAL_WIFI_FILE, []),
+                template: fs.readfile(TEMPLATE_FILE) || ""
             }
         }
     }));
 } else if (action == "import_backup") {
-    /* 从结构化 JSON 档案恢复全套配置 */
+    /* 从结构化 JSON 档案恢复全套配置（事务式：编译不通过则整体回滚） */
     let input_raw = fs.readfile("/dev/stdin") || "";
     let p = null;
-    let parsed_ok = false;
-    try { p = json(input_raw); parsed_ok = true; } catch(e) {}
+    try { p = json(input_raw); } catch(e) { p = null; }
 
     let b = p;
-    if (type(b) == "object" && b.backup) b = b.backup;
-    if (type(b) == "object" && b.backup) b = b.backup;
-    if (!parsed_ok || type(b) != "object" || b.app != "omniclash" || type(b.data) != "object") {
+    while (type(b) == "object" && type(b.backup) == "object") b = b.backup;
+    if (type(b) != "object" || b.app != "omniclash" || type(b.data) != "object") {
         print("{\"success\":false,\"error\":\"备份档案格式非法，必须为 OmniClash 导出的 JSON 备份文件\"}\n");
         return;
     }
@@ -1350,25 +1630,26 @@ if (action == "compile") {
         return;
     }
 
-    /* 恢复前在本地留一份快照以防误恢复 */
+    /* 除事务回滚外，另在本地留一份快照，方便人工找回 */
     let bk_dir = "/etc/omniclash/backup_before_restore";
-    shell_exec(sprintf("mkdir -p %s && cp -f /etc/config/omniclash %s/omniclash.uci 2>/dev/null", bk_dir, bk_dir));
-    shell_exec(sprintf("cp -f %s %s/groups.json 2>/dev/null", GROUPS_FILE, bk_dir));
-    shell_exec(sprintf("cp -f %s %s/apps.json 2>/dev/null", APPS_FILE, bk_dir));
-    shell_exec(sprintf("cp -f %s %s/wifi_normal.json 2>/dev/null", NORMAL_WIFI_FILE, bk_dir));
+    shell_exec(sprintf("mkdir -p %s", bk_dir));
+    for (let f in [ "/etc/config/omniclash", GROUPS_FILE, APPS_FILE, NORMAL_WIFI_FILE, SLOT_GROUP_FILE, TEMPLATE_FILE ])
+        if (fs.access(f)) shell_exec(sprintf("cp -f '%s' '%s/'", f, bk_dir));
 
-    fs.writefile("/etc/config/omniclash", d.config);
-    fs.writefile(GROUPS_FILE, sprintf("%.J\n", d.groups));
-    fs.writefile(APPS_FILE, sprintf("%.J\n", d.apps));
-    if (type(d.wifi_normal) == "array") {
-        fs.writefile(NORMAL_WIFI_FILE, sprintf("%.J\n", d.wifi_normal));
-    }
-
-    uci = require("uci").cursor();
-    compile_config();
-    shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
-
-    print("{\"success\":true,\"msg\":\"全套配置已成功恢复并重新编译合流生效！\"}\n");
+    let r = transactional_apply(
+        [ "/etc/config/omniclash", GROUPS_FILE, APPS_FILE, NORMAL_WIFI_FILE, SLOT_GROUP_FILE, TEMPLATE_FILE ],
+        function() {
+            fs.writefile("/etc/config/omniclash", d.config);
+            fs.writefile(GROUPS_FILE, sprintf("%.J\n", d.groups));
+            fs.writefile(APPS_FILE, sprintf("%.J\n", d.apps));
+            if (type(d.wifi_normal) == "array") fs.writefile(NORMAL_WIFI_FILE, sprintf("%.J\n", d.wifi_normal));
+            if (type(d.slot_group) == "object") fs.writefile(SLOT_GROUP_FILE, sprintf("%.J\n", d.slot_group));
+            if (type(d.template) == "string" && index(d.template, "proxy-groups:") >= 0) fs.writefile(TEMPLATE_FILE, d.template);
+            return null;
+        });
+    print(sprintf("%.J\n", r.ok
+        ? { success: true, msg: "全套配置已恢复并重新编译生效" }
+        : { success: false, error: "恢复失败，已回滚到恢复前的配置：" + r.error }));
 } else if (action == "clear_logs") {
     fs.writefile("/var/log/omniclash/core.log", "");
     fs.writefile("/var/log/omniclash/app.log", "");
@@ -1424,19 +1705,17 @@ if (action == "compile") {
         print("{\"success\":false,\"error\":\"订阅 Provider 数据格式非法，必须为数组\"}\n");
         return;
     }
-    let list = p.providers;
-    let ok = save_template_providers(list);
-    if (ok) {
-        compile_config();
-        shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
-        print("{\"success\":true,\"msg\":\"Provider保存并生效\"}\n");
-    } else {
-        print("{\"success\":false,\"error\":\"保存失败\"}\n");
-    }
+    let r = transactional_apply([ TEMPLATE_FILE ], function() {
+        let s = save_template_providers(p.providers);
+        return s.ok ? null : s.error;
+    });
+    print(sprintf("%.J\n", r.ok ? { success: true, msg: "订阅已保存并生效" } : { success: false, error: r.error }));
 } else if (action == "get_groups") {
     ensure_defaults();
-    let g = json(fs.readfile(GROUPS_FILE) || "[]");
-    print(sprintf("%.J\n", { success: true, groups: g }));
+    let g = null;
+    try { g = json(fs.readfile(GROUPS_FILE) || "[]"); } catch(e) { g = []; }
+    let st = read_slot_group_template();
+    print(sprintf("%.J\n", { success: true, groups: g, slot_group: st }));
 } else if (action == "save_groups") {
     let input_raw = fs.readfile("/dev/stdin") || "";
     let p = null;
@@ -1446,20 +1725,39 @@ if (action == "compile") {
         print("{\"success\":false,\"error\":\"策略组数据格式非法，必须为数组\"}\n");
         return;
     }
-    let list = p.groups;
-    fs.writefile(GROUPS_FILE, sprintf("%.J\n", list));
-    compile_config();
-    shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
-    print("{\"success\":true,\"msg\":\"策略组保存并生效\"}\n");
-} else if (action == "reset_groups") {
-    if (fs.access(GROUPS_DEF_FILE)) {
-        fs.writefile(GROUPS_FILE, fs.readfile(GROUPS_DEF_FILE));
-        compile_config();
-        shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
-        print("{\"success\":true,\"msg\":\"策略组已恢复为默认模板\"}\n");
-    } else {
-        print("{\"success\":false,\"error\":\"未找到默认策略组定义\"}\n");
+    let list = [];
+    for (let g in p.groups) { let c = clean_group(g); if (c) push(list, c); }
+    let errs = validate_groups(list, get_template_providers());
+    if (length(errs)) {
+        print(sprintf("%.J\n", { success: false, error: join("；", errs) }));
+        return;
     }
+    let has_sg = (type(p.slot_group) == "object" && type(p.slot_group.proxies) == "array" && length(p.slot_group.proxies));
+    let files = [ GROUPS_FILE ];
+    if (has_sg) push(files, SLOT_GROUP_FILE);
+    let r = transactional_apply(files, function() {
+        fs.writefile(GROUPS_FILE, sprintf("%.J\n", list));
+        if (has_sg) {
+            let tmp = { name: "slot" };
+            for (let k in keys(p.slot_group)) if (k != "name") tmp[k] = p.slot_group[k];
+            let sg = clean_group(tmp);
+            delete sg.name;
+            fs.writefile(SLOT_GROUP_FILE, sprintf("%.J\n", sg));
+        }
+        return null;
+    });
+    print(sprintf("%.J\n", r.ok ? { success: true, msg: "策略组已保存并生效" } : { success: false, error: r.error }));
+} else if (action == "reset_groups") {
+    if (!fs.access(GROUPS_DEF_FILE)) {
+        print("{\"success\":false,\"error\":\"未找到默认策略组定义\"}\n");
+        return;
+    }
+    let r = transactional_apply([ GROUPS_FILE, SLOT_GROUP_FILE ], function() {
+        fs.writefile(GROUPS_FILE, fs.readfile(GROUPS_DEF_FILE));
+        if (fs.access(SLOT_GROUP_DEF_FILE)) fs.writefile(SLOT_GROUP_FILE, fs.readfile(SLOT_GROUP_DEF_FILE));
+        return null;
+    });
+    print(sprintf("%.J\n", r.ok ? { success: true, msg: "策略组已恢复为默认模板" } : { success: false, error: r.error }));
 } else if (action == "get_apps") {
     ensure_defaults();
     let a = null;
@@ -1475,20 +1773,122 @@ if (action == "compile") {
         print("{\"success\":false,\"error\":\"应用卡片数据格式非法，必须为数组\"}\n");
         return;
     }
-    let list = p.apps;
-    fs.writefile(APPS_FILE, sprintf("%.J\n", list));
-    compile_config();
-    shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
-    print("{\"success\":true,\"msg\":\"应用卡片库保存并生效\"}\n");
-} else if (action == "reset_apps") {
-    if (fs.access(APPS_DEF_FILE)) {
-        fs.writefile(APPS_FILE, fs.readfile(APPS_DEF_FILE));
-        compile_config();
-        shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
-        print("{\"success\":true,\"msg\":\"应用卡片库已恢复为默认模板\"}\n");
-    } else {
-        print("{\"success\":false,\"error\":\"未找到默认应用卡片定义\"}\n");
+    let errs = validate_apps(p.apps);
+    if (length(errs)) {
+        print(sprintf("%.J\n", { success: false, error: join("；", errs) }));
+        return;
     }
+    let r = transactional_apply([ APPS_FILE ], function() {
+        fs.writefile(APPS_FILE, sprintf("%.J\n", p.apps));
+        return null;
+    });
+    print(sprintf("%.J\n", r.ok ? { success: true, msg: "应用卡片库已保存并生效" } : { success: false, error: r.error }));
+} else if (action == "reset_apps") {
+    if (!fs.access(APPS_DEF_FILE)) {
+        print("{\"success\":false,\"error\":\"未找到默认应用卡片定义\"}\n");
+        return;
+    }
+    let r = transactional_apply([ APPS_FILE ], function() {
+        fs.writefile(APPS_FILE, fs.readfile(APPS_DEF_FILE));
+        return null;
+    });
+    print(sprintf("%.J\n", r.ok ? { success: true, msg: "应用卡片库已恢复为默认模板" } : { success: false, error: r.error }));
+} else if (action == "save_all") {
+    /* 一次事务提交全部路由配置：核心设置、订阅、策略组、槽位组模板、应用卡片。
+     * 任何一项校验或最终编译失败，全部文件回滚，只做一次编译与一次热重载。 */
+    let input_raw = fs.readfile("/dev/stdin") || "";
+    let p = null;
+    try { p = json(input_raw); } catch(e) { p = null; }
+    if (type(p) != "object") {
+        print("{\"success\":false,\"error\":\"提交数据格式非法\"}\n");
+        return;
+    }
+
+    let errs = [];
+    let groups = null;
+    if (type(p.groups) == "array") {
+        groups = [];
+        for (let g in p.groups) { let c = clean_group(g); if (c) push(groups, c); }
+    }
+    if (type(p.apps) == "array") for (let e in validate_apps(p.apps)) push(errs, e);
+    if (length(errs)) {
+        print(sprintf("%.J\n", { success: false, error: join("；", errs) }));
+        return;
+    }
+
+    let SETTING_KEYS = {
+        tcp_mode: /^(tun|tproxy|redirect)$/, udp_mode: /^(tun|tproxy)$/, tun_stack: /^(system|gvisor|mixed)$/,
+        bypass_china_mainland_ip: /^[01]$/, dns_mode: /^(fake-ip|redir-host)$/,
+        fake_ip_range: /^[0-9.]+\/[0-9]+$/, mixed_port: /^[0-9]+$/, socks_port: /^[0-9]+$/,
+        log_level: /^(silent|error|warning|info|debug)$/, scheduled_restart: /^[01]$/,
+        scheduled_restart_cron: /^[0-9*\/, -]+$/, cn_target: /./, final_target: /./
+    };
+    if (type(p.settings) == "object") {
+        for (let k in keys(p.settings)) {
+            let v = sprintf("%s", p.settings[k]);
+            if (!SETTING_KEYS[k]) continue;
+            if (!match(v, SETTING_KEYS[k])) push(errs, sprintf("设置项 %s 的值非法：%s", k, v));
+        }
+    }
+    if (length(errs)) {
+        print(sprintf("%.J\n", { success: false, error: join("；", errs) }));
+        return;
+    }
+
+    let has_sg = (type(p.slot_group) == "object" && type(p.slot_group.proxies) == "array" && length(p.slot_group.proxies));
+    let r = transactional_apply(
+        [ "/etc/config/omniclash", TEMPLATE_FILE, GROUPS_FILE, SLOT_GROUP_FILE, APPS_FILE ],
+        function() {
+            if (type(p.settings) == "object") {
+                for (let k in keys(p.settings))
+                    if (SETTING_KEYS[k]) uci.set("omniclash", "config", k, sprintf("%s", p.settings[k]));
+                uci.commit("omniclash");
+            }
+            if (type(p.providers) == "array") {
+                let s = save_template_providers(p.providers);
+                if (!s.ok) return s.error;
+            }
+            if (groups) {
+                let ge = validate_groups(groups, get_template_providers());
+                if (length(ge)) return join("；", ge);
+                fs.writefile(GROUPS_FILE, sprintf("%.J\n", groups));
+            }
+            if (has_sg) {
+                let tmp = { name: "slot" };
+                for (let k in keys(p.slot_group)) if (k != "name") tmp[k] = p.slot_group[k];
+                let sg = clean_group(tmp);
+                delete sg.name;
+                fs.writefile(SLOT_GROUP_FILE, sprintf("%.J\n", sg));
+            }
+            if (type(p.apps) == "array") fs.writefile(APPS_FILE, sprintf("%.J\n", p.apps));
+            return null;
+        });
+    if (r.ok) shell_exec("/usr/bin/omniclash apply_cron >/dev/null 2>&1");
+    print(sprintf("%.J\n", r.ok ? { success: true, msg: "全部配置已保存并生效" } : { success: false, error: r.error }));
+} else if (action == "save_slot_route") {
+    /* 修改槽位的分流模式与出口。只改 omniclash UCI，不触碰无线和网络。 */
+    let input_raw = fs.readfile("/dev/stdin") || "";
+    let p = null;
+    try { p = json(input_raw); } catch(e) { p = null; }
+    if (type(p) != "object" || type(p.sid) != "string" || !uci.get("omniclash", p.sid)) {
+        print("{\"success\":false,\"error\":\"槽位不存在\"}\n");
+        return;
+    }
+    if (p.mode === "") p.mode = null;
+    if (p.mode != null && index([ "global", "split", "app_pool" ], p.mode) < 0) {
+        print("{\"success\":false,\"error\":\"分流模式必须是 global / split / app_pool\"}\n");
+        return;
+    }
+    let r = transactional_apply([ "/etc/config/omniclash" ], function() {
+        if (p.mode != null) uci.set("omniclash", p.sid, "mode", p.mode);
+        if (type(p.target) == "string" && p.target) uci.set("omniclash", p.sid, "target", p.target);
+        uci.commit("omniclash");
+        return null;
+    });
+    print(sprintf("%.J\n", r.ok ? { success: true, msg: "槽位分流已更新" } : { success: false, error: r.error }));
+} else if (action == "get_geodata_tags") {
+    /* 列出本机 geodata 中可用的 GEOSITE / GEOIP 标签，供前端下拉与保存前校验 */
+    print(sprintf("%.J\n", { success: true, geosite: geodata_tags("geosite"), geoip: geodata_tags("geoip") }));
 } else if (action == "get_matrix") {
     ensure_defaults();
     let slots = get_all_slots();
@@ -1573,12 +1973,14 @@ if (action == "compile") {
         });
     }
 
-    let candidate_names = [
-        "🎯 专线-Tallflix", "🎯 专线-Snacky", "🎯 专线-Realith", "🇭🇰 香港节点",
-        "🇨🇳 台湾节点", "🇸🇬 新加坡", "🇯🇵 日本节点", "🇺🇲 美国节点", "🇰🇷 韩国",
-        "🇬🇧 英国节点", "🇩🇪 德国节点", "🏠 住宅落地", "🚀 节点选择", "♻️ 自动选择",
-        "☢ 负载均衡-散列", "☢ 负载均衡-轮询", "🌐 全部节点", "🟢 直连", "🛑 黑洞"
-    ];
+    /* 槽位可选出口 = 槽位组模板中的候选项 + groups.json 中全部策略组（去重、保序） */
+    let candidate_names = [];
+    let seen_c = {};
+    let add_c = function(n) { if (n && !seen_c[n]) { seen_c[n] = true; push(candidate_names, n); } };
+    for (let n in (read_slot_group_template().proxies || [])) add_c(n);
+    let gl = null;
+    try { gl = json(fs.readfile(GROUPS_FILE) || "[]"); } catch(e) { gl = []; }
+    for (let g in (gl || [])) if (type(g) == "object") add_c(g.name);
 
     let mode = get_run_mode();
     print(sprintf("%.J\n", {
@@ -1895,9 +2297,9 @@ if (action == "compile") {
     shell_exec(join("\n", net_cmds) + "\nuci commit network; uci commit dhcp; uci commit firewall; /etc/init.d/network reload; /etc/init.d/dnsmasq reload; /etc/init.d/firewall reload;");
     wireless_exec(join("\n", ap_cmds) + "\nuci commit network; uci commit wireless; /etc/init.d/network reload; wifi reload;");
 
-    compile_config();
-    shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
-    print("{\"success\":true,\"msg\":\"32满额WiFi全架构常驻初始化完成！\"}\n");
+    let c = compile_config_quiet();
+    if (c.ok) shell_exec("/usr/bin/omniclash reload >/dev/null 2>&1");
+    print(sprintf("%.J\n", c.ok ? { success: true, msg: "32满额WiFi全架构常驻初始化完成！" } : { success: false, error: "网络已初始化，但代理配置编译失败：" + c.error }));
 } else if (action == "save_wifi_normal") {
     let input_raw = fs.readfile("/dev/stdin") || "";
     let p = null;

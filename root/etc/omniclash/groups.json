@@ -6,7 +6,8 @@
     "tolerance": 50,
     "interval": 300,
     "lazy": true,
-    "hidden": true
+    "hidden": true,
+    "include-all-providers": true
   },
   {
     "name": "🎯 专线-Tallflix",
@@ -17,7 +18,8 @@
       "🛑 黑洞",
       "🟢 直连"
     ],
-    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Server.png"
+    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Server.png",
+    "include-all-providers": true
   },
   {
     "name": "🎯 专线-Snacky-自动",
@@ -26,7 +28,8 @@
     "tolerance": 50,
     "interval": 300,
     "lazy": true,
-    "hidden": true
+    "hidden": true,
+    "include-all-providers": true
   },
   {
     "name": "🎯 专线-Snacky",
@@ -37,7 +40,8 @@
       "🛑 黑洞",
       "🟢 直连"
     ],
-    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Server.png"
+    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Server.png",
+    "include-all-providers": true
   },
   {
     "name": "🎯 专线-Realith-自动",
@@ -46,7 +50,8 @@
     "tolerance": 50,
     "interval": 300,
     "lazy": true,
-    "hidden": true
+    "hidden": true,
+    "include-all-providers": true
   },
   {
     "name": "🎯 专线-Realith",
@@ -57,7 +62,8 @@
       "🛑 黑洞",
       "🟢 直连"
     ],
-    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Server.png"
+    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Server.png",
+    "include-all-providers": true
   },
   {
     "name": "🚀 节点选择",
@@ -98,7 +104,8 @@
     "strategy": "consistent-hashing",
     "interval": 300,
     "filter": "^((?!(直连)).)*$",
-    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Round_Robin_1.png"
+    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Round_Robin_1.png",
+    "include-all-providers": true
   },
   {
     "name": "☢ 负载均衡-轮询",
@@ -106,7 +113,8 @@
     "strategy": "round-robin",
     "interval": 300,
     "filter": "^((?!(直连)).)*$",
-    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Round_Robin.png"
+    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Round_Robin.png",
+    "include-all-providers": true
   },
   {
     "name": "🔗 前置入口",
@@ -114,7 +122,8 @@
     "proxies": [
       "♻️ 自动选择"
     ],
-    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Server.png"
+    "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Server.png",
+    "include-all-providers": true
   },
   {
     "name": "🏠 住宅落地-自动",
@@ -124,7 +133,8 @@
     "lazy": true,
     "hidden": true,
     "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Auto.png",
-    "filter": "(?i)s5v_"
+    "filter": "(?i)s5v_",
+    "include-all-providers": true
   },
   {
     "name": "🏠 住宅落地",
@@ -133,7 +143,8 @@
       "🏠 住宅落地-自动"
     ],
     "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Static.png",
-    "filter": "(?i)s5v_"
+    "filter": "(?i)s5v_",
+    "include-all-providers": true
   },
   {
     "name": "🌐 全部节点",

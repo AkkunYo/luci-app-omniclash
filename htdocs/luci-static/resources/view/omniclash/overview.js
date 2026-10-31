@@ -6,6 +6,7 @@
 'require rpc';
 'require form';
 'require ui';
+'require omniclash.ui as ocui';
 
 var callGetStatus = rpc.declare({
 	object: 'luci.omniclash',
@@ -42,6 +43,7 @@ return view.extend({
 	},
 
 	render: function(data) {
+		ocui.init();
 		var status = (data && data[0]) ? data[0] : {};
 		var isRunning = !!status.running;
 		var uptimeSec = status.uptime || 0;
@@ -91,7 +93,7 @@ return view.extend({
 			var node = origRenderWidget.apply(this, [section_id, option_index, cfgvalue]);
 			var statusWrap = E('span', {
 				'id': 'omni_core_status_wrap',
-				'style': 'display: inline-flex; align-items: center; gap: 8px; margin-left: 14px; ' + (isRunning ? 'color: #059669; font-weight: 600;' : 'color: #64748b;')
+				'style': 'display: inline-flex; align-items: center; gap: 8px; margin-left: 14px; ' + (isRunning ? 'color: #059669; font-weight: 600;' : 'color: var(--oc-fg-2);')
 			}, [
 				isRunning ? E('span', {
 					'id': 'omni_status_dot',
@@ -149,7 +151,7 @@ return view.extend({
 										E('p', { 'style': 'font-size: 14px; font-weight: 500; color: #059669; margin-bottom: 8px;' },
 											'✅ ' + _('App check/update completed! Current app version: %s').replace('%s', res.new_version || '')
 										),
-										E('p', { 'style': 'color: #64748b; font-size: 13px; margin: 0;' },
+										E('p', { 'style': 'color: var(--oc-fg-2); font-size: 13px; margin: 0;' },
 											res.msg || _('Already on latest version or updated successfully.')
 										)
 									]),
@@ -170,7 +172,7 @@ return view.extend({
 										E('p', { 'style': 'font-size: 14px; font-weight: 500; color: #dc2626; margin-bottom: 8px;' },
 											'❌ ' + _('App update failed')
 										),
-										E('p', { 'style': 'color: #64748b; font-size: 13px; margin: 0;' },
+										E('p', { 'style': 'color: var(--oc-fg-2); font-size: 13px; margin: 0;' },
 											(res && res.error) || _('Failed to fetch update from repository.')
 										)
 									]),
@@ -218,7 +220,7 @@ return view.extend({
 										E('p', { 'style': 'font-size: 14px; font-weight: 500; color: #059669; margin-bottom: 8px;' },
 											'✅ ' + _('Core check/update completed! Current core version: %s').replace('%s', res.new_version || '')
 										),
-										E('p', { 'style': 'color: #64748b; font-size: 13px; margin: 0;' },
+										E('p', { 'style': 'color: var(--oc-fg-2); font-size: 13px; margin: 0;' },
 											res.msg || _('Already on latest version or updated successfully.')
 										)
 									]),
@@ -239,7 +241,7 @@ return view.extend({
 										E('p', { 'style': 'font-size: 14px; font-weight: 500; color: #dc2626; margin-bottom: 8px;' },
 											'❌ ' + _('Core update failed')
 										),
-										E('p', { 'style': 'color: #64748b; font-size: 13px; margin: 0;' },
+										E('p', { 'style': 'color: var(--oc-fg-2); font-size: 13px; margin: 0;' },
 											(res && res.error) || _('Failed to fetch update from repository.')
 										)
 									]),
@@ -266,7 +268,7 @@ return view.extend({
 		o = s.option(form.DummyValue, '_uptime', _('System Uptime'));
 		o.rawhtml = true;
 		o.cfgvalue = function() {
-			return E('span', { 'id': 'omni_uptime_span', 'style': 'color: #64748b; font-family: monospace; font-size: 13px;' }, uptimeStr);
+			return E('span', { 'id': 'omni_uptime_span', 'style': 'color: var(--oc-fg-2); font-family: monospace; font-size: 13px;' }, uptimeStr);
 		};
 
 		// 7. 快捷操作
@@ -309,7 +311,7 @@ return view.extend({
 					var wrap = document.getElementById('omni_core_status_wrap');
 					if (wrap) {
 						var running = !!s.running;
-						wrap.style.color = running ? '#059669' : '#64748b';
+						wrap.style.color = running ? '#059669' : 'var(--oc-fg-2)';
 						wrap.style.fontWeight = running ? '600' : 'normal';
 						dom.content(wrap, [
 							running ? E('span', {

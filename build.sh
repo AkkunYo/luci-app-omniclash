@@ -108,7 +108,7 @@ cp -f "$BUILD_DIR/data/etc/config/omniclash" "$BUILD_DIR/data/etc/omniclash/conf
 rm -f "$BUILD_DIR/data/etc/config/omniclash"
 
 # 3b. 只打包 *_default.json 模板；可写文件由 postinst 首次播种，避免升级覆盖用户数据
-for f in groups apps rules wifi_normal; do
+for f in groups apps rules wifi_normal slot_group; do
     rm -f "$BUILD_DIR/data/etc/omniclash/$f.json"
 done
 
@@ -169,6 +169,10 @@ cat << 'POST' > "$BUILD_DIR/control/postinst"
 	[ -f /etc/omniclash/groups.json ] || cp -f /etc/omniclash/groups_default.json /etc/omniclash/groups.json
 	[ -f /etc/omniclash/apps.json ] || cp -f /etc/omniclash/apps_default.json /etc/omniclash/apps.json
 	[ -f /etc/omniclash/wifi_normal.json ] || cp -f /etc/omniclash/wifi_normal_default.json /etc/omniclash/wifi_normal.json
+	[ -f /etc/omniclash/slot_group.json ] || cp -f /etc/omniclash/slot_group_default.json /etc/omniclash/slot_group.json
+	# 旧版引擎会按组名/类型猜测并注入全部订阅；新版只认配置里显式声明的节点来源。
+	# 升级时为原先依赖猜测的策略组补上 include-all-providers，保证节点不丢。
+	/usr/bin/omniclash migrate_groups >/dev/null 2>&1 || true
 	# 已有用户库时，把默认库新增的卡片/内置规则无损合并进去（不改用户的走向与自定义规则）
 	/usr/bin/omniclash merge_apps >/dev/null 2>&1 || true
 

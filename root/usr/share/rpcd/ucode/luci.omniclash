@@ -272,7 +272,7 @@ const methods = {
 		}
 	},
 	save_groups: {
-		args: { groups: [] },
+		args: { groups: [], slot_group: {} },
 		call: function(req) {
 			return engine_call('save_groups', req.args || {});
 		}
@@ -357,6 +357,23 @@ const methods = {
 		args: { backup: {} },
 		call: function(req) {
 			return engine_call('import_backup', req.args || {});
+		}
+	},
+	save_all: {
+		args: { settings: {}, providers: [], groups: [], slot_group: {}, apps: [] },
+		call: function(req) {
+			return engine_call('save_all', req.args || {});
+		}
+	},
+	save_slot_route: {
+		args: { sid: '', mode: '', target: '' },
+		call: function(req) {
+			return engine_call('save_slot_route', req.args || {});
+		}
+	},
+	get_geodata_tags: {
+		call: function() {
+			return engine_call('get_geodata_tags');
 		}
 	},
 	compile_reload: {

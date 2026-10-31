@@ -1178,3 +1178,381 @@ msgstr "请先粘贴域名或 IP 列表。"
 
 msgid "Are you sure you want to delete proxy group \"%s\"?"
 msgstr "确定要删除策略组“%s”吗？"
+
+msgid "%d cards"
+msgstr "被 %d 张卡片使用"
+
+msgid "%d custom"
+msgstr "%d 条自定义"
+
+msgid "%d invalid"
+msgstr "%d 条无效"
+
+msgid "(default)"
+msgstr "（默认）"
+
+msgid "(none)"
+msgstr "（无）"
+
+msgid "(unnamed)"
+msgstr "（未命名）"
+
+msgid "A group cannot contain itself."
+msgstr "策略组不能包含自己。"
+
+msgid "Add Provider"
+msgstr "添加订阅"
+
+msgid "Add rule"
+msgstr "添加规则"
+
+msgid "Add rule to"
+msgstr "添加规则到"
+
+msgid "Added in front of every node name; groups filter on it"
+msgstr "加在每个节点名前面，策略组按它筛选节点"
+
+msgid "All"
+msgstr "全部"
+
+msgid "Allow DNS resolution for this rule"
+msgstr "允许此规则触发 DNS 解析"
+
+msgid "Applied to all 32 \"🌐 NN-出口\" groups. The exit bound to each slot is always moved to the first position automatically."
+msgstr "应用到全部 32 个「🌐 NN-出口」策略组。每个槽位绑定的出口会自动排到第一位。"
+
+msgid "Apply"
+msgstr "应用"
+
+msgid "Are you sure you want to deploy full 32-WiFi architecture to the child AP?\nThis will configure all VLAN bridges, subnets, DHCP pools, and reload wireless interfaces."
+msgstr "确定要把完整的 32-WiFi 架构部署到子 AP 吗？\n这会配置全部 VLAN 网桥、子网、DHCP 地址池，并重载无线接口。"
+
+msgid "Are you sure you want to reset proxy groups to default template?\nThis will reset all dedicated lines, regions, and application groups."
+msgstr "确定要把策略组恢复为默认模板吗？\n这会重置全部专线、地区和应用策略组。"
+
+msgid "Are you sure you want to restore the full default application library?\nAll custom scenarios and custom rules will be discarded."
+msgstr "确定要恢复默认应用卡片库吗？\n所有自定义卡片和自定义规则都会被丢弃。"
+
+msgid "Built-in Rules"
+msgstr "内置规则"
+
+msgid "Chaining"
+msgstr "链式代理"
+
+msgid "Click \"Save & Apply\" at the bottom to validate and apply all changes in one go."
+msgstr "点击页面底部的「保存并应用」，一次性校验并应用所有改动。"
+
+msgid "Click to add or remove; the order below is the order shown in the dashboard"
+msgstr "点击添加或移除；下方的顺序就是面板中的显示顺序"
+
+msgid "Clients"
+msgstr "终端"
+
+msgid "Configuration Backup & Disaster Recovery"
+msgstr "配置备份与灾难恢复"
+
+msgid "Custom Rules"
+msgstr "自定义规则"
+
+msgid "DNS & Fake-IP Settings"
+msgstr "DNS 与 Fake-IP 设置"
+
+msgid "Delete card"
+msgstr "删除卡片"
+
+msgid "Delete card \"%s\"?"
+msgstr "确定删除卡片「%s」吗？"
+
+msgid "Delete proxy group \"%s\"?"
+msgstr "确定删除策略组「%s」吗？"
+
+msgid "Delete subscription \"%s\"? Proxy groups that reference it must be updated too."
+msgstr "确定删除订阅「%s」吗？引用它的策略组也需要一并修改。"
+
+msgid "Description"
+msgstr "描述"
+
+msgid "Dialer proxy (chain)"
+msgstr "前置代理（链式）"
+
+msgid "Download via"
+msgstr "下载订阅时经由"
+
+msgid "Drop nodes matching"
+msgstr "排除匹配的节点"
+
+msgid "Drop protocols"
+msgstr "排除协议"
+
+msgid "Duplicate"
+msgstr "复制"
+
+msgid "Each group is emitted to mihomo exactly as configured here. Node sources must be declared explicitly: child proxies, subscriptions, or include-all."
+msgstr "每个策略组都按这里的配置原样输出给 mihomo。节点来源需要显式声明：子代理、订阅或「包含全部」。"
+
+msgid "Edit"
+msgstr "编辑"
+
+msgid "Edit Scenario Card"
+msgstr "编辑场景卡片"
+
+msgid "Edit Subscription"
+msgstr "编辑订阅"
+
+msgid "Edit rule in"
+msgstr "编辑规则："
+
+msgid "Enable UDP"
+msgstr "启用 UDP"
+
+msgid "Enable health check"
+msgstr "启用健康检查"
+
+msgid "Every node from this subscription connects through this group first"
+msgstr "该订阅的所有节点都先经过这个策略组再连接"
+
+msgid "Exit"
+msgstr "出口"
+
+msgid "Export or restore the complete configuration (all 32 slots, proxy groups, application card library, subscriptions and core settings)."
+msgstr "导出或恢复全套配置（32 个槽位、策略组、应用卡片库、订阅和核心设置）。"
+
+msgid "External node pools. Only proxy nodes are imported; local groups and rules are never overwritten."
+msgstr "外部节点池。只导入代理节点，不会覆盖本地策略组和规则。"
+
+msgid "Failed to update slot routing"
+msgstr "更新槽位分流失败"
+
+msgid "First rule (optional)"
+msgstr "第一条规则（可选）"
+
+msgid "Fix these rules before saving:"
+msgstr "请先修正以下规则再保存："
+
+msgid "GEOIP tag not found in local geodata"
+msgstr "本机 geodata 中没有这个 GEOIP 标签"
+
+msgid "GEOSITE tag not found in local geodata"
+msgstr "本机 geodata 中没有这个 GEOSITE 标签"
+
+msgid "General (app cards decide)"
+msgstr "通用（由应用卡片决定）"
+
+msgid "Global (all traffic via exit)"
+msgstr "全局（所有流量走出口）"
+
+msgid "Global = every connection uses the slot exit, CN included. Targeted = CN direct, everything else via the slot exit. General = application cards decide, the slot exit is only the final fallback. Changes apply instantly with a hot reload."
+msgstr "全局：所有连接都走槽位出口，包括国内。定向：国内直连，其余走槽位出口。通用：由应用卡片决定，槽位出口只做最后兜底。修改后立即热重载生效。"
+
+msgid "Group name already exists"
+msgstr "策略组名称已存在"
+
+msgid "Group name cannot be empty!"
+msgstr "策略组名称不能为空！"
+
+msgid "Health check"
+msgstr "健康检查"
+
+msgid "Hide in dashboard"
+msgstr "在面板中隐藏"
+
+msgid "Ignored when one of the include options above is on"
+msgstr "勾选了上面任一「包含」选项时此项不生效"
+
+msgid "Import"
+msgstr "导入"
+
+msgid "Imported %d rules, skipped %d duplicates."
+msgstr "已导入 %d 条规则，跳过 %d 条重复。"
+
+msgid "Inbound Proxy Ports"
+msgstr "本地代理端口"
+
+msgid "Include all subscriptions"
+msgstr "包含全部订阅"
+
+msgid "Include every node (subscriptions + local)"
+msgstr "包含全部节点（订阅 + 本地）"
+
+msgid "Keep nodes matching"
+msgstr "保留匹配的节点"
+
+msgid "Keep nodes matching (regex)"
+msgstr "保留匹配的节点（正则）"
+
+msgid "Lazy test (only test while in use)"
+msgstr "惰性测速（仅在使用时测速）"
+
+msgid "Letters, digits, _ . - only"
+msgstr "只能使用字母、数字、_ . -"
+
+msgid "Lines starting with # are ignored. Duplicates are skipped."
+msgstr "以 # 开头的行会被忽略，重复规则自动跳过。"
+
+msgid "Local file path"
+msgstr "本地文件路径"
+
+msgid "Logging & Scheduled Restart"
+msgstr "日志与定时重启"
+
+msgid "Match value"
+msgstr "匹配值"
+
+msgid "My Group"
+msgstr "我的策略组"
+
+msgid "New Subscription"
+msgstr "新建订阅"
+
+msgid "No cards match the search."
+msgstr "没有匹配的卡片。"
+
+msgid "Node filtering"
+msgstr "节点筛选"
+
+msgid "Node sources"
+msgstr "节点来源"
+
+msgid "None"
+msgstr "无"
+
+msgid "Nothing selected"
+msgstr "未选择"
+
+msgid "Nothing was changed. The router is still running the previous configuration."
+msgstr "没有做任何改动，路由器仍在运行原来的配置。"
+
+msgid "Off by default for IP rules (adds no-resolve)"
+msgstr "IP 类规则默认关闭（附加 no-resolve）"
+
+msgid "One rule per line"
+msgstr "每行一条规则"
+
+msgid "Optional description"
+msgstr "可选描述"
+
+msgid "Pick at least one node source: child proxies, subscriptions or an include option."
+msgstr "至少选择一种节点来源：子代理、订阅或「包含」选项。"
+
+msgid "Prefix"
+msgstr "前缀"
+
+msgid "Provider tag already exists"
+msgstr "订阅名称已存在"
+
+msgid "Provider tag may only contain letters, digits, _ . -"
+msgstr "订阅名称只能包含字母、数字、_ . -"
+
+msgid "Proxy used to fetch the subscription itself"
+msgstr "拉取订阅本身时使用的代理"
+
+msgid "Push the 32-slot wireless configuration to the child AP?\nOnly wireless interfaces are touched; AP networks and firewall stay unchanged."
+msgstr "确定把 32 槽位无线配置推送到子 AP 吗？\n只改动无线接口，不影响子 AP 的网络和防火墙。"
+
+msgid "Relative to /etc/omniclash/run"
+msgstr "相对于 /etc/omniclash/run"
+
+msgid "Reload the child AP network configuration now?\nThe AP will briefly drop off the network. If it does not come back within the grace period, it restores the previous configuration by itself."
+msgstr "现在重载子 AP 网络配置吗？\n子 AP 会短暂离线。如果在宽限时间内没有恢复，它会自动回滚到之前的配置。"
+
+msgid "Restore the backup exported at %s from %s?\nCurrent slots, groups, cards and subscriptions will be replaced. If the restored configuration fails validation, nothing is changed."
+msgstr "确定恢复 %s 从 %s 导出的备份吗？\n当前的槽位、策略组、卡片和订阅都会被替换。如果恢复后的配置校验不通过，不会做任何改动。"
+
+msgid "Routing Mode"
+msgstr "分流模式"
+
+msgid "Routing per slot: "
+msgstr "槽位分流说明："
+
+msgid "Save anyway? Saving the whole page will be rejected until it is fixed."
+msgstr "仍然保存吗？修正之前，整页保存会被拒绝。"
+
+msgid "Save failed"
+msgstr "保存失败"
+
+msgid "Search card name, domain, IP or egress"
+msgstr "搜索卡片名称、域名、IP 或出口"
+
+msgid "Search name, filter, member or subscription"
+msgstr "搜索名称、过滤正则、成员或订阅"
+
+msgid "Separate with |"
+msgstr "用 | 分隔"
+
+msgid "Skip TLS certificate verification"
+msgstr "跳过 TLS 证书校验"
+
+msgid "Slot #%s routing updated"
+msgstr "槽位 #%s 分流已更新"
+
+msgid "Slot Exit Template"
+msgstr "槽位出口模板"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Still referenced by: %s\nSaving will fail until those references are removed."
+msgstr "仍被以下项引用：%s\n移除这些引用之前保存会失败。"
+
+msgid "Subscription URL must start with http:// or https://"
+msgstr "订阅地址必须以 http:// 或 https:// 开头"
+
+msgid "Targeted (CN direct, rest via exit)"
+msgstr "定向（国内直连，其余走出口）"
+
+msgid "Test URL"
+msgstr "测速地址"
+
+msgid "The slot template needs at least one candidate exit."
+msgstr "槽位模板至少需要一个候选出口。"
+
+msgid "Traffic Proxy & System TUN Settings"
+msgstr "流量代理与 TUN 设置"
+
+msgid "Type"
+msgstr "类型"
+
+msgid "Unsaved changes. "
+msgstr "有未保存的改动。"
+
+msgid "Unsupported rule type"
+msgstr "不支持的规则类型"
+
+msgid "Update interval (s)"
+msgstr "更新间隔（秒）"
+
+msgid "Use specific subscriptions"
+msgstr "使用指定订阅"
+
+msgid "Used for lines that do not start with a rule type"
+msgstr "用于没有写规则类型的行"
+
+msgid "VLAN"
+msgstr "VLAN"
+
+msgid "Validating, compiling and hot-reloading. If anything fails, every file is rolled back."
+msgstr "正在校验、编译并热重载。任何一步失败都会回滚全部文件。"
+
+msgid "all nodes"
+msgstr "全部节点"
+
+msgid "all subscriptions"
+msgstr "全部订阅"
+
+msgid "copy"
+msgstr "副本"
+
+msgid "custom card"
+msgstr "自定义卡片"
+
+msgid "hidden"
+msgstr "隐藏"
+
+msgid "rotate every connection"
+msgstr "每个连接轮换节点"
+
+msgid "same source+target, same node"
+msgstr "同一来源与目标使用同一节点"
+
+msgid "same target, same node"
+msgstr "同一目标使用同一节点"

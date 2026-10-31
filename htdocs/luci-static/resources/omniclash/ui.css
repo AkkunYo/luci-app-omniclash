@@ -1,0 +1,147 @@
+/* OmniClash 共享样式。
+ * 所有颜色都走 CSS 变量，深色主题由 omniclash/ui.js 在 <html> 上加 .oc-dark 切换，
+ * 同时兼容 Argon 的「跟随系统 / 强制深色」与 bootstrap-dark。 */
+.oc {
+	--oc-fg: #1e293b;
+	--oc-fg-2: #475569;
+	--oc-fg-3: #94a3b8;
+	--oc-bg: #ffffff;
+	--oc-bg-2: #f8fafc;
+	--oc-bg-3: #f1f5f9;
+	--oc-line: #e2e8f0;
+	--oc-line-2: #cbd5e1;
+	--oc-pri: #2563eb;
+	--oc-pri-bg: rgba(37, 99, 235, .10);
+	--oc-ok: #059669;
+	--oc-ok-bg: rgba(16, 185, 129, .12);
+	--oc-warn: #d97706;
+	--oc-warn-bg: rgba(245, 158, 11, .12);
+	--oc-err: #dc2626;
+	--oc-err-bg: rgba(239, 68, 68, .10);
+	--oc-vio: #7c3aed;
+	--oc-vio-bg: rgba(139, 92, 246, .12);
+	--oc-radius: 8px;
+	--oc-shadow: 0 1px 2px rgba(15, 23, 42, .06);
+	color: var(--oc-fg);
+	font-size: 13px;
+}
+.oc-dark .oc {
+	--oc-fg: #e2e8f0;
+	--oc-fg-2: #cbd5e1;
+	--oc-fg-3: #8291a8;
+	--oc-bg: #1f2430;
+	--oc-bg-2: #252b38;
+	--oc-bg-3: #2c3342;
+	--oc-line: #343c4d;
+	--oc-line-2: #475066;
+	--oc-pri: #60a5fa;
+	--oc-pri-bg: rgba(96, 165, 250, .14);
+	--oc-ok: #34d399;
+	--oc-ok-bg: rgba(52, 211, 153, .14);
+	--oc-warn: #fbbf24;
+	--oc-warn-bg: rgba(251, 191, 36, .14);
+	--oc-err: #f87171;
+	--oc-err-bg: rgba(248, 113, 113, .14);
+	--oc-vio: #a78bfa;
+	--oc-vio-bg: rgba(167, 139, 250, .16);
+	--oc-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+}
+
+/* ---------- 页面头部与子标签 ---------- */
+.oc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.oc-head h3 { margin: 0; font-size: 15px; color: var(--oc-fg); }
+.oc-head p { margin: 4px 0 0; color: var(--oc-fg-3); font-size: 12px; }
+.oc-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--oc-line); margin-bottom: 18px; overflow-x: auto; }
+.oc-tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 9px 14px; font-size: 13px; color: var(--oc-fg-2); cursor: pointer; white-space: nowrap; }
+.oc-tab:hover { color: var(--oc-fg); }
+.oc-tab.is-active { color: var(--oc-pri); border-bottom-color: var(--oc-pri); font-weight: 600; }
+.oc-pane { display: none; }
+.oc-pane.is-active { display: block; }
+
+/* ---------- 工具栏 ---------- */
+.oc-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.oc-toolbar .oc-grow { flex: 1; min-width: 200px; }
+.oc-search { width: 100%; box-sizing: border-box; }
+.oc-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.oc-chip { border: 1px solid var(--oc-line); background: var(--oc-bg); color: var(--oc-fg-2); border-radius: 999px; padding: 3px 11px; font-size: 12px; cursor: pointer; line-height: 1.6; }
+.oc-chip:hover { border-color: var(--oc-line-2); color: var(--oc-fg); }
+.oc-chip.is-active { background: var(--oc-pri-bg); border-color: var(--oc-pri); color: var(--oc-pri); font-weight: 600; }
+.oc-chip .oc-count { opacity: .7; margin-left: 4px; font-weight: 400; }
+
+/* ---------- 卡片列表 ---------- */
+.oc-list { display: flex; flex-direction: column; gap: 8px; }
+.oc-card { background: var(--oc-bg); border: 1px solid var(--oc-line); border-radius: var(--oc-radius); box-shadow: var(--oc-shadow); }
+.oc-card.is-off { opacity: .6; }
+.oc-card.has-accent { border-left: 3px solid var(--oc-pri); }
+.oc-card.has-accent.is-off { border-left-color: var(--oc-line-2); }
+.oc-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; flex-wrap: wrap; }
+.oc-row-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 220px; }
+.oc-row-side { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.oc-idx { font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--oc-fg-3); width: 26px; flex-shrink: 0; }
+.oc-icon { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+.oc-icon-txt { font-size: 17px; width: 22px; text-align: center; flex-shrink: 0; }
+.oc-title { font-weight: 600; color: var(--oc-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.oc-sub { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.oc-body { border-top: 1px dashed var(--oc-line); padding: 10px 12px 12px 48px; }
+.oc-desc { color: var(--oc-fg-3); font-size: 12px; margin-bottom: 8px; }
+.oc-empty { text-align: center; padding: 28px; color: var(--oc-fg-3); border: 1px dashed var(--oc-line); border-radius: var(--oc-radius); }
+
+/* ---------- 标签与胶囊 ---------- */
+.oc-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 4px; font-size: 11px; line-height: 1.7; background: var(--oc-bg-3); color: var(--oc-fg-2); max-width: 100%; }
+.oc-tag.is-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.oc-tag.is-pri { background: var(--oc-pri-bg); color: var(--oc-pri); }
+.oc-tag.is-ok { background: var(--oc-ok-bg); color: var(--oc-ok); }
+.oc-tag.is-warn { background: var(--oc-warn-bg); color: var(--oc-warn); }
+.oc-tag.is-err { background: var(--oc-err-bg); color: var(--oc-err); }
+.oc-tag.is-vio { background: var(--oc-vio-bg); color: var(--oc-vio); }
+.oc-tag b { font-weight: 600; }
+.oc-tag .oc-x { cursor: pointer; opacity: .6; margin-left: 2px; border: 0; background: none; color: inherit; padding: 0; font-size: 13px; line-height: 1; }
+.oc-tag .oc-x:hover { opacity: 1; }
+.oc-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.oc-tags.is-scroll { max-height: 140px; overflow-y: auto; }
+
+/* ---------- 按钮 ---------- */
+.oc .cbi-button.oc-sm { padding: 0 9px; font-size: 12px; line-height: 26px; height: 28px; min-width: 28px; margin: 0; }
+.oc-icon-btn { padding: 0 7px !important; }
+
+/* ---------- 表单 ---------- */
+.oc-form { display: flex; flex-direction: column; gap: 12px; }
+.oc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.oc-grid.is-2 { grid-template-columns: 2fr 1fr; }
+.oc-field label { display: block; font-weight: 600; font-size: 12px; color: var(--oc-fg-2); margin-bottom: 5px; }
+.oc-field .oc-hint { font-size: 11px; color: var(--oc-fg-3); margin-top: 4px; }
+.oc-field input[type=text], .oc-field input[type=number], .oc-field select, .oc-field textarea { width: 100%; box-sizing: border-box; }
+.oc-field.is-check label { display: flex; align-items: center; gap: 6px; font-weight: 400; color: var(--oc-fg); cursor: pointer; }
+.oc-box { border: 1px solid var(--oc-line); border-radius: var(--oc-radius); padding: 10px 12px; background: var(--oc-bg-2); }
+.oc-box > .oc-box-title { font-weight: 600; font-size: 12px; color: var(--oc-fg-2); margin-bottom: 8px; }
+.oc-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.oc-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* ---------- 多选胶囊 ---------- */
+.oc-pick { display: flex; flex-wrap: wrap; gap: 5px; max-height: 180px; overflow-y: auto; padding: 8px; border: 1px solid var(--oc-line); border-radius: var(--oc-radius); background: var(--oc-bg-2); }
+.oc-pick span { padding: 2px 9px; border-radius: 4px; font-size: 12px; cursor: pointer; user-select: none; background: var(--oc-bg); color: var(--oc-fg-2); border: 1px solid var(--oc-line); }
+.oc-pick span.is-on { background: var(--oc-pri); border-color: var(--oc-pri); color: #fff; }
+.oc-order { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.oc-order-item { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; background: var(--oc-bg); border: 1px solid var(--oc-line); font-size: 12px; }
+.oc-order-item .oc-grow { flex: 1; }
+
+/* ---------- 提示条 ---------- */
+.oc-note { border-left: 3px solid var(--oc-pri); background: var(--oc-pri-bg); padding: 9px 12px; border-radius: 4px; font-size: 12px; color: var(--oc-fg-2); margin-bottom: 14px; }
+.oc-note.is-ok { border-left-color: var(--oc-ok); background: var(--oc-ok-bg); }
+.oc-note.is-err { border-left-color: var(--oc-err); background: var(--oc-err-bg); color: var(--oc-err); }
+.oc-note b { color: var(--oc-fg); }
+
+/* ---------- 表格（矩阵页） ---------- */
+.oc-table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--oc-line); border-radius: var(--oc-radius); overflow: hidden; }
+.oc-table th { background: var(--oc-bg-3); color: var(--oc-fg-2); font-size: 12px; font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--oc-line); white-space: nowrap; }
+.oc-table td { padding: 7px 10px; border-bottom: 1px solid var(--oc-line); vertical-align: middle; background: var(--oc-bg); }
+.oc-table tr:last-child td { border-bottom: 0; }
+.oc-table tr.is-off td { opacity: .55; }
+.oc-table input[type=text], .oc-table select { width: 100%; box-sizing: border-box; min-width: 0; }
+.oc-table-wrap { overflow-x: auto; }
+
+@media (max-width: 720px) {
+	.oc-body { padding-left: 12px; }
+	.oc-grid.is-2 { grid-template-columns: 1fr; }
+	.oc-row-main { min-width: 0; flex-basis: 100%; }
+}

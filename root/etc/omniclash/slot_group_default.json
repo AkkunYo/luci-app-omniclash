@@ -1,0 +1,27 @@
+{
+  "type": "select",
+  "include-all": true,
+  "exclude-filter": "s5v_",
+  "proxies": [
+    "🎯 专线-Tallflix",
+    "🎯 专线-Snacky",
+    "🎯 专线-Realith",
+    "🇭🇰 香港节点",
+    "🇨🇳 台湾节点",
+    "🇸🇬 新加坡",
+    "🇯🇵 日本节点",
+    "🇺🇲 美国节点",
+    "🇰🇷 韩国",
+    "🇬🇧 英国节点",
+    "🇩🇪 德国节点",
+    "🏠 住宅落地",
+    "🚀 节点选择",
+    "♻️ 自动选择",
+    "☢ 负载均衡-散列",
+    "☢ 负载均衡-轮询",
+    "🌐 全部节点",
+    "🟢 直连",
+    "🛑 黑洞"
+  ],
+  "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/WiFi.png"
+}

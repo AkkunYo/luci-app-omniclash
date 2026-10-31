@@ -3,6 +3,7 @@
 'require rpc';
 'require poll';
 'require ui';
+'require omniclash.ui as ocui';
 
 var callGetLogs = rpc.declare({
 	object: 'luci.omniclash',
@@ -20,6 +21,7 @@ return view.extend({
 	},
 
 	render: function(res) {
+		ocui.init();
 		var logContent = (res && res.log) ? res.log : _('No running logs available');
 
 		window.clearOmniLogs = function() {
@@ -47,11 +49,11 @@ return view.extend({
 			});
 		};
 
-		var viewEl = E('div', { 'class': 'cbi-map' }, [
+		var viewEl = E('div', { 'class': 'cbi-map oc' }, [
 			E('div', { 'style': 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;' }, [
 				E('div', {}, [
 					E('h2', { 'style': 'margin: 0;' }, _('OmniClash Live Logs')),
-					E('div', { 'style': 'font-size: 12px; color: #94a3b8; margin-top: 4px;' }, _('Live Mihomo core log stream (auto-scrolls every 3 seconds)'))
+					E('div', { 'style': 'font-size: 12px; color: var(--oc-fg-3); margin-top: 4px;' }, _('Live Mihomo core log stream (auto-scrolls every 3 seconds)'))
 				]),
 				E('div', { 'style': 'display: flex; gap: 8px;' }, [
 					E('button', {
