@@ -1085,3 +1085,96 @@ msgstr "gVisor (用户态沙箱)"
 
 msgid "no response"
 msgstr "无响应"
+
+msgid "Dedicated Lines"
+msgstr "专线出口"
+
+msgid "Region Auto"
+msgstr "地区自动"
+
+msgid "App Routing"
+msgstr "业务分流"
+
+msgid "Core Dispatch"
+msgstr "核心调度"
+
+msgid "🔍 Search proxy group name, regex filter, or type..."
+msgstr "🔍 搜索策略组名称、正则过滤或类型..."
+
+msgid "🔍 Search scenario card name, domain, or IP..."
+msgstr "🔍 搜索场景卡片名称、域名或 IP..."
+
+msgid "No proxy groups match current filter or search."
+msgstr "当前分类或搜索条件下未找到匹配的策略组。"
+
+msgid "Edit Proxy Group"
+msgstr "编辑策略组"
+
+msgid "New Proxy Group"
+msgstr "新建策略组"
+
+msgid "Quick tags:"
+msgstr "快捷标签："
+
+msgid "Child Proxies / Sub-Groups"
+msgstr "包含的子节点 / 代理组"
+
+msgid "Click pills to toggle"
+msgstr "点击胶囊标签切换勾选"
+
+msgid "Group Icon URL"
+msgstr "策略组图标 URL"
+
+msgid "Auto Speedtest Settings"
+msgstr "自动测速与健康检查设置"
+
+msgid "Interval (sec)"
+msgstr "测试间隔 (秒)"
+
+msgid "Tolerance (ms)"
+msgstr "容差 (毫秒)"
+
+msgid "Health Check URL"
+msgstr "测速目标 URL"
+
+msgid "Lazy Test (test only when traffic is routed)"
+msgstr "惰性测速 (仅在有流量经过时触发测速)"
+
+msgid "Load Balance Algorithm"
+msgstr "负载均衡算法"
+
+msgid "Consistent Hashing"
+msgstr "一致性散列"
+
+msgid "Round Robin"
+msgstr "轮询"
+
+msgid "Expand All"
+msgstr "全部展开"
+
+msgid "Collapse All"
+msgstr "全部收起"
+
+msgid "Batch Import"
+msgstr "批量导入"
+
+msgid "Close Batch"
+msgstr "收起批量"
+
+msgid "Batch Rule Import (one domain or IP per line, supports lines like DOMAIN-SUFFIX,example.com):"
+msgstr "批量规则导入 (每行一条域名或 IP，亦支持完整规则如 DOMAIN-SUFFIX,example.com)："
+
+msgid "Default Type:"
+msgstr "默认规则类型："
+
+msgid "Import All Lines"
+msgstr "⚡ 一键批量导入全部"
+
+msgid "Imported %d rules into \"%s\"!"
+msgstr "已成功将 %d 条规则批量导入到“%s”！"
+
+msgid "Please paste domains or IPs first."
+msgstr "请先粘贴域名或 IP 列表。"
+
+msgid "Are you sure you want to delete proxy group \"%s\"?"
+msgstr "确定要删除策略组“%s”吗？"

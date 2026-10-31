@@ -294,6 +294,10 @@
         "payload": "google"
       },
       {
+        "type": "GEOSITE",
+        "payload": "google-cn"
+      },
+      {
         "type": "GEOIP",
         "payload": "google"
       }

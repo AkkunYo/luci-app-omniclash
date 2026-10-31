@@ -105,8 +105,12 @@ return view.extend({
 		var runConfigContent = data[4] || '';
 
 		var groupTypes = ['select', 'url-test', 'fallback', 'load-balance'];
-		var appRuleTypes = ['DOMAIN-SUFFIX', 'DOMAIN-KEYWORD', 'DOMAIN', 'IP-CIDR', 'GEOSITE', 'GEOIP'];
+		var appRuleTypes = ['DOMAIN-SUFFIX', 'DOMAIN-KEYWORD', 'DOMAIN', 'IP-CIDR', 'GEOSITE', 'GEOIP', 'RULE-SET'];
 		var appExpanded = {};
+		var appBatchOpen = {};
+		var groupFilterCat = 'all';
+		var groupSearchQuery = '';
+		var appSearchQuery = '';
 
 		// 获取当前所有可选走向选项 (DIRECT, REJECT, 以及 groupsList 中的所有策略组名称)
 		function getTargetOptions() {
@@ -295,82 +299,480 @@ return view.extend({
 			ev.target.value = '';
 		};
 
-		// ---------------- 2. Proxy Groups 策略组渲染与增删 ----------------
-		function renderGroupRows() {
-			var tbody = document.getElementById('omniclash_groups_tbody');
-			if (!tbody) return;
-			tbody.innerHTML = '';
-
-			if (groupsList.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">' + _('No proxy groups configured. Click "+ Add Proxy Group" or "Reset to Default Groups".') + '</td></tr>';
-				return;
-			}
-
-			groupsList.forEach(function(g, idx) {
-				var tr = document.createElement('tr');
-				var filterStr = g.filter || '';
-
-				tr.innerHTML = `
-					<td style="font-weight: bold; width: 40px; text-align: center;">${idx + 1}</td>
-					<td style="width: 220px;">
-						<input type="text" id="grp_name_${idx}" class="cbi-input-text" style="width: 100%; font-weight: bold; color: #2563eb;" value="${g.name || ''}" placeholder="${_('Group Name')}">
-					</td>
-					<td style="width: 140px;">
-						<select id="grp_type_${idx}" class="cbi-input-select" style="width: 100%;">
-							${groupTypes.map(t => `<option value="${t}" ${t === g.type ? 'selected' : ''}>${t}</option>`).join('')}
-						</select>
-					</td>
-					<td>
-						<input type="text" id="grp_filter_${idx}" class="cbi-input-text" style="width: 100%; font-family: monospace;" value="${filterStr}" placeholder="${_('Filter Regex (e.g. (?i)HK|HongKong)')}">
-					</td>
-					<td style="width: 70px; text-align: center;">
-						<button type="button" class="cbi-button cbi-button-remove" onclick="removeGroup(${idx})">${_('Delete')}</button>
-					</td>
-				`;
-				tbody.appendChild(tr);
-			});
+		// ---------------- 2. Proxy Groups 策略组现代卡片流与全功能装配 ----------------
+		function detectGroupCat(g) {
+			var n = (g && g.name) ? g.name : "";
+			if (n.indexOf("专线") >= 0) return "line";
+			if (g && (g.type === "url-test" || n.indexOf("节点") >= 0 || n.indexOf("地区") >= 0 || /香港|台湾|日本|新加坡|韩国|美国|英国|德国|其它/.test(n))) return "region";
+			if (n.indexOf("选择") >= 0 || n.indexOf("负载") >= 0 || n.indexOf("全部") >= 0 || n.indexOf("前置") >= 0 || n.indexOf("住宅") >= 0 || n.indexOf("漏网") >= 0) return "core";
+			return "app";
 		}
 
-		window.removeGroup = function(idx) {
-			syncGroupsFromDom();
-			groupsList.splice(idx, 1);
-			renderGroupRows();
+		function groupTypeBadge(type) {
+			var style = "padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; font-family: monospace; display: inline-flex; align-items: center; gap: 4px;";
+			if (type === "select") {
+				return E("span", { "style": style + " background: rgba(37, 99, 235, 0.12); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.28);" }, "select");
+			} else if (type === "url-test") {
+				return E("span", { "style": style + " background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.28);" }, "url-test ⚡");
+			} else if (type === "fallback") {
+				return E("span", { "style": style + " background: rgba(245, 158, 11, 0.12); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.28);" }, "fallback");
+			} else if (type === "load-balance") {
+				return E("span", { "style": style + " background: rgba(139, 92, 246, 0.12); color: #7c3aed; border: 1px solid rgba(139, 92, 246, 0.28);" }, "load-balance ☢");
+			}
+			return E("span", { "style": style + " background: rgba(148, 163, 184, 0.15); color: #64748b;" }, type || "unknown");
+		}
+
+		window.openGroupModal = function(idx) {
+			var isNew = (idx < 0);
+			var group = isNew ? {
+				name: "",
+				type: "select",
+				filter: "",
+				proxies: ["DIRECT"],
+				strategy: "consistent-hashing",
+				tolerance: 50,
+				interval: 300,
+				lazy: true
+			} : JSON.parse(JSON.stringify(groupsList[idx]));
+
+			var nameInput = E("input", {
+				"type": "text",
+				"class": "cbi-input-text",
+				"style": "width: 100%; box-sizing: border-box; font-weight: 600; font-size: 13px; color: #2563eb;",
+				"value": group.name || "",
+				"placeholder": _("e.g. 🎯 专线-Tallflix")
+			});
+
+			var typeSelect = E("select", {
+				"class": "cbi-input-select",
+				"style": "width: 100%; box-sizing: border-box; font-size: 13px;"
+			}, groupTypes.map(function(t) {
+				return E("option", { "value": t, "selected": t === group.type ? "selected" : null }, t);
+			}));
+
+			var iconInput = E("input", {
+				"type": "text",
+				"class": "cbi-input-text",
+				"style": "width: 100%; box-sizing: border-box; font-size: 12px;",
+				"value": group.icon || "",
+				"placeholder": "https://... or emoji"
+			});
+
+			var filterInput = E("input", {
+				"type": "text",
+				"class": "cbi-input-text",
+				"style": "width: 100%; box-sizing: border-box; font-family: monospace; font-size: 12px;",
+				"value": group.filter || "",
+				"placeholder": "e.g. (?i)HK|HongKong"
+			});
+
+			var urlInput = E("input", {
+				"type": "text",
+				"class": "cbi-input-text",
+				"style": "width: 100%; box-sizing: border-box; font-family: monospace; font-size: 12px;",
+				"value": group.url || "https://www.gstatic.com/generate_204",
+				"placeholder": "https://www.gstatic.com/generate_204"
+			});
+
+			var intervalInput = E("input", {
+				"type": "number",
+				"class": "cbi-input-text",
+				"style": "width: 100%; box-sizing: border-box;",
+				"value": group.interval || 300
+			});
+
+			var toleranceInput = E("input", {
+				"type": "number",
+				"class": "cbi-input-text",
+				"style": "width: 100%; box-sizing: border-box;",
+				"value": group.tolerance || 50
+			});
+
+			var strategySelect = E("select", {
+				"class": "cbi-input-select",
+				"style": "width: 100%; box-sizing: border-box;"
+			}, [
+				E("option", { "value": "consistent-hashing", "selected": group.strategy === "consistent-hashing" ? "selected" : null }, "consistent-hashing (" + _("Consistent Hashing") + ")"),
+				E("option", { "value": "round-robin", "selected": group.strategy === "round-robin" ? "selected" : null }, "round-robin (" + _("Round Robin") + ")")
+			]);
+
+			var lazyCheckbox = E("input", {
+				"type": "checkbox",
+				"checked": (group.lazy !== false) ? "checked" : null
+			});
+
+			var candidateTargets = ["DIRECT", "REJECT"];
+			groupsList.forEach(function(g, gidx) {
+				if (!isNew && gidx === idx) return;
+				if (g.name && candidateTargets.indexOf(g.name) < 0) {
+					candidateTargets.push(g.name);
+				}
+			});
+
+			var selectedProxies = (group.proxies && Array.isArray(group.proxies)) ? group.proxies.slice() : [];
+			var pillsContainer = E("div", {
+				"style": "display: flex; flex-wrap: wrap; gap: 6px; max-height: 160px; overflow-y: auto; padding: 8px 10px; border: 1px solid rgba(148,163,184,0.25); border-radius: 6px; background: rgba(0,0,0,0.02);"
+			});
+
+			function renderPills() {
+				pillsContainer.innerHTML = "";
+				candidateTargets.forEach(function(tgt) {
+					var isSel = (selectedProxies.indexOf(tgt) >= 0);
+					var pill = E("span", {
+						"style": "display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; user-select: none; transition: all 0.15s ease;" +
+							(isSel ? " background: #2563eb; color: #fff; font-weight: 500;" : " background: rgba(148,163,184,0.15); color: #475569;"),
+						"click": function() {
+							var pos = selectedProxies.indexOf(tgt);
+							if (pos >= 0) selectedProxies.splice(pos, 1);
+							else selectedProxies.push(tgt);
+							renderPills();
+						}
+					}, [ isSel ? "✓ " + tgt : "+ " + tgt ]);
+					pillsContainer.appendChild(pill);
+				});
+			}
+			renderPills();
+
+			var testSection = E("div", {
+				"id": "grp_test_section",
+				"style": "margin-bottom: 14px; padding: 10px 12px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 6px;"
+			}, [
+				E("div", { "style": "font-weight: 600; font-size: 12px; color: #059669; margin-bottom: 8px;" }, "⚡ " + _("Auto Speedtest Settings")),
+				E("div", { "style": "display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;" }, [
+					E("div", {}, [ E("label", { "style": "display: block; font-size: 11px; color: #64748b; margin-bottom: 3px;" }, _("Interval (sec)")), intervalInput ]),
+					E("div", {}, [ E("label", { "style": "display: block; font-size: 11px; color: #64748b; margin-bottom: 3px;" }, _("Tolerance (ms)")), toleranceInput ])
+				]),
+				E("div", { "style": "margin-bottom: 8px;" }, [
+					E("label", { "style": "display: block; font-size: 11px; color: #64748b; margin-bottom: 3px;" }, _("Health Check URL")),
+					urlInput
+				]),
+				E("div", { "style": "display: flex; align-items: center; gap: 6px; font-size: 12px; color: #475569;" }, [
+					lazyCheckbox, _("Lazy Test (test only when traffic is routed)")
+				])
+			]);
+
+			var lbSection = E("div", {
+				"id": "grp_lb_section",
+				"style": "margin-bottom: 14px; padding: 10px 12px; background: rgba(124, 58, 237, 0.05); border: 1px solid rgba(124, 58, 237, 0.2); border-radius: 6px;"
+			}, [
+				E("div", { "style": "font-weight: 600; font-size: 12px; color: #7c3aed; margin-bottom: 8px;" }, "☢ " + _("Load Balance Algorithm")),
+				strategySelect
+			]);
+
+			function syncTypeView() {
+				var t = typeSelect.value;
+				testSection.style.display = (t === "url-test" || t === "fallback") ? "block" : "none";
+				lbSection.style.display = (t === "load-balance") ? "block" : "none";
+			}
+			typeSelect.addEventListener("change", syncTypeView);
+			syncTypeView();
+
+			var modalBody = E("div", { "style": "width: 100%; box-sizing: border-box; padding: 4px 0;" }, [
+				E("div", { "style": "display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;" }, [
+					E("div", {}, [
+						E("label", { "style": "display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;" }, _("Group Name")),
+						nameInput
+					]),
+					E("div", {}, [
+						E("label", { "style": "display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;" }, _("Group Type")),
+						typeSelect
+					])
+				]),
+				E("div", { "style": "margin-bottom: 12px;" }, [
+					E("label", { "style": "display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;" }, _("Node Filter (Regex)")),
+					filterInput,
+					E("div", { "style": "display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;" }, [
+						E("span", { "style": "font-size: 11px; color: #64748b;" }, _("Quick tags:")),
+						E("a", { "href": "#", "style": "font-size: 11px; color: #2563eb;", "click": function(e){ e.preventDefault(); filterInput.value = "(?i)HK|香港"; } }, "香港 (HK)"),
+						E("a", { "href": "#", "style": "font-size: 11px; color: #2563eb;", "click": function(e){ e.preventDefault(); filterInput.value = "(?i)TW|台湾"; } }, "台湾 (TW)"),
+						E("a", { "href": "#", "style": "font-size: 11px; color: #2563eb;", "click": function(e){ e.preventDefault(); filterInput.value = "(?i)JP|日本"; } }, "日本 (JP)"),
+						E("a", { "href": "#", "style": "font-size: 11px; color: #2563eb;", "click": function(e){ e.preventDefault(); filterInput.value = "(?i)SG|新加坡"; } }, "新加坡 (SG)"),
+						E("a", { "href": "#", "style": "font-size: 11px; color: #2563eb;", "click": function(e){ e.preventDefault(); filterInput.value = "(?i)US|美国"; } }, "美国 (US)")
+					])
+				]),
+				testSection,
+				lbSection,
+				E("div", { "style": "margin-bottom: 14px;" }, [
+					E("div", { "style": "display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;" }, [
+						E("label", { "style": "font-weight: 600; font-size: 13px; margin: 0; color: #1e293b;" }, _("Child Proxies / Sub-Groups")),
+						E("span", { "style": "font-size: 11px; color: #64748b;" }, _("Click pills to toggle"))
+					]),
+					pillsContainer
+				]),
+				E("div", { "style": "margin-bottom: 12px;" }, [
+					E("label", { "style": "display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;" }, _("Group Icon URL")),
+					iconInput
+				]),
+				E("div", { "class": "right", "style": "display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;" }, [
+					E("button", { "type": "button", "class": "cbi-button", "click": ui.hideModal }, _("Cancel")),
+					E("button", {
+						"type": "button",
+						"class": "cbi-button cbi-button-apply",
+						"click": function() {
+							var newName = (nameInput.value || "").trim();
+							if (!newName) {
+								ui.addNotification(null, E("p", {}, _("Group name cannot be empty!")), "error");
+								return;
+							}
+							var newG = {
+								name: newName,
+								type: typeSelect.value,
+								filter: (filterInput.value || "").trim(),
+								proxies: selectedProxies,
+								icon: (iconInput.value || "").trim()
+							};
+							if (newG.type === "url-test" || newG.type === "fallback") {
+								newG.url = (urlInput.value || "").trim();
+								newG.interval = parseInt(intervalInput.value, 10) || 300;
+								newG.tolerance = parseInt(toleranceInput.value, 10) || 50;
+								newG.lazy = lazyCheckbox.checked;
+							} else if (newG.type === "load-balance") {
+								newG.strategy = strategySelect.value;
+							}
+							if (isNew) {
+								groupsList.push(newG);
+							} else {
+								groupsList[idx] = newG;
+							}
+							ui.hideModal();
+							renderGroupCards();
+						}
+					}, _("Save"))
+				])
+			]);
+
+			ui.showModal(isNew ? _("New Proxy Group") : _("Edit Proxy Group"), modalBody);
 		};
 
-		window.addGroup = function() {
-			syncGroupsFromDom();
-			groupsList.push({ name: _('New Group'), type: 'select', filter: '(?i)HK|香港', proxies: ['DIRECT'] });
-			renderGroupRows();
+		window.moveGroup = function(idx, offset) {
+			var target = idx + offset;
+			if (target < 0 || target >= groupsList.length) return;
+			var tmp = groupsList[idx];
+			groupsList[idx] = groupsList[target];
+			groupsList[target] = tmp;
+			renderGroupCards();
 		};
+
+		window.removeGroup = function(idx) {
+			var g = groupsList[idx];
+			if (!g) return;
+			if (!confirm(_("Are you sure you want to delete proxy group \"%s\"?").replace("%s", g.name))) return;
+			groupsList.splice(idx, 1);
+			renderGroupCards();
+		};
+
+		function renderGroupCards() {
+			var container = document.getElementById("omniclash_groups_container");
+			if (!container) return;
+			container.innerHTML = "";
+
+			var catCounts = { all: groupsList.length, line: 0, region: 0, app: 0, core: 0 };
+			groupsList.forEach(function(g) {
+				var c = detectGroupCat(g);
+				if (catCounts[c] !== undefined) catCounts[c]++;
+			});
+
+			var catBar = E("div", {
+				"style": "display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;"
+			}, [
+				E("button", {
+					"type": "button",
+					"class": "cbi-button" + (groupFilterCat === "all" ? " cbi-button-action" : ""),
+					"style": "font-size: 12px; padding: 3px 10px;" + (groupFilterCat === "all" ? " font-weight: bold;" : ""),
+					"click": function() { groupFilterCat = "all"; renderGroupCards(); }
+				}, _("All") + " (" + catCounts.all + ")"),
+				E("button", {
+					"type": "button",
+					"class": "cbi-button" + (groupFilterCat === "line" ? " cbi-button-action" : ""),
+					"style": "font-size: 12px; padding: 3px 10px;" + (groupFilterCat === "line" ? " font-weight: bold;" : ""),
+					"click": function() { groupFilterCat = "line"; renderGroupCards(); }
+				}, "🎯 " + _("Dedicated Lines") + " (" + catCounts.line + ")"),
+				E("button", {
+					"type": "button",
+					"class": "cbi-button" + (groupFilterCat === "region" ? " cbi-button-action" : ""),
+					"style": "font-size: 12px; padding: 3px 10px;" + (groupFilterCat === "region" ? " font-weight: bold;" : ""),
+					"click": function() { groupFilterCat = "region"; renderGroupCards(); }
+				}, "🌐 " + _("Region Auto") + " (" + catCounts.region + ")"),
+				E("button", {
+					"type": "button",
+					"class": "cbi-button" + (groupFilterCat === "app" ? " cbi-button-action" : ""),
+					"style": "font-size: 12px; padding: 3px 10px;" + (groupFilterCat === "app" ? " font-weight: bold;" : ""),
+					"click": function() { groupFilterCat = "app"; renderGroupCards(); }
+				}, "🎛️ " + _("App Routing") + " (" + catCounts.app + ")"),
+				E("button", {
+					"type": "button",
+					"class": "cbi-button" + (groupFilterCat === "core" ? " cbi-button-action" : ""),
+					"style": "font-size: 12px; padding: 3px 10px;" + (groupFilterCat === "core" ? " font-weight: bold;" : ""),
+					"click": function() { groupFilterCat = "core"; renderGroupCards(); }
+				}, "🚀 " + _("Core Dispatch") + " (" + catCounts.core + ")")
+			]);
+			container.appendChild(catBar);
+
+			var searchInput = E("input", {
+				"type": "text",
+				"class": "cbi-input-text",
+				"style": "flex: 1; min-width: 220px; font-size: 12px;",
+				"placeholder": _("🔍 Search proxy group name, regex filter, or type..."),
+				"value": groupSearchQuery
+			});
+			searchInput.addEventListener("input", function() {
+				groupSearchQuery = (this.value || "").trim();
+				renderGroupListOnly();
+			});
+
+			var topActionBar = E("div", {
+				"style": "display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;"
+			}, [
+				searchInput,
+				E("div", { "style": "display: flex; gap: 8px;" }, [
+					E("button", {
+						"type": "button",
+						"class": "cbi-button cbi-button-action",
+						"click": function() { window.openGroupModal(-1); }
+					}, "+ " + _("New Proxy Group")),
+					E("button", {
+						"type": "button",
+						"class": "cbi-button cbi-button-reset",
+						"click": function() { window.resetDefaultGroups(); }
+					}, "🔄 " + _("Reset to Default Groups"))
+				])
+			]);
+			container.appendChild(topActionBar);
+
+			var listContainer = E("div", { "id": "omniclash_groups_list_inner" });
+			container.appendChild(listContainer);
+
+			function renderGroupListOnly() {
+				listContainer.innerHTML = "";
+				var filtered = [];
+				groupsList.forEach(function(g, idx) {
+					if (groupFilterCat !== "all" && detectGroupCat(g) !== groupFilterCat) return;
+					if (groupSearchQuery) {
+						var q = groupSearchQuery.toLowerCase();
+						var nm = (g.name || "").toLowerCase();
+						var fl = (g.filter || "").toLowerCase();
+						var tp = (g.type || "").toLowerCase();
+						if (nm.indexOf(q) < 0 && fl.indexOf(q) < 0 && tp.indexOf(q) < 0) return;
+					}
+					filtered.push({ g: g, idx: idx });
+				});
+
+				if (!filtered.length) {
+					listContainer.appendChild(E("div", {
+						"style": "text-align: center; padding: 30px; color: #94a3b8; font-size: 13px; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px dashed rgba(148,163,184,0.25);"
+					}, _("No proxy groups match current filter or search.")));
+					return;
+				}
+
+				filtered.forEach(function(item) {
+					var g = item.g;
+					var idx = item.idx;
+
+					var iconEl = null;
+					if (g.icon && g.icon.indexOf("http") === 0) {
+						iconEl = E("img", { "src": g.icon, "style": "width: 22px; height: 22px; object-fit: contain; vertical-align: middle; flex-shrink: 0;" });
+					} else {
+						var emoji = "🌐";
+						if (g.name.indexOf("专线") >= 0) emoji = "🎯";
+						else if (g.name.indexOf("自动") >= 0 || g.type === "url-test") emoji = "⚡";
+						else if (g.name.indexOf("负载") >= 0) emoji = "☢";
+						else if (g.name.indexOf("选择") >= 0) emoji = "🚀";
+						else if (g.name.indexOf("直连") >= 0) emoji = "🟢";
+						iconEl = E("span", { "style": "font-size: 18px; vertical-align: middle; flex-shrink: 0;" }, emoji);
+					}
+
+					var badge = groupTypeBadge(g.type);
+
+					var detailParts = [];
+					if (g.filter) {
+						detailParts.push(E("span", {
+							"style": "padding: 1px 6px; border-radius: 4px; background: rgba(148,163,184,0.12); color: #475569; font-family: monospace; font-size: 11px;"
+						}, "filter: " + g.filter));
+					}
+					if (g.proxies && g.proxies.length) {
+						var preview = g.proxies.slice(0, 3).join(", ") + (g.proxies.length > 3 ? "..." : "");
+						detailParts.push(E("span", {
+							"style": "padding: 1px 6px; border-radius: 4px; background: rgba(37,99,235,0.08); color: #2563eb; font-size: 11px;"
+						}, _("Proxies") + ": [" + preview + "] (" + g.proxies.length + ")"));
+					}
+					if (g.type === "url-test" || g.type === "fallback") {
+						detailParts.push(E("span", {
+							"style": "padding: 1px 6px; border-radius: 4px; background: rgba(16,185,129,0.08); color: #059669; font-size: 11px;"
+						}, (g.interval || 300) + "s / " + (g.tolerance || 50) + "ms"));
+					}
+					if (g.strategy) {
+						detailParts.push(E("span", {
+							"style": "padding: 1px 6px; border-radius: 4px; background: rgba(139,92,246,0.08); color: #7c3aed; font-size: 11px;"
+						}, g.strategy));
+					}
+
+					var card = E("div", {
+						"style": "display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; border: 1px solid rgba(148,163,184,0.22); border-radius: 8px; background: rgba(255,255,255,0.03); transition: all 0.2s ease; flex-wrap: wrap;"
+					}, [
+						E("div", { "style": "display: flex; align-items: center; gap: 10px; min-width: 240px; flex: 1;" }, [
+							E("span", { "style": "font-family: monospace; font-size: 11px; color: #94a3b8; font-weight: bold; width: 28px;" }, "#" + (idx + 1 < 10 ? "0" : "") + (idx + 1)),
+							iconEl,
+							E("div", {}, [
+								E("div", { "style": "display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" }, [
+									E("b", { "style": "font-size: 13px; color: #1e293b;" }, g.name),
+									badge
+								]),
+								E("div", { "style": "display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap;" }, detailParts)
+							])
+						]),
+						E("div", { "style": "display: flex; align-items: center; gap: 6px; flex-shrink: 0;" }, [
+							E("button", {
+								"type": "button",
+								"class": "cbi-button",
+								"style": "padding: 2px 8px; font-size: 12px;",
+								"click": function() { window.openGroupModal(idx); }
+							}, "⚙️ " + _("Edit")),
+							E("button", {
+								"type": "button",
+								"class": "cbi-button",
+								"style": "padding: 2px 8px; font-size: 12px;",
+								"disabled": (idx === 0) ? "disabled" : null,
+								"click": function() { window.moveGroup(idx, -1); }
+							}, "↑"),
+							E("button", {
+								"type": "button",
+								"class": "cbi-button",
+								"style": "padding: 2px 8px; font-size: 12px;",
+								"disabled": (idx === groupsList.length - 1) ? "disabled" : null,
+								"click": function() { window.moveGroup(idx, 1); }
+							}, "↓"),
+							E("button", {
+								"type": "button",
+								"class": "cbi-button cbi-button-remove",
+								"style": "padding: 2px 8px; font-size: 12px;",
+								"click": function() { window.removeGroup(idx); }
+							}, _("Delete"))
+						])
+					]);
+					listContainer.appendChild(card);
+				});
+			}
+
+		renderGroupListOnly();
+		}
 
 		window.resetDefaultGroups = function() {
-			if (!confirm(_('Are you sure you want to reset proxy groups to default template?\nThis will reset all dedicated lines, regions, and application groups.'))) return;
-			ui.showModal(_('Resetting'), [ E('p', { 'class': 'spinning' }, _('Resetting default proxy groups template...')) ]);
+			if (!confirm(_("Are you sure you want to reset proxy groups to default template?\nThis will reset all dedicated lines, regions, and application groups."))) return;
+			ui.showModal(_("Resetting"), [ E("p", { "class": "spinning" }, _("Resetting default proxy groups template...")) ]);
 			callResetGroups().then(function(res) {
 				if (res && res.success === false)
-					throw new Error(res.error || _('Failed to reset proxy groups'));
+					throw new Error(res.error || _("Failed to reset proxy groups"));
 				return callGetGroups();
 			}).then(function(res) {
 				groupsList = (res && res.groups) ? res.groups : [];
-				renderGroupRows();
+				renderGroupCards();
 				ui.hideModal();
-				ui.addNotification(null, E('p', {}, '✅ ' + _('Proxy groups successfully restored to default template!')), 'success');
+				ui.addNotification(null, E("p", {}, "✅ " + _("Proxy groups successfully restored to default template!")), "success");
 			}).catch(function(err) {
 				ui.hideModal();
-				ui.addNotification(null, E('p', {}, err.message), 'error');
+				ui.addNotification(null, E("p", {}, err.message), "error");
 			});
 		};
-
-		function syncGroupsFromDom() {
-			groupsList.forEach(function(g, idx) {
-				var nameEl = document.getElementById('grp_name_' + idx);
-				var typeEl = document.getElementById('grp_type_' + idx);
-				var filterEl = document.getElementById('grp_filter_' + idx);
-				if (nameEl) g.name = nameEl.value.trim();
-				if (typeEl) g.type = typeEl.value;
-				if (filterEl) g.filter = filterEl.value.trim();
-			});
-		}
 
 		// ---------------- 3. 应用分流卡片流 (Application Card Stream) ----------------
 		function appRuleCount(app) {
@@ -386,158 +788,265 @@ return view.extend({
 			return -1;
 		}
 
+		window.expandAllApps = function(expandState) {
+			appsList.forEach(function(a) {
+				if (a && a.id) appExpanded[a.id] = !!expandState;
+			});
+			renderAppCards();
+		};
+
+		window.toggleBatchBox = function(idx) {
+			appBatchOpen[idx] = !appBatchOpen[idx];
+			renderAppCards();
+		};
+
+		window.addBatchCustomRules = function(idx) {
+			var textarea = document.getElementById("app_batch_text_" + idx);
+			var typeSelect = document.getElementById("app_batch_type_" + idx);
+			if (!textarea || !typeSelect) return;
+			var text = (textarea.value || "").trim();
+			if (!text) {
+				ui.addNotification(null, E("p", {}, _("Please paste domains or IPs first.")), "error");
+				return;
+			}
+			var lines = text.split("\n");
+			var added = 0;
+			if (!appsList[idx].custom_rules) appsList[idx].custom_rules = [];
+			var defaultType = typeSelect.value;
+
+			lines.forEach(function(line) {
+				var raw = line.trim();
+				if (!raw || raw.startsWith("#") || raw.startsWith("//")) return;
+				var parts = raw.split(/[,:\s]+/);
+				var t = defaultType;
+				var p = raw;
+				if (parts.length >= 2 && appRuleTypes.indexOf(parts[0].toUpperCase()) >= 0) {
+					t = parts[0].toUpperCase();
+					p = parts[1];
+				}
+				appsList[idx].custom_rules.push({ type: t, payload: p });
+				added++;
+			});
+
+			appBatchOpen[idx] = false;
+			renderAppCards();
+			ui.addNotification(null, E("p", {}, "✅ " + _("Imported %d rules into \"%s\"!").replace("%d", added).replace("%s", appsList[idx].name || appsList[idx].id)), "success");
+		};
+
 		function renderAppCards() {
-			var container = document.getElementById('omniclash_apps_container');
+			var container = document.getElementById("omniclash_apps_container");
 			if (!container) return;
-			container.innerHTML = '';
+			container.innerHTML = "";
 
 			if (appsList.length === 0) {
-				container.appendChild(E('div', {
-					'style': 'text-align: center; padding: 24px; color: #94a3b8; font-size: 13px;'
+				container.appendChild(E("div", {
+					"style": "text-align: center; padding: 24px; color: #94a3b8; font-size: 13px;"
 				}, _('No application scenarios configured. Use "+ New Scenario Card" or "Reset to Defaults".')));
 				return;
 			}
 
 			appsList.forEach(function(app, idx) {
+				if (appSearchQuery) {
+					var q = appSearchQuery.toLowerCase();
+					var matchName = (app.name && app.name.toLowerCase().indexOf(q) >= 0);
+					var matchId = (app.id && app.id.toLowerCase().indexOf(q) >= 0);
+					var matchRule = false;
+					var allR = (app.builtin_rules || []).concat(app.custom_rules || []);
+					for (var i = 0; i < allR.length; i++) {
+						if (allR[i] && allR[i].payload && allR[i].payload.toLowerCase().indexOf(q) >= 0) {
+							matchRule = true;
+							break;
+						}
+					}
+					if (!matchName && !matchId && !matchRule) return;
+				}
+
 				var expanded = !!appExpanded[app.id];
-				var enabled = (app.enabled === false || app.enabled === 'false' || app.enabled === '0' || app.enabled === 0) ? false : true;
+				var enabled = (app.enabled === false || app.enabled === "false" || app.enabled === "0" || app.enabled === 0) ? false : true;
 				var isBuiltin = (app.is_custom !== true);
 				var count = appRuleCount(app);
 
-				var targetSel = E('select', {
-					'class': 'cbi-input-select',
-					'style': 'width: 210px; font-size: 12px;',
-					'change': function() {
+				var targetSel = E("select", {
+					"class": "cbi-input-select",
+					"style": "width: 210px; font-size: 12px;",
+					"change": function() {
 						appsList[idx].target = this.value;
 					}
 				}, targetOptionsWith(app.target).map(function(t) {
-					return E('option', { 'value': t, 'selected': (app.target === t) ? 'selected' : null }, t);
+					return E("option", { "value": t, "selected": (app.target === t) ? "selected" : null }, t);
 				}));
 
-				var enabledBox = E('input', {
-					'type': 'checkbox',
-					'title': _('Enable this scenario'),
-					'checked': enabled ? 'checked' : null,
-					'style': 'cursor: pointer;',
-					'change': function() {
+				var enabledBox = E("input", {
+					"type": "checkbox",
+					"title": _("Enable this scenario"),
+					"checked": enabled ? "checked" : null,
+					"style": "cursor: pointer;",
+					"change": function() {
 						appsList[idx].enabled = this.checked;
+						renderAppCards();
 					}
 				});
 
-				var rowHeader = E('div', {
-					'style': 'display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 12px;' + (enabled ? '' : ' opacity: 0.55;')
+				var rowHeader = E("div", {
+					"style": "display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 14px;" + (enabled ? "" : " opacity: 0.55;")
 				}, [
-					E('button', {
-						'type': 'button',
-						'class': 'cbi-button',
-						'style': 'padding: 0 6px; min-width: 24px; font-size: 12px;',
-						'title': expanded ? _('Collapse') : _('Expand'),
-						'click': function() {
+					E("button", {
+						"type": "button",
+						"class": "cbi-button",
+						"style": "padding: 0 6px; min-width: 24px; font-size: 12px;",
+						"title": expanded ? _("Collapse") : _("Expand"),
+						"click": function() {
 							appExpanded[app.id] = !expanded;
 							renderAppCards();
 						}
-					}, expanded ? '▾' : '▸'),
-					E('span', { 'style': 'font-weight: 600; font-size: 13px; min-width: 120px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;' }, app.name || app.id),
-					E('span', {
-						'class': 'badge',
-						'style': 'padding: 1px 7px; border-radius: 10px; font-size: 10px; background: rgba(148,163,184,0.18); color: #64748b;'
-					}, _('%d rules').format(count)),
-					E('span', { 'style': 'flex: 1;' }),
-					E('span', { 'style': 'font-size: 12px; color: #64748b;' }, _('Egress')),
+					}, expanded ? "▾" : "▸"),
+					E("span", { "style": "font-weight: 600; font-size: 13px; min-width: 120px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1e293b;" }, app.name || app.id),
+					E("span", {
+						"class": "badge",
+						"style": "padding: 2px 8px; border-radius: 10px; font-size: 11px; background: rgba(37,99,235,0.08); color: #2563eb; font-weight: 500;"
+					}, _("%d rules").format(count)),
+					E("span", { "style": "flex: 1;" }),
+					E("span", { "style": "font-size: 12px; color: #64748b;" }, _("Egress")),
 					targetSel,
-					E('span', { 'style': 'display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #64748b;' }, [ enabledBox, _('On') ]),
-					E('button', {
-						'type': 'button',
-						'class': 'cbi-button',
-						'style': 'padding: 0 6px; min-width: 24px;',
-						'disabled': idx === 0 ? 'disabled' : null,
-						'title': _('Move Up'),
-						'click': function() { window.moveApp(idx, -1); }
-					}, '↑'),
-					E('button', {
-						'type': 'button',
-						'class': 'cbi-button',
-						'style': 'padding: 0 6px; min-width: 24px;',
-						'disabled': idx === appsList.length - 1 ? 'disabled' : null,
-						'title': _('Move Down'),
-						'click': function() { window.moveApp(idx, 1); }
-					}, '↓'),
-					isBuiltin ? E('span', {
-						'style': 'min-width: 28px; text-align: center; color: #cbd5e1; font-size: 12px;',
-						'title': _('Built-in scenario cannot be deleted')
-					}, '🔒') : E('button', {
-						'type': 'button',
-						'class': 'cbi-button cbi-button-remove',
-						'style': 'padding: 0 6px; min-width: 28px;',
-						'title': _('Delete'),
-						'click': function() { window.removeApp(idx); }
-					}, '🗑️')
+					E("span", { "style": "display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #64748b;" }, [ enabledBox, _("On") ]),
+					E("button", {
+						"type": "button",
+						"class": "cbi-button",
+						"style": "padding: 0 6px; min-width: 24px;",
+						"disabled": idx === 0 ? "disabled" : null,
+						"title": _("Move Up"),
+						"click": function() { window.moveApp(idx, -1); }
+					}, "↑"),
+					E("button", {
+						"type": "button",
+						"class": "cbi-button",
+						"style": "padding: 0 6px; min-width: 24px;",
+						"disabled": idx === appsList.length - 1 ? "disabled" : null,
+						"title": _("Move Down"),
+						"click": function() { window.moveApp(idx, 1); }
+					}, "↓"),
+					isBuiltin ? "" : E("button", {
+						"type": "button",
+						"class": "cbi-button cbi-button-remove",
+						"style": "padding: 0 6px; min-width: 24px;",
+						"title": _("Delete custom scenario"),
+						"click": function() { window.removeApp(idx); }
+					}, "✕")
 				]);
 
 				var cardChildren = [ rowHeader ];
 
-				if (expanded) {
+			if (expanded) {
 					var bodyChildren = [];
+					if (app.desc) {
+						bodyChildren.push(E("div", { "style": "font-size: 12px; color: #64748b; margin-bottom: 8px;" }, app.desc));
+					}
 
+					bodyChildren.push(E("div", { "style": "font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 4px;" }, _("Built-in Rules:")));
 					if (app.builtin_rules && app.builtin_rules.length) {
-						bodyChildren.push(E('div', { 'style': 'font-size: 11px; color: #94a3b8; margin: 0 0 4px 0;' }, _('Built-in rules')));
-						bodyChildren.push(E('div', { 'style': 'font-family: monospace; font-size: 11px; line-height: 1.7; color: #475569; margin-bottom: 10px;' },
-							app.builtin_rules.map(function(r) {
-								return E('div', {}, (r.type || '?') + ', ' + (r.payload || '?'));
-							})
-						));
-					}
-
-					bodyChildren.push(E('div', { 'style': 'font-size: 11px; color: #94a3b8; margin: 0 0 4px 0;' }, _('Custom rules')));
-
-					if (app.custom_rules && app.custom_rules.length) {
-						bodyChildren.push(E('div', { 'style': 'margin-bottom: 8px;' },
-							app.custom_rules.map(function(r, ridx) {
-								return E('div', { 'style': 'display: flex; align-items: center; gap: 8px; font-family: monospace; font-size: 11px; line-height: 1.9;' }, [
-									E('span', { 'style': 'color: #2563eb;' }, (r.type || '?') + ', ' + (r.payload || '?')),
-									E('button', {
-										'type': 'button',
-										'class': 'cbi-button cbi-button-remove',
-										'style': 'padding: 0 5px; font-size: 10px;',
-										'click': function() { window.removeCustomRule(idx, ridx); }
-									}, _('Remove'))
-								]);
-							})
-						));
+						bodyChildren.push(E("div", {
+							"style": "display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; max-height: 120px; overflow-y: auto;"
+						}, app.builtin_rules.map(function(r) {
+							return E("span", {
+								"style": "display: inline-flex; align-items: center; gap: 4px; font-family: monospace; font-size: 11px; padding: 2px 6px; border-radius: 3px; background: rgba(148,163,184,0.12); color: #334155;"
+							}, [
+								E("span", { "style": "font-weight: bold; color: #64748b;" }, r.type),
+								r.payload
+							]);
+						})));
 					} else {
-						bodyChildren.push(E('div', { 'style': 'font-size: 11px; color: #cbd5e1; margin-bottom: 8px;' }, _('No custom rules yet.')));
+						bodyChildren.push(E("div", { "style": "font-size: 11px; color: #94a3b8; margin-bottom: 8px;" }, _("No built-in rules (pure target-binding card).")));
 					}
 
-					bodyChildren.push(E('div', { 'style': 'display: flex; align-items: center; gap: 8px; flex-wrap: wrap;' }, [
-						E('select', {
-							'id': 'app_newtype_' + idx,
-							'class': 'cbi-input-select',
-							'style': 'width: 150px; font-size: 12px;'
+					bodyChildren.push(E("div", { "style": "font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 4px;" }, _("Custom Rules:")));
+					if (app.custom_rules && app.custom_rules.length) {
+						bodyChildren.push(E("div", {
+							"style": "display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;"
+						}, app.custom_rules.map(function(r, ridx) {
+							return E("span", {
+								"style": "display: inline-flex; align-items: center; gap: 6px; font-family: monospace; font-size: 11px; padding: 2px 6px; border-radius: 3px; background: rgba(16,185,129,0.1); color: #059669; border: 1px solid rgba(16,185,129,0.25);"
+							}, [
+								E("b", {}, r.type),
+								r.payload,
+								E("button", {
+									"type": "button",
+									"class": "cbi-button cbi-button-remove",
+									"style": "padding: 0 4px; font-size: 10px; height: 16px; line-height: 16px; margin: 0;",
+									"click": function() { window.removeCustomRule(idx, ridx); }
+								}, "×")
+							]);
+						})));
+					} else {
+						bodyChildren.push(E("div", { "style": "font-size: 11px; color: #94a3b8; margin-bottom: 8px;" }, _("No custom rules yet.")));
+					}
+
+					bodyChildren.push(E("div", { "style": "display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" }, [
+						E("select", {
+							"id": "app_newtype_" + idx,
+							"class": "cbi-input-select",
+							"style": "width: 150px; font-size: 12px;"
 						}, appRuleTypes.map(function(t) {
-							return E('option', { 'value': t }, t);
+							return E("option", { "value": t }, t);
 						})),
-						E('input', {
-							'type': 'text',
-							'id': 'app_newpayload_' + idx,
-							'class': 'cbi-input-text',
-							'style': 'width: 260px; font-family: monospace; font-size: 12px;',
-							'placeholder': _('Domain or IP (e.g. example.com)')
+						E("input", {
+							"type": "text",
+							"id": "app_newpayload_" + idx,
+							"class": "cbi-input-text",
+							"style": "width: 260px; font-family: monospace; font-size: 12px;",
+							"placeholder": _("Domain or IP (e.g. example.com)")
 						}),
-						E('button', {
-							'type': 'button',
-							'class': 'cbi-button cbi-button-action',
-							'style': 'font-size: 12px;',
-							'click': function() { window.addCustomRule(idx); }
-						}, _('Add'))
+						E("button", {
+							"type": "button",
+							"class": "cbi-button cbi-button-action",
+							"style": "font-size: 12px;",
+							"click": function() { window.addCustomRule(idx); }
+						}, _("Add")),
+						E("button", {
+							"type": "button",
+							"class": "cbi-button",
+							"style": "font-size: 12px;",
+							"click": function() { window.toggleBatchBox(idx); }
+						}, "📋 " + (appBatchOpen[idx] ? _("Close Batch") : _("Batch Import")))
 					]));
 
-					cardChildren.push(E('div', {
-						'style': 'padding: 0 12px 12px 46px; border-top: 1px dashed rgba(148,163,184,0.25); padding-top: 10px; margin-top: 2px;'
+					if (appBatchOpen[idx]) {
+						bodyChildren.push(E("div", {
+							"style": "margin-top: 10px; padding: 10px; background: rgba(59,130,246,0.04); border: 1px dashed rgba(59,130,246,0.3); border-radius: 6px;"
+						}, [
+							E("div", { "style": "font-size: 12px; font-weight: 600; color: #2563eb; margin-bottom: 6px;" },
+								_("Batch Rule Import (one domain or IP per line, supports lines like DOMAIN-SUFFIX,example.com):")),
+							E("div", { "style": "display: flex; gap: 8px; margin-bottom: 8px;" }, [
+								E("span", { "style": "font-size: 12px; line-height: 30px; color: #64748b;" }, _("Default Type:")),
+								E("select", {
+									"id": "app_batch_type_" + idx,
+									"class": "cbi-input-select",
+									"style": "width: 160px; font-size: 12px;"
+								}, appRuleTypes.map(function(t) {
+									return E("option", { "value": t }, t);
+								}))
+							]),
+							E("textarea", {
+								"id": "app_batch_text_" + idx,
+								"class": "cbi-input-textarea",
+								"style": "width: 100%; height: 90px; font-family: monospace; font-size: 12px; box-sizing: border-box; margin-bottom: 8px;",
+								"placeholder": "example.com\n*.google.com\n1.2.3.4/24"
+							}),
+							E("button", {
+								"type": "button",
+								"class": "cbi-button cbi-button-action",
+								"style": "font-size: 12px;",
+								"click": function() { window.addBatchCustomRules(idx); }
+							}, "⚡ " + _("Import All Lines"))
+						]));
+					}
+
+					cardChildren.push(E("div", {
+						"style": "padding: 0 14px 12px 46px; border-top: 1px dashed rgba(148,163,184,0.22); padding-top: 10px; margin-top: 2px;"
 					}, bodyChildren));
 				}
 
-				container.appendChild(E('div', {
-					'style': 'border: 1px solid rgba(148,163,184,0.25); border-radius: 6px; margin-bottom: 8px; background: rgba(148,163,184,0.03);'
+				container.appendChild(E("div", {
+					"style": "border: 1px solid rgba(148,163,184,0.22); border-left: 4px solid " + (enabled ? "#3b82f6;" : "#94a3b8;") + " border-radius: 8px; margin-bottom: 10px; background: rgba(255,255,255,0.02); box-shadow: 0 1px 3px rgba(0,0,0,0.02);"
 				}, cardChildren));
 			});
 		}
@@ -554,7 +1063,7 @@ return view.extend({
 		window.removeApp = function(idx) {
 			var app = appsList[idx];
 			if (!app || app.is_custom !== true) {
-				ui.addNotification(null, E('p', {}, _('Built-in scenarios cannot be deleted. Disable them instead.')), 'warning');
+				ui.addNotification(null, E("p", {}, _("Built-in scenarios cannot be deleted. Disable them instead.")), "warning");
 				return;
 			}
 			appsList.splice(idx, 1);
@@ -563,12 +1072,12 @@ return view.extend({
 		};
 
 		window.addCustomRule = function(idx) {
-			var typeEl = document.getElementById('app_newtype_' + idx);
-			var payloadEl = document.getElementById('app_newpayload_' + idx);
+			var typeEl = document.getElementById("app_newtype_" + idx);
+			var payloadEl = document.getElementById("app_newpayload_" + idx);
 			if (!typeEl || !payloadEl) return;
-			var payload = (payloadEl.value || '').trim();
+			var payload = (payloadEl.value || "").trim();
 			if (!payload) {
-				ui.addNotification(null, E('p', {}, _('Please enter a domain or IP first.')), 'error');
+				ui.addNotification(null, E("p", {}, _("Please enter a domain or IP first.")), "error");
 				return;
 			}
 			if (!appsList[idx].custom_rules) appsList[idx].custom_rules = [];
@@ -583,77 +1092,77 @@ return view.extend({
 		};
 
 		window.openNewAppModal = function() {
-			var nameInput = E('input', {
-				'type': 'text',
-				'class': 'cbi-input-text',
-				'id': 'new_app_name',
-				'style': 'width: 100%; box-sizing: border-box;',
-				'placeholder': _('e.g. Company Office')
+			var nameInput = E("input", {
+				"type": "text",
+				"class": "cbi-input-text",
+				"id": "new_app_name",
+				"style": "width: 100%; box-sizing: border-box;",
+				"placeholder": _("e.g. Company Office")
 			});
-			var typeSelect = E('select', {
-				'class': 'cbi-input-select',
-				'id': 'new_app_type',
-				'style': 'width: 100%; box-sizing: border-box;'
+			var typeSelect = E("select", {
+				"class": "cbi-input-select",
+				"id": "new_app_type",
+				"style": "width: 100%; box-sizing: border-box;"
 			}, appRuleTypes.map(function(t) {
-				return E('option', { 'value': t }, t);
+				return E("option", { "value": t }, t);
 			}));
-			var payloadInput = E('input', {
-				'type': 'text',
-				'class': 'cbi-input-text',
-				'id': 'new_app_payload',
-				'style': 'width: 100%; box-sizing: border-box; font-family: monospace;',
-				'placeholder': _('e.g. example.com')
+			var payloadInput = E("input", {
+				"type": "text",
+				"class": "cbi-input-text",
+				"id": "new_app_payload",
+				"style": "width: 100%; box-sizing: border-box; font-family: monospace;",
+				"placeholder": _("e.g. example.com")
 			});
-			var targetSelect = E('select', {
-				'class': 'cbi-input-select',
-				'id': 'new_app_target',
-				'style': 'width: 100%; box-sizing: border-box;'
+			var targetSelect = E("select", {
+				"class": "cbi-input-select",
+				"id": "new_app_target",
+				"style": "width: 100%; box-sizing: border-box;"
 			}, getTargetOptions().map(function(t) {
-				return E('option', { 'value': t, 'selected': t === '🚀 节点选择' ? 'selected' : null }, t);
+				return E("option", { "value": t, "selected": t === "🚀 节点选择" ? "selected" : null }, t);
 			}));
 
-			ui.showModal(_('New Scenario Card'), E('div', { 'style': 'width: 100%; box-sizing: border-box; padding: 4px 0;' }, [
-				E('div', { 'style': 'margin-bottom: 14px;' }, [
-					E('label', { 'style': 'display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;' }, _('Scenario Name')),
+			ui.showModal(_("New Scenario Card"), E("div", { "style": "width: 100%; box-sizing: border-box; padding: 4px 0;" }, [
+				E("div", { "style": "margin-bottom: 14px;" }, [
+					E("label", { "style": "display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;" }, _("Scenario Name")),
 					nameInput
 				]),
-				E('div', { 'style': 'margin-bottom: 14px;' }, [
-					E('label', { 'style': 'display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;' }, _('Rule Type')),
+				E("div", { "style": "margin-bottom: 14px;" }, [
+					E("label", { "style": "display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;" }, _("Rule Type")),
 					typeSelect
 				]),
-				E('div', { 'style': 'margin-bottom: 14px;' }, [
-					E('label', { 'style': 'display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;' }, _('Initial Domain / IP')),
+				E("div", { "style": "margin-bottom: 14px;" }, [
+					E("label", { "style": "display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;" }, _("Initial Domain / IP")),
 					payloadInput,
-					E('div', { 'style': 'margin-top: 4px; font-size: 12px; color: #64748b;' }, _('Optional. Leave blank to create a card with only an egress target.'))
+					E("div", { "style": "margin-top: 4px; font-size: 12px; color: #64748b;" }, _("Optional. Leave blank to create a card with only an egress target."))
 				]),
-				E('div', { 'style': 'margin-bottom: 16px;' }, [
-					E('label', { 'style': 'display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;' }, _('Egress Target')),
+				E("div", { "style": "margin-bottom: 16px;" }, [
+					E("label", { "style": "display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #1e293b;" }, _("Egress Target")),
 					targetSelect
 				]),
-				E('div', { 'class': 'right', 'style': 'margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;' }, [
-					E('button', { 'type': 'button', 'class': 'cbi-button', 'click': ui.hideModal }, _('Cancel')),
-					E('button', {
-						'type': 'button',
-						'class': 'cbi-button cbi-button-apply',
-						'click': function() {
-							var name = (nameInput.value || '').trim();
+				E("div", { "class": "right", "style": "margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;" }, [
+					E("button", { "type": "button", "class": "cbi-button", "click": ui.hideModal }, _("Cancel")),
+					E("button", {
+						"type": "button",
+						"class": "cbi-button cbi-button-apply",
+						"click": function() {
+							var name = (nameInput.value || "").trim();
 							if (!name) {
-								ui.addNotification(null, E('p', {}, _('Scenario name cannot be empty.')), 'error');
+								ui.addNotification(null, E("p", {}, _("Scenario name cannot be empty.")), "error");
 								return;
 							}
-							var payload = (payloadInput.value || '').trim();
-							var baseId = 'custom_' + name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-							if (!baseId || baseId === 'custom_') baseId = 'custom_card';
+							var payload = (payloadInput.value || "").trim();
+							var baseId = "custom_" + name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+						if (!baseId || baseId === "custom_") baseId = "custom_card";
 							var newId = baseId;
 							var n = 2;
 							while (appFindIndexById(newId) >= 0) {
-								newId = baseId + '_' + n;
+								newId = baseId + "_" + n;
 								n++;
 							}
 							var card = {
 								id: newId,
 								name: name,
-								desc: '',
+								desc: "",
 								target: targetSelect.value,
 								builtin_rules: [],
 								custom_rules: payload ? [ { type: typeSelect.value, payload: payload } ] : [],
@@ -662,37 +1171,36 @@ return view.extend({
 							};
 							appsList.push(card);
 							appExpanded[newId] = true;
-											ui.hideModal();
+							ui.hideModal();
 							renderAppCards();
 						}
-					}, _('Create'))
+					}, _("Create"))
 				])
 			]));
 		};
 
 		window.resetDefaultApps = function() {
-			if (!confirm(_('Are you sure you want to restore the full default application library?\nAll custom scenarios and custom rules will be discarded.'))) return;
-			ui.showModal(_('Resetting'), [ E('p', { 'class': 'spinning' }, _('Restoring default application library...')) ]);
+			if (!confirm(_("Are you sure you want to restore the full default application library?\nAll custom scenarios and custom rules will be discarded."))) return;
+			ui.showModal(_("Resetting"), [ E("p", { "class": "spinning" }, _("Restoring default application library...")) ]);
 			callResetApps().then(function(res) {
 				if (res && res.success === false)
-					throw new Error(res.error || _('Failed to restore default application library'));
+					throw new Error(res.error || _("Failed to restore default application library"));
 				return callGetApps();
 			}).then(function(res) {
 				appsList = (res && res.apps) ? res.apps : [];
 				appExpanded = {};
 				renderAppCards();
 				ui.hideModal();
-				ui.addNotification(null, E('p', {}, '✅ ' + _('Default application library restored successfully!')), 'success');
+				ui.addNotification(null, E("p", {}, "✅ " + _("Default application library restored successfully!")), "success");
 			}).catch(function(err) {
 				ui.hideModal();
-				ui.addNotification(null, E('p', {}, err.message), 'error');
+				ui.addNotification(null, E("p", {}, err.message), "error");
 			});
 		};
 
 		// ---------------- 4. 终极全量保存处理函数 ----------------
 		window.saveAllRoutingSettings = function() {
 			syncProvidersFromDom();
-			syncGroupsFromDom();
 
 			// 展开卡片中已输入但未点击“添加”的规则不允许被静默丢弃
 			var pendingRules = [];
@@ -1209,7 +1717,7 @@ return view.extend({
 
 		setTimeout(function() {
 			renderProviderRows();
-			renderGroupRows();
+			renderGroupCards();
 			renderAppCards();
 		}, 50);
 

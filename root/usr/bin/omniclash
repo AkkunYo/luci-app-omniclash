@@ -766,8 +766,15 @@ function compile_config() {
             }
         }
         if (use_list && length(use_list)) push(parts, sprintf("use: [%s]", join(", ", use_list)));
-        if (g.proxies && length(g.proxies)) push(parts, sprintf("proxies: [%s]", join(", ", g.proxies)));
+        if (g.proxies && length(g.proxies)) {
+            let quoted_proxies = [];
+            for (let px in g.proxies) {
+                if (px) push(quoted_proxies, sprintf("\"%s\"", replace(px, "\"", "\\\"")));
+            }
+            if (length(quoted_proxies)) push(parts, sprintf("proxies: [%s]", join(", ", quoted_proxies)));
+        }
         if (g.filter) push(parts, sprintf("filter: \"%s\"", replace(g.filter, "\"", "\\\"")));
+        if (g.url) push(parts, sprintf("url: \"%s\"", replace(g.url, "\"", "\\\"")));
         if (g.tolerance) push(parts, sprintf("tolerance: %d", g.tolerance));
         if (g.interval) push(parts, sprintf("interval: %d", g.interval));
         if (g.lazy != null) push(parts, sprintf("lazy: %s", g.lazy ? "true" : "false"));
@@ -793,7 +800,6 @@ function compile_config() {
         for (let slot in slots) {
             let cidr = sprintf("192.168.%s.0/24", slot.vlan);
             let out = sprintf("🌐 %s-出口", slot.num);
-            push(tier1_infra, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOSITE,google-cn)),%s", cidr, out));
 
             if (slot.mode == "global") {
                 push(tier2_global, sprintf("  # [全局模式] 槽位 #%s: %s (VLAN %s)", slot.num, slot.ssid, slot.vlan));
@@ -802,6 +808,7 @@ function compile_config() {
                 push(tier3_split, sprintf("  # [定向分流] 槽位 #%s: %s (VLAN %s)", slot.num, slot.ssid, slot.vlan));
                 push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOSITE,private)),DIRECT", cidr));
                 push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOIP,private)),DIRECT", cidr));
+                push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOSITE,google-cn)),%s", cidr, out));
                 push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOSITE,cn)),DIRECT", cidr));
                 push(tier3_split, sprintf("  - AND,((SRC-IP-CIDR,%s),(GEOIP,cn)),DIRECT", cidr));
                 push(tier3_split, sprintf("  - SRC-IP-CIDR,%s,%s", cidr, out));
