@@ -155,10 +155,11 @@
     "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Final.png"
   },
   {
-    "name": "🇨🇳 特殊直连",
+    "name": "🇨🇳 特殊互接",
     "type": "select",
     "icon": "https://hk.gh-proxy.org/https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Direct.png",
     "proxies": [
+      "🏠 住宅落地",
       "🟢 直连",
       "🇭🇰 香港节点",
       "🇨🇳 台湾节点",

@@ -83,10 +83,10 @@
     "is_custom": false
   },
   {
-    "id": "residential_sites",
-    "name": "🏠 住宅落地服务",
-    "desc": "内部大模型网关与特定高风控服务强制走住宅独享落地",
-    "target": "🏠 住宅落地",
+    "id": "special_proxy",
+    "name": "🇨🇳 特殊互接",
+    "desc": "特定高风控管理、测速及业务站点统一路由策略（可选直连、住宅落地等）",
+    "target": "🇨🇳 特殊互接",
     "builtin_rules": [
       {
         "type": "DOMAIN-SUFFIX",
@@ -99,18 +99,7 @@
       {
         "type": "DOMAIN-SUFFIX",
         "payload": "hybgzs.com"
-      }
-    ],
-    "custom_rules": [],
-    "enabled": true,
-    "is_custom": false
-  },
-  {
-    "id": "special_direct",
-    "name": "🇨🇳 特殊直连",
-    "desc": "测速与归属地查询等需要灵活在直连与特定代理节点之间一键切换的站点",
-    "target": "🇨🇳 特殊直连",
-    "builtin_rules": [
+      },
       {
         "type": "DOMAIN-SUFFIX",
         "payload": "speedtest.net"
